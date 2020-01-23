@@ -1,5 +1,5 @@
 
-DIRS = libjaylink cmd
+DIRS = cmd
 
 all:
 	for dir in $(DIRS); do \

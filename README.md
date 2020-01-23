@@ -1,2 +1,2 @@
 # rvdbg
-RiSC-V Debugger
+RISC-V Debugger
