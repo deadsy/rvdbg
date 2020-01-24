@@ -83,7 +83,7 @@ func newBitSet(val uint64, n int) bitSet {
 	if n > setSize || n < 0 {
 		panic("")
 	}
-	if n < 64 {
+	if n < setSize {
 		val &= uint64((1 << n) - 1)
 	}
 	return bitSet{
@@ -277,8 +277,14 @@ func (b *BitString) Length() int {
 	return b.n
 }
 
-// BitString returns a 1/0 string for the bit string.
-func (b *BitString) BitString() string {
+// Split splits a bit string into []uint using the number of bits in the input slice.
+func (b *BitString) Split(in []int) []uint {
+	x := make([]uint, len(in))
+	// TODO
+	return x
+}
+
+func (b *BitString) String() string {
 	s := []string{}
 	for i := len(b.set) - 1; i >= 0; i-- {
 		if b.set[i].n > 0 {
@@ -288,8 +294,9 @@ func (b *BitString) BitString() string {
 	return strings.Join(s, "")
 }
 
-func (b *BitString) String() string {
-	return fmt.Sprintf("(%d) %s", b.n, b.BitString())
+// LengthBits returns a length/bits string for the bit string.
+func (b *BitString) LengthBits() string {
+	return fmt.Sprintf("(%d) %s", b.n, b.String())
 }
 
 //-----------------------------------------------------------------------------
@@ -309,31 +316,29 @@ func Zeroes(n int) *BitString {
 	return NewBitString().Tail0(n)
 }
 
-// FromBytes sets a bit string from a byte slice.
+// FromBytes returns a bit string from a byte slice.
 func FromBytes(s []byte, n int) *BitString {
 	// sanity check
 	k := len(s)
 	if n > k*8 {
 		panic("")
 	}
-	// 8 bytes at a time
 	b := NewBitString()
 	i := 0
-	for ; k >= 8; k -= 8 {
+	// 8 bytes at a time
+	for n >= setSize {
 		val := bytesToUint64(s[i : i+8])
 		b.tail(newBitSet(val, setSize))
 		i += 8
+		k -= 8
 		n -= setSize
 	}
-	// left over bytes
+	// left over bits
 	if k > 0 {
 		var val uint64
 		for j := 0; j < k; j++ {
 			val |= uint64(s[i+j]) << (j * 8)
 		}
-
-		fmt.Printf("%d\n", n)
-
 		b.tail(newBitSet(val, n))
 	}
 	return b
@@ -344,17 +349,15 @@ func FromString(s string) *BitString {
 	n := len(s)
 	b := NewBitString()
 	for n > 0 {
-		j := len(s)
 		k := min(n, setSize)
-		x := stringToUint64(s[j-k : j])
-		b.tail(newBitSet(x, k))
-		s = s[0 : j-k]
+		val := stringToUint64(s[n-k : n])
+		b.tail(newBitSet(val, k))
 		n -= k
 	}
 	return b
 }
 
-// Random returns a random bit string of n bits.
+// Random returns a random bit string with n bits.
 func Random(n int) *BitString {
 	b := NewBitString()
 	for n > 0 {
