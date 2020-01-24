@@ -10,6 +10,8 @@ package bitstr
 
 import (
 	"bytes"
+	"fmt"
+	"math/rand"
 	"testing"
 )
 
@@ -32,6 +34,7 @@ const testString0 = "11011110101011011011111011101111"
 func Test_BitString(t *testing.T) {
 
 	var a, b, c *BitString
+	var k int
 
 	b = NewBitString().Tail0(2)
 	if b.BitString() != "00" {
@@ -53,13 +56,15 @@ func Test_BitString(t *testing.T) {
 		t.Error("FAIL")
 	}
 
-	b = NewBitString().Tail0(271)
-	if b.BitString() != repeatRune('0', 271) {
+	k = 271
+	b = NewBitString().Tail0(k)
+	if b.BitString() != repeatRune('0', k) {
 		t.Error("FAIL")
 	}
 
-	b = NewBitString().Tail1(1490)
-	if b.BitString() != repeatRune('1', 1490) {
+	k = 1490
+	b = NewBitString().Tail1(k)
+	if b.BitString() != repeatRune('1', k) {
 		t.Error("FAIL")
 	}
 
@@ -88,18 +93,18 @@ func Test_BitString(t *testing.T) {
 		t.Error("FAIL")
 	}
 
-	b, _ = FromString("11101")
+	b = FromString("11101")
 	if b.String() != "(5) 11101" {
 		t.Error("FAIL")
 	}
 
-	b, _ = FromString("011111")
+	b = FromString("011111")
 	if b.String() != "(6) 011111" {
 		t.Error("FAIL")
 	}
 
 	b = Random(2017)
-	a, _ = FromString(b.BitString())
+	a = FromString(b.BitString())
 	if a.String() != b.String() {
 		t.Error("FAIL")
 	}
@@ -124,33 +129,102 @@ func Test_BitString(t *testing.T) {
 		t.Error("FAIL")
 	}
 
-	a, _ = FromString("11111111")
+	a = FromString("")
+	if !bytes.Equal(a.GetBytes(), []byte{}) {
+		t.Error("FAIL")
+	}
+
+	a = FromString("11111111")
 	if !bytes.Equal(a.GetBytes(), []byte{255}) {
 		t.Error("FAIL")
 	}
 
-	a, _ = FromString(testString0)
+	a = FromString(testString0)
 	if !bytes.Equal(a.GetBytes(), []byte{0xef, 0xbe, 0xad, 0xde}) {
 		t.Error("FAIL")
 	}
 
-	/*
+	a = FromBytes([]byte{0xff}, 7)
+	if a.String() != "(7) 1111111" {
+		t.Error("FAIL")
+	}
 
-	   x = bits.bits().set_bytes((0xff,), 7)
-	   self.assertEqual(str(x), '(7) 1111111')
-	   x = bits.bits().set_bytes((0x1,), 7)
-	   self.assertEqual(str(x), '(7) 0000001')
-	   x = bits.bits().set_bytes((64,), 7)
-	   self.assertEqual(str(x), '(7) 1000000')
+	a = FromBytes([]byte{0x1}, 7)
+	if a.String() != "(7) 0000001" {
+		t.Error("FAIL")
+	}
 
+	a = FromBytes([]byte{64}, 7)
+	if a.String() != "(7) 1000000" {
+		t.Error("FAIL")
+	}
 
-	   str0 = '11011110101011011011111011101111'
-	   x = bits.from_tuple(str0)
-	   y = bits.bits().set_bytes(x.get_bytes(), len(str0))
-	   self.assertEqual(y.bit_str(), str0)
+	a = FromString(testString0)
+	b = FromBytes(a.GetBytes(), len(testString0))
+	if a.BitString() != testString0 {
+		t.Error("FAIL")
+	}
 
+	k = 2057
+	a = Random(k)
+	b = FromBytes(a.GetBytes(), k)
+	if a.String() != b.String() {
+		t.Error("FAIL")
+	}
 
-	*/
+	// random tails
+	rand.Seed(1)
+	a = NewBitString()
+	for i := 0; i < 500; i++ {
+		a = a.Tail(Random(rand.Int() % 197))
+	}
+	b = FromBytes(a.GetBytes(), a.Length())
+	if a.String() != b.String() {
+		t.Error("FAIL")
+	}
+
+	// random heads
+	rand.Seed(1)
+	a = NewBitString()
+	for i := 0; i < 500; i++ {
+		a = a.Head(Random(rand.Int() % 1709))
+	}
+	b = FromBytes(a.GetBytes(), a.Length())
+	if a.String() != b.String() {
+		t.Error("FAIL")
+	}
+
+	// random tail/head
+	rand.Seed(1)
+	a = NewBitString()
+	for i := 0; i < 500; i++ {
+		a = a.Tail(Random(rand.Int() % 197))
+	}
+	for i := 0; i < 100; i++ {
+		a = a.Head(Random(rand.Int() % 1709))
+	}
+
+	b = FromBytes(a.GetBytes(), a.Length())
+
+	fmt.Printf("%d %d\n", a.Length(), b.Length())
+
+	if a.String() != b.String() {
+		t.Error("FAIL")
+	}
+
+	// random head/tail
+	rand.Seed(1)
+	a = NewBitString()
+	for i := 0; i < 500; i++ {
+		a = a.Head(Random(rand.Int() % 197))
+	}
+	for i := 0; i < 500; i++ {
+		a = a.Tail(Random(rand.Int() % 1709))
+	}
+	b = FromBytes(a.GetBytes(), a.Length())
+	if a.String() != b.String() {
+		t.Error("FAIL")
+	}
 
 }
 

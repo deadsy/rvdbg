@@ -28,17 +28,42 @@ package bitstr
 import (
 	"fmt"
 	"math/rand"
-	"strconv"
 	"strings"
 )
 
 //-----------------------------------------------------------------------------
 
+// min returns the minimum of two integers.
 func min(a, b int) int {
 	if a < b {
 		return a
 	}
 	return b
+}
+
+// bytesToUint64 converts an 8-byte slice to a uint64.
+func bytesToUint64(b []byte) uint64 {
+	_ = b[7] // bounds check hint
+	return uint64(b[0]) |
+		uint64(b[1])<<8 |
+		uint64(b[2])<<16 |
+		uint64(b[3])<<24 |
+		uint64(b[4])<<32 |
+		uint64(b[5])<<40 |
+		uint64(b[6])<<48 |
+		uint64(b[7])<<56
+}
+
+// stringToUint64 converts a 0/1 string to a uint64.
+func stringToUint64(s string) uint64 {
+	var val uint64
+	for i := range s {
+		val <<= 1
+		if s[i] == '1' {
+			val |= 1
+		}
+	}
+	return val
 }
 
 //-----------------------------------------------------------------------------
@@ -67,6 +92,7 @@ func newBitSet(val uint64, n int) bitSet {
 	}
 }
 
+// dropHead drops n-bits from the head of a bit set.
 func (bs *bitSet) dropHead(n int) {
 	if n > setSize || n < 0 {
 		panic("")
@@ -75,12 +101,51 @@ func (bs *bitSet) dropHead(n int) {
 	bs.n -= n
 }
 
+// dropTail drops n-bits from the tail of a bit set.
 func (bs *bitSet) dropTail(n int) {
 	if n > setSize || n < 0 {
 		panic("")
 	}
 	bs.val &= uint64((1 << (bs.n - n)) - 1)
 	bs.n -= n
+}
+
+// genByte generates an 8-byte slice from an input bit set and stores left-over bits.
+func (bs *bitSet) genByte(in bitSet) []byte {
+	if in.n == 0 {
+		return nil
+	}
+	if bs.n+in.n >= setSize {
+		// generate bytes
+		buf := make([]byte, 8)
+		val := bs.val | (in.val << bs.n)
+		for i := range buf {
+			buf[i] = byte(val >> (i * 8))
+		}
+		// store the left over bits
+		k := setSize - bs.n
+		bs.val = in.val >> k
+		bs.n = in.n - k
+		return buf
+	}
+	// store the input bits
+	bs.val |= (in.val << bs.n)
+	bs.n += in.n
+	return nil
+}
+
+// flushByte flushes out any remaining bytes in the bit set.
+func (bs *bitSet) flushByte() []byte {
+	if bs.n == 0 {
+		return nil
+	}
+	buf := make([]byte, (bs.n+7)>>3)
+	for i := range buf {
+		buf[i] = byte(bs.val >> (i * 8))
+	}
+	bs.val = 0
+	bs.n = 0
+	return buf
 }
 
 func (bs *bitSet) String() string {
@@ -106,8 +171,10 @@ func NewBitString() *BitString {
 
 // tail adds a bit set to the tail of the bit string.
 func (b *BitString) tail(bs bitSet) *BitString {
-	b.set = append(b.set, bs)
-	b.n += bs.n
+	if bs.n > 0 {
+		b.set = append(b.set, bs)
+		b.n += bs.n
+	}
 	return b
 }
 
@@ -194,9 +261,20 @@ func (b *BitString) Tail(a *BitString) *BitString {
 	return b
 }
 
-// GetBytes returns a byte slice matching the bit string.
+// GetBytes returns a byte slice for the bit string.
 func (b *BitString) GetBytes() []byte {
-	return nil
+	buf := make([]byte, 0, (b.n+7)>>3)
+	state := &bitSet{}
+	for i := range b.set {
+		buf = append(buf, state.genByte(b.set[i])...)
+	}
+	buf = append(buf, state.flushByte()...)
+	return buf
+}
+
+// Length returns the length of the bit string.
+func (b *BitString) Length() int {
+	return b.n
 }
 
 // BitString returns a 1/0 string for the bit string.
@@ -233,25 +311,47 @@ func Zeroes(n int) *BitString {
 
 // FromBytes sets a bit string from a byte slice.
 func FromBytes(s []byte, n int) *BitString {
-	return nil
+	// sanity check
+	k := len(s)
+	if n > k*8 {
+		panic("")
+	}
+	// 8 bytes at a time
+	b := NewBitString()
+	i := 0
+	for ; k >= 8; k -= 8 {
+		val := bytesToUint64(s[i : i+8])
+		b.tail(newBitSet(val, setSize))
+		i += 8
+		n -= setSize
+	}
+	// left over bytes
+	if k > 0 {
+		var val uint64
+		for j := 0; j < k; j++ {
+			val |= uint64(s[i+j]) << (j * 8)
+		}
+
+		fmt.Printf("%d\n", n)
+
+		b.tail(newBitSet(val, n))
+	}
+	return b
 }
 
 // FromString returns a bit string from a 1/0 string.
-func FromString(s string) (*BitString, error) {
+func FromString(s string) *BitString {
 	n := len(s)
 	b := NewBitString()
 	for n > 0 {
 		j := len(s)
 		k := min(n, setSize)
-		x, err := strconv.ParseUint(s[j-k:j], 2, 64)
-		if err != nil {
-			return nil, err
-		}
+		x := stringToUint64(s[j-k : j])
 		b.tail(newBitSet(x, k))
 		s = s[0 : j-k]
 		n -= k
 	}
-	return b, nil
+	return b
 }
 
 // Random returns a random bit string of n bits.
