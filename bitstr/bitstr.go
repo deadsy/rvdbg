@@ -182,11 +182,20 @@ func (b *BitString) Copy() *BitString {
 
 // Head adds a bit string to the head of a bit string.
 func (b *BitString) Head(a *BitString) *BitString {
-	return nil
+	b.set = append(a.set, b.set...)
+	b.n += a.n
+	return b
 }
 
 // Tail adds a bit string to the tail of a bit string.
 func (b *BitString) Tail(a *BitString) *BitString {
+	b.set = append(b.set, a.set...)
+	b.n += a.n
+	return b
+}
+
+// GetBytes returns a byte slice matching the bit string.
+func (b *BitString) GetBytes() []byte {
 	return nil
 }
 
@@ -220,6 +229,11 @@ func Ones(n int) *BitString {
 // Zeroes returns a bit string with n-zero bits.
 func Zeroes(n int) *BitString {
 	return NewBitString().Tail0(n)
+}
+
+// FromBytes sets a bit string from a byte slice.
+func FromBytes(s []byte, n int) *BitString {
+	return nil
 }
 
 // FromString returns a bit string from a 1/0 string.

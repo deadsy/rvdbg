@@ -9,6 +9,7 @@ Bit string test functions.
 package bitstr
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -24,9 +25,13 @@ func repeatRune(r rune, n int) string {
 
 //-----------------------------------------------------------------------------
 
+const testString0 = "11011110101011011011111011101111"
+
+//-----------------------------------------------------------------------------
+
 func Test_BitString(t *testing.T) {
 
-	var a, b *BitString
+	var a, b, c *BitString
 
 	b = NewBitString().Tail0(2)
 	if b.BitString() != "00" {
@@ -105,35 +110,31 @@ func Test_BitString(t *testing.T) {
 		t.Error("FAIL")
 	}
 
+	a = Random(73)
+	b = Random(89)
+	c = a.Copy().Head(b)
+	if a.BitString()+b.BitString() != c.BitString() {
+		t.Error("FAIL")
+	}
+
+	a = Random(26)
+	b = Random(128)
+	c = a.Copy().Tail(b)
+	if b.BitString()+a.BitString() != c.BitString() {
+		t.Error("FAIL")
+	}
+
+	a, _ = FromString("11111111")
+	if !bytes.Equal(a.GetBytes(), []byte{255}) {
+		t.Error("FAIL")
+	}
+
+	a, _ = FromString(testString0)
+	if !bytes.Equal(a.GetBytes(), []byte{0xef, 0xbe, 0xad, 0xde}) {
+		t.Error("FAIL")
+	}
+
 	/*
-
-
-	   x = bits.from_random(10)
-	   y = bits.from_random(10)
-	   z = x.copy().head(y)
-	   self.assertEqual(x.bit_str() + y.bit_str(), z.bit_str())
-
-
-	   x = bits.from_random(10)
-	   y = bits.from_random(10)
-	   z = x.copy().tail(y)
-	   self.assertEqual(y.bit_str() + x.bit_str(), z.bit_str())
-
-
-	   x = bits.from_tuple('11111111')
-	   y = x.get_bytes()
-	   self.assertEqual(len(y), 1)
-	   self.assertEqual(y[0], 255)
-
-
-	   x = bits.from_tuple('11011110101011011011111011101111')
-	   y = x.get_bytes()
-	   self.assertEqual(len(y), 4)
-	   self.assertEqual(y[0], 0xef)
-	   self.assertEqual(y[1], 0xbe)
-	   self.assertEqual(y[2], 0xad)
-	   self.assertEqual(y[3], 0xde)
-
 
 	   x = bits.bits().set_bytes((0xff,), 7)
 	   self.assertEqual(str(x), '(7) 1111111')
