@@ -24,6 +24,18 @@ func repeatRune(r rune, n int) string {
 	return string(s)
 }
 
+func uintEqual(a, b []uint) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
 //-----------------------------------------------------------------------------
 
 const testString0 = "11011110101011011011111011101111"
@@ -226,6 +238,17 @@ func Test_BitString(t *testing.T) {
 	}
 	c = FromString(a.String())
 	if a.String() != c.String() {
+		t.Error("FAIL")
+	}
+
+	a = FromString(testString0)
+	if !uintEqual(a.Split([]int{8, 8, 8, 8}), []uint{0xef, 0xbe, 0xad, 0xde}) {
+		t.Error("FAIL")
+	}
+	if !uintEqual(a.Split([]int{16, 16}), []uint{0xbeef, 0xdead}) {
+		t.Error("FAIL")
+	}
+	if !uintEqual(a.Split([]int{32}), []uint{0xdeadbeef}) {
 		t.Error("FAIL")
 	}
 

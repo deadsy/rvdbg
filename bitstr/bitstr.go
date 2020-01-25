@@ -110,42 +110,47 @@ func (bs *bitSet) dropTail(n int) {
 	bs.n -= n
 }
 
-// genByte generates an 8-byte slice from an input bit set and stores left-over bits.
-func (bs *bitSet) genByte(in bitSet) []byte {
+// feed in a bit set and generate an n-bit uint.
+func (bs *bitSet) feed(in bitSet, n int) (uint, bool) {
 	if in.n == 0 {
-		return nil
+		// no change
+		return 0, false
 	}
-	if bs.n+in.n >= setSize {
-		// generate bytes
-		buf := make([]byte, 8)
-		val := bs.val | (in.val << bs.n)
-		for i := range buf {
-			buf[i] = byte(val >> (i * 8))
-		}
+	if bs.n+in.n >= n {
+		// generate the uint
+		val := (bs.val | (in.val << bs.n)) & ((1 << n) - 1)
 		// store the left over bits
-		k := setSize - bs.n
+		k := n - bs.n
 		bs.val = in.val >> k
 		bs.n = in.n - k
-		return buf
+		return uint(val), true
 	}
 	// store the input bits
 	bs.val |= (in.val << bs.n)
 	bs.n += in.n
-	return nil
+	return 0, false
 }
 
-// flushByte flushes out any remaining bytes in the bit set.
-func (bs *bitSet) flushByte() []byte {
+// get an n-bit uint from a bit set.
+func (bs *bitSet) get(n int) (uint, bool) {
+	if bs.n < n {
+		return 0, false
+	}
+	val := bs.val & ((1 << n) - 1)
+	bs.val >>= n
+	bs.n -= n
+	return uint(val), true
+}
+
+// flush any remaining bits from a bit set.
+func (bs *bitSet) flush() (uint, bool) {
 	if bs.n == 0 {
-		return nil
+		return 0, false
 	}
-	buf := make([]byte, (bs.n+7)>>3)
-	for i := range buf {
-		buf[i] = byte(bs.val >> (i * 8))
-	}
+	val := bs.val
 	bs.val = 0
 	bs.n = 0
-	return buf
+	return uint(val), true
 }
 
 func (bs *bitSet) String() string {
@@ -266,9 +271,23 @@ func (b *BitString) GetBytes() []byte {
 	buf := make([]byte, 0, (b.n+7)>>3)
 	state := &bitSet{}
 	for i := range b.set {
-		buf = append(buf, state.genByte(b.set[i])...)
+		val, ok := state.feed(b.set[i], 8)
+		if !ok {
+			continue
+		}
+		buf = append(buf, byte(val))
+		for {
+			val, ok := state.get(8)
+			if !ok {
+				break
+			}
+			buf = append(buf, byte(val))
+		}
 	}
-	buf = append(buf, state.flushByte()...)
+	val, ok := state.flush()
+	if ok {
+		buf = append(buf, byte(val))
+	}
 	return buf
 }
 
@@ -280,7 +299,30 @@ func (b *BitString) Length() int {
 // Split splits a bit string into []uint using the number of bits in the input slice.
 func (b *BitString) Split(in []int) []uint {
 	x := make([]uint, len(in))
-	// TODO
+	state := &bitSet{}
+	j := 0
+	for i := range b.set {
+		val, ok := state.feed(b.set[i], in[j])
+		if !ok {
+			continue
+		}
+		x[j] = val
+		j++
+		if j == len(in) {
+			return x
+		}
+		for {
+			val, ok := state.get(in[j])
+			if !ok {
+				break
+			}
+			x[j] = val
+			j++
+			if j == len(in) {
+				return x
+			}
+		}
+	}
 	return x
 }
 
