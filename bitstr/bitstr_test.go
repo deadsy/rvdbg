@@ -85,32 +85,32 @@ func Test_BitString(t *testing.T) {
 	}
 
 	b = Ones(3)
-	if b.LengthBits() != "(3) 111" {
+	if b.LenBits() != "(3) 111" {
 		t.Error("FAIL")
 	}
 
 	b = Zeroes(7)
-	if b.LengthBits() != "(7) 0000000" {
+	if b.LenBits() != "(7) 0000000" {
 		t.Error("FAIL")
 	}
 
 	b = Zeroes(7).Tail1(4)
-	if b.LengthBits() != "(11) 11110000000" {
+	if b.LenBits() != "(11) 11110000000" {
 		t.Error("FAIL")
 	}
 
 	b = Ones(7).Tail0(4)
-	if b.LengthBits() != "(11) 00001111111" {
+	if b.LenBits() != "(11) 00001111111" {
 		t.Error("FAIL")
 	}
 
 	b = FromString("11101")
-	if b.LengthBits() != "(5) 11101" {
+	if b.LenBits() != "(5) 11101" {
 		t.Error("FAIL")
 	}
 
 	b = FromString("011111")
-	if b.LengthBits() != "(6) 011111" {
+	if b.LenBits() != "(6) 011111" {
 		t.Error("FAIL")
 	}
 
@@ -156,17 +156,17 @@ func Test_BitString(t *testing.T) {
 	}
 
 	a = FromBytes([]byte{0xff}, 7)
-	if a.LengthBits() != "(7) 1111111" {
+	if a.LenBits() != "(7) 1111111" {
 		t.Error("FAIL")
 	}
 
 	a = FromBytes([]byte{0x1}, 7)
-	if a.LengthBits() != "(7) 0000001" {
+	if a.LenBits() != "(7) 0000001" {
 		t.Error("FAIL")
 	}
 
 	a = FromBytes([]byte{64}, 7)
-	if a.LengthBits() != "(7) 1000000" {
+	if a.LenBits() != "(7) 1000000" {
 		t.Error("FAIL")
 	}
 
@@ -189,7 +189,7 @@ func Test_BitString(t *testing.T) {
 	for i := 0; i < 500; i++ {
 		a = a.Tail(Random(rand.Int() % 197))
 	}
-	b = FromBytes(a.GetBytes(), a.Length())
+	b = FromBytes(a.GetBytes(), a.Len())
 	if a.String() != b.String() {
 		t.Error("FAIL")
 	}
@@ -200,7 +200,7 @@ func Test_BitString(t *testing.T) {
 	for i := 0; i < 500; i++ {
 		a = a.Head(Random(rand.Int() % 1709))
 	}
-	b = FromBytes(a.GetBytes(), a.Length())
+	b = FromBytes(a.GetBytes(), a.Len())
 	if a.String() != b.String() {
 		t.Error("FAIL")
 	}
@@ -214,7 +214,7 @@ func Test_BitString(t *testing.T) {
 	for i := 0; i < 500; i++ {
 		a = a.Head(Random(rand.Int() % 1709))
 	}
-	b = FromBytes(a.GetBytes(), a.Length())
+	b = FromBytes(a.GetBytes(), a.Len())
 	if a.String() != b.String() {
 		t.Error("FAIL")
 	}
@@ -232,7 +232,7 @@ func Test_BitString(t *testing.T) {
 	for i := 0; i < 500; i++ {
 		a = a.Tail(Random(rand.Int() % 1709))
 	}
-	b = FromBytes(a.GetBytes(), a.Length())
+	b = FromBytes(a.GetBytes(), a.Len())
 	if a.String() != b.String() {
 		t.Error("FAIL")
 	}

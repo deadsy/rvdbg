@@ -291,8 +291,8 @@ func (b *BitString) GetBytes() []byte {
 	return buf
 }
 
-// Length returns the length of the bit string.
-func (b *BitString) Length() int {
+// Len returns the length of the bit string.
+func (b *BitString) Len() int {
 	return b.n
 }
 
@@ -336,8 +336,8 @@ func (b *BitString) String() string {
 	return strings.Join(s, "")
 }
 
-// LengthBits returns a length/bits string for the bit string.
-func (b *BitString) LengthBits() string {
+// LenBits returns a length/bits string for the bit string.
+func (b *BitString) LenBits() string {
 	return fmt.Sprintf("(%d) %s", b.n, b.String())
 }
 
