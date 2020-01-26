@@ -9,6 +9,7 @@ Segger J-Link Driver
 package jlink
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -108,15 +109,72 @@ type Jtag struct {
 }
 
 // NewJtag returns a new J-Link JTAG driver.
-func NewJtag(dev *libjaylink.Device) (*Jtag, error) {
+func NewJtag(dev *libjaylink.Device, speed uint16) (*Jtag, error) {
 	// get the device handle
 	hdl, err := dev.Open()
 	if err != nil {
 		return nil, err
 	}
+	// get the device capabilities
+	caps, err := hdl.GetAllCaps()
+	if err != nil {
+		hdl.Close()
+		return nil, err
+	}
 	// get the JTAG command version
 	version, err := hdl.GetJtagCommandVersion()
 	if err != nil {
+		hdl.Close()
+		return nil, err
+	}
+	// check and select the target interface
+	if !caps.HasCap(libjaylink.DEV_CAP_SELECT_TIF) {
+		return nil, errors.New("jtag interface can't be selected")
+	}
+	itf, err := hdl.GetAvailableInterfaces()
+	if err != nil {
+		hdl.Close()
+		return nil, err
+	}
+	if itf&(1<<libjaylink.TIF_JTAG) == 0 {
+		hdl.Close()
+		return nil, errors.New("jtag interface not available")
+	}
+	_, err = hdl.SelectInterface(libjaylink.TIF_JTAG)
+	if err != nil {
+		hdl.Close()
+		return nil, err
+	}
+	// check the JTAG state
+	state, err := hdl.GetHardwareStatus()
+	if err != nil {
+		hdl.Close()
+		return nil, err
+	}
+	if state.TargetVoltage < 1500 {
+		hdl.Close()
+		return nil, fmt.Errorf("Target voltage is too low (%dmV). Is the target connected and powered?", state.TargetVoltage)
+	}
+	if state.Tres {
+		hdl.Close()
+		return nil, errors.New("Target ~SRST line asserted. Target is held in reset.")
+	}
+	// check the desired interface speed
+	if caps.HasCap(libjaylink.DEV_CAP_GET_SPEEDS) {
+		maxSpeed, err := hdl.GetMaxSpeed()
+		if err != nil {
+			hdl.Close()
+			return nil, err
+		}
+		if speed > maxSpeed {
+			hdl.Close()
+			return nil, fmt.Errorf("JTAG speed is too high: %dkHz > %dkHz (max)", speed, maxSpeed)
+		}
+	}
+	// set the interface speed
+	err = hdl.SetSpeed(speed)
+	if err != nil {
+		hdl.Close()
 		return nil, err
 	}
 	j := &Jtag{
@@ -196,8 +254,7 @@ func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 		return nil, err
 	}
 	if needTdo {
-		tdo.DropHead(idleToIRshift.Len())
-		tdo.DropTail(xShiftToIdle.Len() - 1)
+		tdo.DropHead(idleToIRshift.Len()).DropTail(xShiftToIdle.Len() - 1)
 		//log.Debug.Printf("tdo %s\n", tdo.LenBits())
 		return tdo, nil
 	}
@@ -215,8 +272,7 @@ func (j *Jtag) ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 		return nil, err
 	}
 	if needTdo {
-		tdo.DropHead(idleToDRshift.Len())
-		tdo.DropTail(xShiftToIdle.Len() - 1)
+		tdo.DropHead(idleToDRshift.Len()).DropTail(xShiftToIdle.Len() - 1)
 		//log.Debug.Printf("tdo %s\n", tdo.LenBits())
 		return tdo, nil
 	}

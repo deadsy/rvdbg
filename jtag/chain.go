@@ -227,8 +227,8 @@ func (ch *Chain) numDevices() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	// now each DR is a single bit
-	// the DR chain length is the number of devices
+	// Now each DR is a single bit.
+	// The DR chain length is the number of devices.
 	return ch.drLength()
 }
 

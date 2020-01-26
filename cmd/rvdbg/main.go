@@ -9,17 +9,21 @@ RISC-V Debugger
 package main
 
 import (
+	"broadcom/bcm47622"
 	"errors"
 	"fmt"
 	"os"
 
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/jlink"
+	"github.com/deadsy/rvdbg/jtag"
 )
 
 //-----------------------------------------------------------------------------
 
 const historyPath = ".rvdbg_history"
+const speed1MHz = 1000
+const speed4MHz = 4000
 
 //-----------------------------------------------------------------------------
 
@@ -27,6 +31,7 @@ const historyPath = ".rvdbg_history"
 type debugApp struct {
 	jlinkLibrary *jlink.Jlink
 	jtagDriver   *jlink.Jtag
+	jtagChain    *jtag.Chain
 	prompt       string
 }
 
@@ -49,8 +54,15 @@ func newDebugApp() (*debugApp, error) {
 		return nil, err
 	}
 
-	jtagDriver, err := jlink.NewJtag(dev)
+	jtagDriver, err := jlink.NewJtag(dev, speed4MHz)
 	if err != nil {
+		jlinkLibrary.Shutdown()
+		return nil, err
+	}
+
+	jtagChain, err := jtag.NewChain(jtagDriver, bcm47622.ChainInfo)
+	if err != nil {
+		jtagDriver.Close()
 		jlinkLibrary.Shutdown()
 		return nil, err
 	}
@@ -58,6 +70,7 @@ func newDebugApp() (*debugApp, error) {
 	return &debugApp{
 		jlinkLibrary: jlinkLibrary,
 		jtagDriver:   jtagDriver,
+		jtagChain:    jtagChain,
 		prompt:       "rvdbg> ",
 	}, nil
 }
