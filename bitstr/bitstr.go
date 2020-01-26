@@ -386,6 +386,16 @@ func FromBytes(s []byte, n int) *BitString {
 	return b
 }
 
+// FromUint returns a bit string from a uint.
+func FromUint(val uint, n int) *BitString {
+	if n > 64 {
+		panic("")
+	}
+	b := NewBitString()
+	b.tail(newBitSet(uint64(val), n))
+	return b
+}
+
 // FromString returns a bit string from a 1/0 string.
 func FromString(s string) *BitString {
 	n := len(s)

@@ -15,7 +15,7 @@ import (
 
 	"github.com/deadsy/libjaylink"
 	"github.com/deadsy/rvdbg/bitstr"
-	"github.com/deadsy/rvdbg/utils/log"
+	"github.com/deadsy/rvdbg/util/log"
 )
 
 //-----------------------------------------------------------------------------

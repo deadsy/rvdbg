@@ -25,16 +25,28 @@ const idcodeLength = 32
 
 //-----------------------------------------------------------------------------
 
-// DeviceInfo describes how the deice will appear on the JTAG chain.
+// Driver is the interface for a JTAG driver.
+type Driver interface {
+	TestReset(delay time.Duration) error                                   // pulse TRST
+	SystemReset(delay time.Duration) error                                 // pulse SRST
+	TapReset() error                                                       // reset TAP state machine
+	ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) // scan IR
+	ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) // scan DR
+}
+
+//-----------------------------------------------------------------------------
+
+// DeviceInfo describes how the device is configured on the JTAG chain.
 type DeviceInfo struct {
 	IRLength int    // length in bits of instruction register
 	ID       IDCode // expected id code for the device
 	Name     string // name of the device
 }
 
+// ChainInfo stores all of the devices on the chain (in order).
 type ChainInfo []DeviceInfo
 
-// irLengthBefore returns the total IR length before device at idx position.
+// irLengthBefore returns the total IR length before the device at idx position.
 func (ci ChainInfo) irLengthBefore(idx int) int {
 	irlen := 0
 	for i, d := range ci {
@@ -45,20 +57,20 @@ func (ci ChainInfo) irLengthBefore(idx int) int {
 	return irlen
 }
 
+// irLengthAfter returns the total IR length after the device at idx position.
+func (ci ChainInfo) irLengthAfter(idx int) int {
+	irlen := 0
+	for i, d := range ci {
+		if i > idx {
+			irlen += d.IRLength
+		}
+	}
+	return irlen
+}
+
 // irLengthTotal returns the total IR length in the chain information.
 func (ci ChainInfo) irLengthTotal() int {
 	return ci.irLengthBefore(len(ci))
-}
-
-//-----------------------------------------------------------------------------
-
-// Driver is the interface for a JTAG driver.
-type Driver interface {
-	TestReset(delay time.Duration) error                                   // pulse TRST
-	SystemReset(delay time.Duration) error                                 // pulse SRST
-	TapReset() error                                                       // reset TAP state machine
-	ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) // scan IR
-	ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) // scan DR
 }
 
 //-----------------------------------------------------------------------------
@@ -73,7 +85,7 @@ type Chain struct {
 }
 
 // NewChain returns the interface object for a JTAG chain.
-func NewChain(drv Driver, info []DeviceInfo) (*Chain, error) {
+func NewChain(drv Driver, info ChainInfo) (*Chain, error) {
 	ch := &Chain{
 		drv:  drv,
 		info: info,
@@ -91,6 +103,7 @@ func (ch *Chain) String() string {
 	return strings.Join(s, "\n")
 }
 
+// Scan and validate the JTAG chain. Setup the devices.
 func (ch *Chain) scan() error {
 	// reset the TAP state machine for all devices
 	err := ch.drv.TapReset()
@@ -217,54 +230,6 @@ func (ch *Chain) numDevices() (int, error) {
 	// now each DR is a single bit
 	// the DR chain length is the number of devices
 	return ch.drLength()
-}
-
-//-----------------------------------------------------------------------------
-
-// Device stores the state for a single device on a JTAG chain.
-type Device struct {
-	drv         Driver // jtag driver
-	name        string // device name
-	idx         int    // index of device on the JTAG chain
-	idcode      IDCode // ID code for the device
-	irlen       int    // IR length for this device
-	irlenAfter  int    // IR bits after this device
-	irlenBefore int    // IR bits before this device
-}
-
-// NewDevice returns the interface object for a single device on a JTAG chain.
-func (ch *Chain) NewDevice(idx int) *Device {
-	return &Device{}
-}
-
-func (dev *Device) String() string {
-	return fmt.Sprintf("idx %d %s irlen %d %s", dev.idx, dev.name, dev.irlen, dev.idcode.Decode())
-	return ""
-}
-
-// rwIR reads and writes IR for a device.
-func (dev *Device) rwIR(wr *bitstr.BitString) (*bitstr.BitString, error) {
-	tdi := bitstr.Ones(dev.irlenBefore).Tail(wr).Tail1(dev.irlenAfter)
-	tdo, err := dev.drv.ScanIR(tdi, true)
-	if err != nil {
-		return nil, err
-	}
-	// strip the ir bits from the other devices
-	tdo.DropHead(dev.irlenBefore)
-	tdo.DropTail(dev.irlenAfter)
-	return tdo, nil
-}
-
-// testIRCapture tests the IR capture result.
-func (dev *Device) testIRCapture() (bool, error) {
-	// write all-1s to the IR
-	rd, err := dev.rwIR(bitstr.Ones(dev.irlen))
-	if err != nil {
-		return false, err
-	}
-	val := rd.Split([]int{dev.irlen})[0]
-	// the lowest 2 bits should be "01"
-	return val&3 == 1, nil
 }
 
 //-----------------------------------------------------------------------------
