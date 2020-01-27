@@ -51,16 +51,16 @@ func (dev *Device) String() string {
 	return fmt.Sprintf("idx %d %s irlen %d %s", dev.idx, dev.name, dev.irlen, dev.idcode)
 }
 
-// wrIR writes to IR for a device
-func (dev *Device) wrIR(wr *bitstr.BitString) error {
+// WrIR writes to IR for a device
+func (dev *Device) WrIR(wr *bitstr.BitString) error {
 	// place other devices into bypass mode (IR = all 1's)
 	tdi := bitstr.Ones(dev.irlenBefore).Tail(wr).Tail1(dev.irlenAfter)
 	_, err := dev.drv.ScanIR(tdi, false)
 	return err
 }
 
-// rwIR reads and writes IR for a device.
-func (dev *Device) rwIR(wr *bitstr.BitString) (*bitstr.BitString, error) {
+// RdWrIR reads and writes IR for a device.
+func (dev *Device) RdWrIR(wr *bitstr.BitString) (*bitstr.BitString, error) {
 	tdi := bitstr.Ones(dev.irlenBefore).Tail(wr).Tail1(dev.irlenAfter)
 	tdo, err := dev.drv.ScanIR(tdi, true)
 	if err != nil {
@@ -71,16 +71,16 @@ func (dev *Device) rwIR(wr *bitstr.BitString) (*bitstr.BitString, error) {
 	return tdo, nil
 }
 
-// wrDR writes to DR for a device
-func (dev *Device) wrDR(wr *bitstr.BitString) error {
+// WrDR writes to DR for a device
+func (dev *Device) WrDR(wr *bitstr.BitString) error {
 	// other devices are assumed to be in bypass mode (DR length = 1)
 	tdi := bitstr.Ones(dev.devsBefore).Tail(wr).Tail1(dev.devsAfter)
 	_, err := dev.drv.ScanDR(tdi, false)
 	return err
 }
 
-// rwIR reads and writes DR for a device.
-func (dev *Device) rwDR(wr *bitstr.BitString) (*bitstr.BitString, error) {
+// RdWrDR reads and writes DR for a device.
+func (dev *Device) RdWrDR(wr *bitstr.BitString) (*bitstr.BitString, error) {
 	tdi := bitstr.Ones(dev.devsBefore).Tail(wr).Tail1(dev.devsAfter)
 	tdo, err := dev.drv.ScanDR(tdi, true)
 	if err != nil {
@@ -94,7 +94,7 @@ func (dev *Device) rwDR(wr *bitstr.BitString) (*bitstr.BitString, error) {
 // testIRCapture tests the IR capture result.
 func (dev *Device) testIRCapture() (bool, error) {
 	// write all-1s to the IR
-	rd, err := dev.rwIR(bitstr.Ones(dev.irlen))
+	rd, err := dev.RdWrIR(bitstr.Ones(dev.irlen))
 	if err != nil {
 		return false, err
 	}
@@ -107,7 +107,7 @@ func (dev *Device) testIRCapture() (bool, error) {
 func (dev *Device) Survey() string {
 	s := []string{}
 	for ir := 0; ir < (1 << dev.irlen); ir++ {
-		err := dev.wrIR(bitstr.FromUint(uint(ir), dev.irlen))
+		err := dev.WrIR(bitstr.FromUint(uint(ir), dev.irlen))
 		if err != nil {
 			s = append(s, fmt.Sprintf("ir %d can't write ir", ir))
 			continue
