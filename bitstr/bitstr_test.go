@@ -155,6 +155,11 @@ func Test_BitString(t *testing.T) {
 		t.Error("FAIL")
 	}
 
+	a = FromUint(0xdeadbeef, 32)
+	if !bytes.Equal(a.GetBytes(), []byte{0xef, 0xbe, 0xad, 0xde}) {
+		t.Error("FAIL")
+	}
+
 	a = FromBytes([]byte{0xff}, 7)
 	if a.LenBits() != "(7) 1111111" {
 		t.Error("FAIL")
@@ -250,6 +255,30 @@ func Test_BitString(t *testing.T) {
 	}
 	if !uintEqual(a.Split([]int{32}), []uint{0xdeadbeef}) {
 		t.Error("FAIL")
+	}
+
+	// drop head
+	rand.Seed(1)
+	for i := 0; i < 500; i++ {
+		j := rand.Int() % 1023
+		k := rand.Int() % j
+		a = Random(j)
+		b = a.Copy().DropHead(k)
+		if a.String()[0:j-k] != b.String() {
+			t.Error("FAIL")
+		}
+	}
+
+	// drop tail
+	rand.Seed(1)
+	for i := 0; i < 500; i++ {
+		j := rand.Int() % 1023
+		k := rand.Int() % j
+		a = Random(j)
+		b = a.Copy().DropTail(k)
+		if a.String()[k:j] != b.String() {
+			t.Error("FAIL")
+		}
 	}
 
 }

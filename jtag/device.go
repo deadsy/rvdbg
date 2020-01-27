@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 /*
 
-JTAG Device Managament
+JTAG Device Functions
 
 */
 //-----------------------------------------------------------------------------
@@ -53,7 +53,7 @@ func (dev *Device) String() string {
 
 // wrIR writes to IR for a device
 func (dev *Device) wrIR(wr *bitstr.BitString) error {
-	// place other devices into bypass mode (ir = all 1's)
+	// place other devices into bypass mode (IR = all 1's)
 	tdi := bitstr.Ones(dev.irlenBefore).Tail(wr).Tail1(dev.irlenAfter)
 	_, err := dev.drv.ScanIR(tdi, false)
 	return err
@@ -66,14 +66,14 @@ func (dev *Device) rwIR(wr *bitstr.BitString) (*bitstr.BitString, error) {
 	if err != nil {
 		return nil, err
 	}
-	// strip the ir bits from the other devices
+	// strip the IR bits from the other devices
 	tdo.DropHead(dev.irlenBefore).DropTail(dev.irlenAfter)
 	return tdo, nil
 }
 
 // wrDR writes to DR for a device
 func (dev *Device) wrDR(wr *bitstr.BitString) error {
-	// other devices are assumed to be in bypass mode (dr length = 1)
+	// other devices are assumed to be in bypass mode (DR length = 1)
 	tdi := bitstr.Ones(dev.devsBefore).Tail(wr).Tail1(dev.devsAfter)
 	_, err := dev.drv.ScanDR(tdi, false)
 	return err
@@ -86,7 +86,7 @@ func (dev *Device) rwDR(wr *bitstr.BitString) (*bitstr.BitString, error) {
 	if err != nil {
 		return nil, err
 	}
-	// strip the dr bits from the bypassed devices
+	// strip the DR bits from the bypassed devices
 	tdo.DropHead(dev.devsBefore).DropTail(dev.devsAfter)
 	return tdo, nil
 }
@@ -103,7 +103,7 @@ func (dev *Device) testIRCapture() (bool, error) {
 	return val&3 == 1, nil
 }
 
-// Survey returns a string with all IR values and the DR lengths.
+// Survey returns a string with all IR values and corresponding DR lengths.
 func (dev *Device) Survey() string {
 	s := []string{}
 	for ir := 0; ir < (1 << dev.irlen); ir++ {

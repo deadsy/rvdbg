@@ -46,7 +46,7 @@ type DeviceInfo struct {
 // ChainInfo stores all of the devices on the chain (in order).
 type ChainInfo []DeviceInfo
 
-// irLengthBefore returns the total IR length before the device at idx position.
+// irLengthBefore returns the total IR length before the device at the idx position.
 func (ci ChainInfo) irLengthBefore(idx int) int {
 	irlen := 0
 	for i, d := range ci {
@@ -57,7 +57,7 @@ func (ci ChainInfo) irLengthBefore(idx int) int {
 	return irlen
 }
 
-// irLengthAfter returns the total IR length after the device at idx position.
+// irLengthAfter returns the total IR length after the device at the idx position.
 func (ci ChainInfo) irLengthAfter(idx int) int {
 	irlen := 0
 	for i, d := range ci {
