@@ -22,8 +22,8 @@ import (
 //-----------------------------------------------------------------------------
 
 const historyPath = ".rvdbg_history"
-const speed1MHz = 1000
-const speed4MHz = 4000
+const MHz = 1000
+const mV = 1
 
 //-----------------------------------------------------------------------------
 
@@ -54,13 +54,13 @@ func newDebugApp() (*debugApp, error) {
 		return nil, err
 	}
 
-	jtagDriver, err := jlink.NewJtag(dev, speed4MHz)
+	jtagDriver, err := jlink.NewJtag(dev, 4*MHz, 3000*mV)
 	if err != nil {
 		jlinkLibrary.Shutdown()
 		return nil, err
 	}
 
-	jtagChain, err := jtag.NewChain(jtagDriver, bcm47622.ChainInfo)
+	jtagChain, err := jtag.NewChain(jtagDriver, bcm47622.ChainInfo1)
 	if err != nil {
 		jtagDriver.Close()
 		jlinkLibrary.Shutdown()

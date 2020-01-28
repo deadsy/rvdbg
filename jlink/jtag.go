@@ -34,7 +34,7 @@ type Jtag struct {
 }
 
 // NewJtag returns a new J-Link JTAG driver.
-func NewJtag(dev *libjaylink.Device, speed uint16) (*Jtag, error) {
+func NewJtag(dev *libjaylink.Device, speed, volts uint16) (*Jtag, error) {
 	// get the device handle
 	hdl, err := dev.Open()
 	if err != nil {
@@ -76,11 +76,12 @@ func NewJtag(dev *libjaylink.Device, speed uint16) (*Jtag, error) {
 		hdl.Close()
 		return nil, err
 	}
-	if state.TargetVoltage < 1500 {
+	// check for the required target voltage
+	if state.TargetVoltage < volts {
 		hdl.Close()
 		return nil, fmt.Errorf("target voltage is too low (%dmV), is the target connected and powered?", state.TargetVoltage)
 	}
-	if state.Tres {
+	if !state.Tres {
 		hdl.Close()
 		return nil, errors.New("target ~SRST line asserted, target is held in reset")
 	}
