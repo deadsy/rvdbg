@@ -135,7 +135,7 @@ func (j *Jtag) String() string {
 
 // jtagIO performs jtag IO operations.
 func (j *Jtag) jtagIO(tms, tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
-	tdo, err := j.hdl.JtagIO(tms.GetBytes(), tdi.GetBytes(), j.version)
+	tdo, err := j.hdl.JtagIO(tms.GetBytes(), tdi.GetBytes(), uint16(tdi.Len()), j.version)
 	if needTdo {
 		return bitstr.FromBytes(tdo, tdi.Len()), err
 	}
