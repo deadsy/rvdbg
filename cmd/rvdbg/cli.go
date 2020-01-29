@@ -40,12 +40,26 @@ var cmdExit = cli.Leaf{
 
 //-----------------------------------------------------------------------------
 
-var cmdJtag = cli.Leaf{
+var cmdJtagChain = cli.Leaf{
+	Descr: "display jtag chain state",
+	F: func(c *cli.CLI, args []string) {
+		jtagChain := c.User.(*debugApp).jtagChain
+		c.User.Put(fmt.Sprintf("%s\n", jtagChain))
+	},
+}
+
+var cmdJtagDriver = cli.Leaf{
 	Descr: "display jtag driver state",
 	F: func(c *cli.CLI, args []string) {
 		jtagDriver := c.User.(*debugApp).jtagDriver
 		c.User.Put(fmt.Sprintf("%s\n", jtagDriver))
 	},
+}
+
+// jtagMenu submenu items
+var jtagMenu = cli.Menu{
+	{"chain", cmdJtagChain},
+	{"driver", cmdJtagDriver},
 }
 
 //-----------------------------------------------------------------------------
@@ -55,7 +69,7 @@ var menuRoot = cli.Menu{
 	{"exit", cmdExit},
 	{"help", cmdHelp},
 	{"history", cmdHistory, cli.HistoryHelp},
-	{"jtag", cmdJtag},
+	{"jtag", jtagMenu, "jtag functions"},
 }
 
 //-----------------------------------------------------------------------------

@@ -16,6 +16,7 @@ import (
 
 	"github.com/deadsy/libjaylink"
 	"github.com/deadsy/rvdbg/bitstr"
+	"github.com/deadsy/rvdbg/util/log"
 )
 
 //-----------------------------------------------------------------------------
@@ -31,27 +32,37 @@ type Jtag struct {
 	dev     *libjaylink.Device
 	hdl     *libjaylink.DeviceHandle
 	version libjaylink.JtagVersion
+	speed   uint16 // current JTAG clock speed in kHz
 }
 
 // NewJtag returns a new J-Link JTAG driver.
 func NewJtag(dev *libjaylink.Device, speed, volts uint16) (*Jtag, error) {
+	j := &Jtag{
+		dev: dev,
+	}
+
 	// get the device handle
 	hdl, err := dev.Open()
 	if err != nil {
 		return nil, err
 	}
+	j.hdl = hdl
+
 	// get the device capabilities
 	caps, err := hdl.GetAllCaps()
 	if err != nil {
 		hdl.Close()
 		return nil, err
 	}
+
 	// get the JTAG command version
 	version, err := hdl.GetJtagCommandVersion()
 	if err != nil {
 		hdl.Close()
 		return nil, err
 	}
+	j.version = version
+
 	// check and select the target interface
 	if !caps.HasCap(libjaylink.DEV_CAP_SELECT_TIF) {
 		return nil, errors.New("jtag interface can't be selected")
@@ -70,21 +81,26 @@ func NewJtag(dev *libjaylink.Device, speed, volts uint16) (*Jtag, error) {
 		hdl.Close()
 		return nil, err
 	}
-	// check the JTAG state
+
+	// get the JTAG state
 	state, err := hdl.GetHardwareStatus()
 	if err != nil {
 		hdl.Close()
 		return nil, err
 	}
+
 	// check for the required target voltage
 	if state.TargetVoltage < volts {
 		hdl.Close()
 		return nil, fmt.Errorf("target voltage is too low (%dmV), is the target connected and powered?", state.TargetVoltage)
 	}
+
+	// check the ~SRST state
 	if !state.Tres {
 		hdl.Close()
 		return nil, errors.New("target ~SRST line asserted, target is held in reset")
 	}
+
 	// check the desired interface speed
 	if caps.HasCap(libjaylink.DEV_CAP_GET_SPEEDS) {
 		maxSpeed, err := hdl.GetMaxSpeed()
@@ -93,21 +109,19 @@ func NewJtag(dev *libjaylink.Device, speed, volts uint16) (*Jtag, error) {
 			return nil, err
 		}
 		if speed > maxSpeed {
-			hdl.Close()
-			return nil, fmt.Errorf("JTAG speed is too high: %dkHz > %dkHz (max)", speed, maxSpeed)
+			log.Info.Printf("JTAG speed %dkHz is too high, limiting to %dkHz (max)", speed, maxSpeed)
+			speed = maxSpeed
 		}
 	}
+
 	// set the interface speed
 	err = hdl.SetSpeed(speed)
 	if err != nil {
 		hdl.Close()
 		return nil, err
 	}
-	j := &Jtag{
-		dev:     dev,
-		hdl:     hdl,
-		version: version,
-	}
+	j.speed = speed
+
 	return j, nil
 }
 
@@ -122,14 +136,19 @@ func (j *Jtag) String() string {
 	if err == nil {
 		s = append(s, fmt.Sprintf("hardware %s", hw))
 	}
+	sn, err := j.dev.GetSerialNumber()
+	if err == nil {
+		s = append(s, fmt.Sprintf("serial number %d", sn))
+	}
 	ver, err := j.hdl.GetFirmwareVersion()
 	if err == nil {
 		s = append(s, fmt.Sprintf("firmware %s", ver))
 	}
-	sn, err := j.dev.GetSerialNumber()
+	state, err := j.hdl.GetHardwareStatus()
 	if err == nil {
-		s = append(s, fmt.Sprintf("serial %d", sn))
+		s = append(s, fmt.Sprintf("target voltage %dmV", state.TargetVoltage))
 	}
+	s = append(s, fmt.Sprintf("jtag speed %dkHz", j.speed))
 	return strings.Join(s, "\n")
 }
 

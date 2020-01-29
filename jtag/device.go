@@ -48,7 +48,7 @@ func (ch *Chain) NewDevice(idx int) *Device {
 }
 
 func (dev *Device) String() string {
-	return fmt.Sprintf("idx %d %s irlen %d %s", dev.idx, dev.name, dev.irlen, dev.idcode)
+	return fmt.Sprintf("device %d: %s irlen %d %s", dev.idx, dev.name, dev.irlen, dev.idcode)
 }
 
 // WrIR writes to IR for a device

@@ -994,7 +994,7 @@ func (code IDCode) String() string {
 	part := util.GetBits(id, 27, 12)
 	mfg := util.GetBits(id, 11, 1)
 	s := []string{}
-	s = append(s, fmt.Sprintf("idcode 0x%08x", code))
+	s = append(s, fmt.Sprintf("idcode 0x%08x", id))
 	s = append(s, fmt.Sprintf("mfg 0x%03x (%s)", mfg, mfgNameLookup(mfg)))
 	s = append(s, fmt.Sprintf("part 0x%04x", part))
 	s = append(s, fmt.Sprintf("ver 0x%x", ver))

@@ -32,6 +32,7 @@ type debugApp struct {
 	jlinkLibrary *jlink.Jlink
 	jtagDriver   *jlink.Jtag
 	jtagChain    *jtag.Chain
+	jtagDevice   *jtag.Device
 	prompt       string
 }
 
@@ -67,10 +68,18 @@ func newDebugApp() (*debugApp, error) {
 		return nil, err
 	}
 
+	jtagDevice, err := jtagChain.GetDevice(3)
+	if err != nil {
+		jtagDriver.Close()
+		jlinkLibrary.Shutdown()
+		return nil, err
+	}
+
 	return &debugApp{
 		jlinkLibrary: jlinkLibrary,
 		jtagDriver:   jtagDriver,
 		jtagChain:    jtagChain,
+		jtagDevice:   jtagDevice,
 		prompt:       "rvdbg> ",
 	}, nil
 }

@@ -96,7 +96,7 @@ func NewChain(drv Driver, info ChainInfo) (*Chain, error) {
 
 func (ch *Chain) String() string {
 	s := []string{}
-	s = append(s, fmt.Sprintf("jtag chain irlen %d devices %d", ch.irlen, len(ch.dev)))
+	s = append(s, fmt.Sprintf("chain: irlen %d devices %d", ch.irlen, len(ch.dev)))
 	for i := range ch.dev {
 		s = append(s, ch.dev[i].String())
 	}
@@ -230,6 +230,17 @@ func (ch *Chain) numDevices() (int, error) {
 	// Now each DR is a single bit.
 	// The DR chain length is the number of devices.
 	return ch.drLength()
+}
+
+// GetDevice returns the JTAG device at the idx position on the chain.
+func (ch *Chain) GetDevice(idx int) (*Device, error) {
+	if idx < 0 || idx >= len(ch.dev) {
+		return nil, fmt.Errorf("device[%d] does not exist", idx)
+	}
+	if ch.dev[idx] == nil {
+		return nil, fmt.Errorf("device[%d] is nil", idx)
+	}
+	return ch.dev[idx], nil
 }
 
 //-----------------------------------------------------------------------------
