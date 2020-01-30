@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deadsy/libjaylink"
+	"github.com/deadsy/jaylink"
 	"github.com/deadsy/rvdbg/util/log"
 )
 
@@ -32,14 +32,14 @@ func logCallback(domain, msg string, user interface{}) {
 
 // Jlink stores the J-Link library context.
 type Jlink struct {
-	ctx *libjaylink.Context
-	dev []libjaylink.Device
+	ctx *jaylink.Context
+	dev []jaylink.Device
 }
 
 // Init initializes the J-Link library.
 func Init() (*Jlink, error) {
 	// initialise the library
-	ctx, err := libjaylink.Init()
+	ctx, err := jaylink.Init()
 	if err != nil {
 		return nil, err
 	}
@@ -49,13 +49,13 @@ func Init() (*Jlink, error) {
 		ctx.Exit()
 		return nil, err
 	}
-	err = ctx.LogSetLevel(libjaylink.LOG_LEVEL_DEBUG)
+	err = ctx.LogSetLevel(jaylink.LOG_LEVEL_DEBUG)
 	if err != nil {
 		ctx.Exit()
 		return nil, err
 	}
 	// discover devices
-	err = ctx.DiscoveryScan(libjaylink.HIF_USB)
+	err = ctx.DiscoveryScan(jaylink.HIF_USB)
 	if err != nil {
 		ctx.Exit()
 		return nil, err
@@ -85,7 +85,7 @@ func (j *Jlink) NumDevices() int {
 }
 
 // DeviceByIndex returns a J-Link device by index number.
-func (j *Jlink) DeviceByIndex(idx int) (*libjaylink.Device, error) {
+func (j *Jlink) DeviceByIndex(idx int) (*jaylink.Device, error) {
 	if idx < 0 || idx >= len(j.dev) {
 		return nil, fmt.Errorf("device index %d out of range", idx)
 	}

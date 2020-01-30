@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deadsy/libjaylink"
+	"github.com/deadsy/jaylink"
 	"github.com/deadsy/rvdbg/bitstr"
 	"github.com/deadsy/rvdbg/util/log"
 )
@@ -29,14 +29,14 @@ var xShiftToIdle = bitstr.FromString("011")   // shift-x -> run-test/idle
 
 // Jtag is a driver for J-link JTAG operations.
 type Jtag struct {
-	dev     *libjaylink.Device
-	hdl     *libjaylink.DeviceHandle
-	version libjaylink.JtagVersion
+	dev     *jaylink.Device
+	hdl     *jaylink.DeviceHandle
+	version jaylink.JtagVersion
 	speed   uint16 // current JTAG clock speed in kHz
 }
 
 // NewJtag returns a new J-Link JTAG driver.
-func NewJtag(dev *libjaylink.Device, speed, volts uint16) (*Jtag, error) {
+func NewJtag(dev *jaylink.Device, speed, volts uint16) (*Jtag, error) {
 	j := &Jtag{
 		dev: dev,
 	}
@@ -64,7 +64,7 @@ func NewJtag(dev *libjaylink.Device, speed, volts uint16) (*Jtag, error) {
 	j.version = version
 
 	// check and select the target interface
-	if !caps.HasCap(libjaylink.DEV_CAP_SELECT_TIF) {
+	if !caps.HasCap(jaylink.DEV_CAP_SELECT_TIF) {
 		return nil, errors.New("jtag interface can't be selected")
 	}
 	itf, err := hdl.GetAvailableInterfaces()
@@ -72,11 +72,11 @@ func NewJtag(dev *libjaylink.Device, speed, volts uint16) (*Jtag, error) {
 		hdl.Close()
 		return nil, err
 	}
-	if itf&(1<<libjaylink.TIF_JTAG) == 0 {
+	if itf&(1<<jaylink.TIF_JTAG) == 0 {
 		hdl.Close()
 		return nil, errors.New("jtag interface not available")
 	}
-	_, err = hdl.SelectInterface(libjaylink.TIF_JTAG)
+	_, err = hdl.SelectInterface(jaylink.TIF_JTAG)
 	if err != nil {
 		hdl.Close()
 		return nil, err
@@ -102,7 +102,7 @@ func NewJtag(dev *libjaylink.Device, speed, volts uint16) (*Jtag, error) {
 	}
 
 	// check the desired interface speed
-	if caps.HasCap(libjaylink.DEV_CAP_GET_SPEEDS) {
+	if caps.HasCap(jaylink.DEV_CAP_GET_SPEEDS) {
 		maxSpeed, err := hdl.GetMaxSpeed()
 		if err != nil {
 			hdl.Close()

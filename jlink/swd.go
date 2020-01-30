@@ -14,19 +14,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deadsy/libjaylink"
+	"github.com/deadsy/jaylink"
 )
 
 //-----------------------------------------------------------------------------
 
 // Swd is a driver for J-link SWD operations.
 type Swd struct {
-	dev *libjaylink.Device
-	hdl *libjaylink.DeviceHandle
+	dev *jaylink.Device
+	hdl *jaylink.DeviceHandle
 }
 
 // NewSwd returns a new J-Link SWD driver.
-func NewSwd(dev *libjaylink.Device, speed uint16) (*Swd, error) {
+func NewSwd(dev *jaylink.Device, speed uint16) (*Swd, error) {
 	// get the device handle
 	hdl, err := dev.Open()
 	if err != nil {
@@ -39,7 +39,7 @@ func NewSwd(dev *libjaylink.Device, speed uint16) (*Swd, error) {
 		return nil, err
 	}
 	// check and select the target interface
-	if !caps.HasCap(libjaylink.DEV_CAP_SELECT_TIF) {
+	if !caps.HasCap(jaylink.DEV_CAP_SELECT_TIF) {
 		return nil, errors.New("swd interface can't be selected")
 	}
 	itf, err := hdl.GetAvailableInterfaces()
@@ -47,11 +47,11 @@ func NewSwd(dev *libjaylink.Device, speed uint16) (*Swd, error) {
 		hdl.Close()
 		return nil, err
 	}
-	if itf&(1<<libjaylink.TIF_SWD) == 0 {
+	if itf&(1<<jaylink.TIF_SWD) == 0 {
 		hdl.Close()
 		return nil, errors.New("swd interface not available")
 	}
-	_, err = hdl.SelectInterface(libjaylink.TIF_SWD)
+	_, err = hdl.SelectInterface(jaylink.TIF_SWD)
 	if err != nil {
 		hdl.Close()
 		return nil, err
@@ -71,7 +71,7 @@ func NewSwd(dev *libjaylink.Device, speed uint16) (*Swd, error) {
 		return nil, errors.New("target ~SRST line asserted, target is held in reset")
 	}
 	// check the desired interface speed
-	if caps.HasCap(libjaylink.DEV_CAP_GET_SPEEDS) {
+	if caps.HasCap(jaylink.DEV_CAP_GET_SPEEDS) {
 		maxSpeed, err := hdl.GetMaxSpeed()
 		if err != nil {
 			hdl.Close()
