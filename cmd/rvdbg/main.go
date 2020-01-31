@@ -15,6 +15,7 @@ import (
 	"os"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/dap"
 	"github.com/deadsy/rvdbg/jlink"
 	"github.com/deadsy/rvdbg/jtag"
 )
@@ -96,7 +97,39 @@ func (app *debugApp) Put(s string) {
 
 //-----------------------------------------------------------------------------
 
+func foo() error {
+
+	dapLibrary, err := dap.Init()
+	if err != nil {
+		return err
+	}
+
+	if dapLibrary.NumDevices() == 0 {
+		dapLibrary.Shutdown()
+		return errors.New("no CMSIS-DAP devices found")
+	}
+
+	devInfo, err := dapLibrary.DeviceByIndex(0)
+	if err != nil {
+		dapLibrary.Shutdown()
+		return err
+	}
+
+	fmt.Printf("%s\n", devInfo)
+
+	dapLibrary.Shutdown()
+
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+
 func main() {
+
+	err := foo()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+	}
 
 	// create the application
 	app, err := newDebugApp()

@@ -3,7 +3,7 @@
 
 Segger J-Link Driver
 
-This package implements J-Link JTAG/SWD drivers using the libjaylink library.
+This package implements J-Link JTAG/SWD drivers using the jaylink library.
 
 */
 //-----------------------------------------------------------------------------
