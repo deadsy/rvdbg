@@ -13,6 +13,7 @@ package dap
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/deadsy/hidapi"
 )
@@ -41,8 +42,8 @@ func Init() (*Dap, error) {
 
 	// filter in the CMSIS-DAP devices
 	dapDevice := []*hidapi.DeviceInfo{}
-	for _, dInfo := range hidDevice {
-		dev, err := hidapi.Open(dInfo.VendorID, dInfo.ProductID, "")
+	for _, devInfo := range hidDevice {
+		dev, err := hidapi.Open(devInfo.VendorID, devInfo.ProductID, "")
 		if err != nil {
 			continue
 		}
@@ -50,8 +51,8 @@ func Init() (*Dap, error) {
 		if err != nil {
 			continue
 		}
-		if product == "CMSIS-DAP" {
-			dapDevice = append(dapDevice, dInfo)
+		if strings.Contains(product, "CMSIS-DAP") {
+			dapDevice = append(dapDevice, devInfo)
 		}
 		dev.Close()
 	}

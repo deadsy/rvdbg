@@ -35,6 +35,28 @@ type Jtag struct {
 	speed   uint16 // current JTAG clock speed in kHz
 }
 
+func (j *Jtag) String() string {
+	s := []string{}
+	hw, err := j.hdl.GetHardwareVersion()
+	if err == nil {
+		s = append(s, fmt.Sprintf("hardware %s", hw))
+	}
+	sn, err := j.dev.GetSerialNumber()
+	if err == nil {
+		s = append(s, fmt.Sprintf("serial number %d", sn))
+	}
+	ver, err := j.hdl.GetFirmwareVersion()
+	if err == nil {
+		s = append(s, fmt.Sprintf("firmware %s", ver))
+	}
+	state, err := j.hdl.GetHardwareStatus()
+	if err == nil {
+		s = append(s, fmt.Sprintf("target voltage %dmV", state.TargetVoltage))
+	}
+	s = append(s, fmt.Sprintf("jtag speed %dkHz", j.speed))
+	return strings.Join(s, "\n")
+}
+
 // NewJtag returns a new J-Link JTAG driver.
 func NewJtag(dev *jaylink.Device, speed, volts uint16) (*Jtag, error) {
 	j := &Jtag{
@@ -128,28 +150,6 @@ func NewJtag(dev *jaylink.Device, speed, volts uint16) (*Jtag, error) {
 // Close closes a J-Link JTAG driver.
 func (j *Jtag) Close() error {
 	return j.hdl.Close()
-}
-
-func (j *Jtag) String() string {
-	s := []string{}
-	hw, err := j.hdl.GetHardwareVersion()
-	if err == nil {
-		s = append(s, fmt.Sprintf("hardware %s", hw))
-	}
-	sn, err := j.dev.GetSerialNumber()
-	if err == nil {
-		s = append(s, fmt.Sprintf("serial number %d", sn))
-	}
-	ver, err := j.hdl.GetFirmwareVersion()
-	if err == nil {
-		s = append(s, fmt.Sprintf("firmware %s", ver))
-	}
-	state, err := j.hdl.GetHardwareStatus()
-	if err == nil {
-		s = append(s, fmt.Sprintf("target voltage %dmV", state.TargetVoltage))
-	}
-	s = append(s, fmt.Sprintf("jtag speed %dkHz", j.speed))
-	return strings.Join(s, "\n")
 }
 
 // jtagIO performs jtag IO operations.

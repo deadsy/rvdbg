@@ -115,8 +115,15 @@ func foo() error {
 		return err
 	}
 
-	fmt.Printf("%s\n", devInfo)
+	jtagDriver, err := dap.NewJtag(devInfo, 4*MHz, 3000*mV)
+	if err != nil {
+		dapLibrary.Shutdown()
+		return err
+	}
 
+	fmt.Printf("%s\n", jtagDriver)
+
+	jtagDriver.Close()
 	dapLibrary.Shutdown()
 
 	return nil
