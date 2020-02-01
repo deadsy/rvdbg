@@ -19,6 +19,35 @@ import (
 )
 
 //-----------------------------------------------------------------------------
+// cmsis-dap protocol constants
+
+// General Commands
+const cmdInfo = 0x00
+const cmdLED = 0x01
+const cmdConnect = 0x02
+const cmdDisconnect = 0x03
+const cmdWriteAbort = 0x08
+const cmdDelay = 0x09
+const cmdResetTarget = 0x0A
+
+// cmdInfo
+const InfoVendorID = 0x01        // Get the Vendor ID (string)
+const InfoProductID = 0x02       // Get the Product ID (string)
+const InfoSerialNumber = 0x03    // Get the Serial Number (string)
+const InfoFirmwareVersion = 0x04 // Get the CMSIS-DAP Firmware Version (string)
+const InfoVendorName = 0x05      // Get the Target Device Vendor (string)
+const InfoDeviceName = 0x06      // Get the Target Device Name (string)
+const InfoCapabilities = 0xF0    // Get information about the Capabilities (BYTE) of the Debug Unit
+const InfoTestDomainTimer = 0xF1 // Get the Test Domain Timer parameter information
+const InfoSwoTraceSize = 0xFD    // Get the SWO Trace Buffer Size (WORD)
+const InfoMaxPacketCount = 0xFE  // Get the maximum Packet Count (BYTE)
+const InfoMaxPacketSize = 0xFF   // Get the maximum Packet Size (SHORT)
+
+// DAP Status Code
+const dapOk = 0
+const dapError = 0xFF
+
+//-----------------------------------------------------------------------------
 
 // Dap stores the DAP library context.
 type Dap struct {
@@ -80,6 +109,33 @@ func (dap *Dap) DeviceByIndex(idx int) (*hidapi.DeviceInfo, error) {
 		return nil, fmt.Errorf("device index %d out of range", idx)
 	}
 	return dap.device[idx], nil
+}
+
+//-----------------------------------------------------------------------------
+
+// Device is a DAP device.
+type Device struct {
+	dev *hidapi.Device
+}
+
+func (dev *Device) String() string {
+	return fmt.Sprintf("%s", dev.dev)
+}
+
+// info issues a DAP_info command
+func (dev *Device) info(id byte) ([]byte, error) {
+
+	buf := []byte{cmdInfo, id}
+	err := dev.dev.Write(0, buf)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := dev.dev.ReadTimeout(0, 32, 1000)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 //-----------------------------------------------------------------------------

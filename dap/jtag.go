@@ -21,7 +21,7 @@ import (
 
 // Jtag is a driver for CMSIS-DAP JTAG operations.
 type Jtag struct {
-	dev *hidapi.Device
+	dev *Device
 }
 
 func (j *Jtag) String() string {
@@ -31,20 +31,31 @@ func (j *Jtag) String() string {
 // NewJtag returns a new CMSIS-DAP JTAG driver.
 func NewJtag(devInfo *hidapi.DeviceInfo, speed, volts uint16) (*Jtag, error) {
 
+	fmt.Printf("%s\n", devInfo.SerialNumber)
+
 	dev, err := hidapi.Open(devInfo.VendorID, devInfo.ProductID, devInfo.SerialNumber)
 	if err != nil {
 		return nil, err
 	}
 
+	d := &Device{dev: dev}
+
+	r, err := d.info(InfoCapabilities)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("(%d) %v\n", len(r), r)
+
 	j := &Jtag{
-		dev: dev,
+		dev: &Device{dev: dev},
 	}
 	return j, nil
 }
 
 // Close closes a CMSIS-DAP JTAG driver.
 func (j *Jtag) Close() error {
-	return j.dev.Close()
+	return j.dev.dev.Close()
 }
 
 // jtagIO performs jtag IO operations.
