@@ -21,7 +21,7 @@ import (
 
 // Jtag is a driver for CMSIS-DAP JTAG operations.
 type Jtag struct {
-	dev *Device
+	dev *device
 }
 
 func (j *Jtag) String() string {
@@ -31,31 +31,29 @@ func (j *Jtag) String() string {
 // NewJtag returns a new CMSIS-DAP JTAG driver.
 func NewJtag(devInfo *hidapi.DeviceInfo, speed, volts uint16) (*Jtag, error) {
 
-	fmt.Printf("%s\n", devInfo.SerialNumber)
-
-	dev, err := hidapi.Open(devInfo.VendorID, devInfo.ProductID, devInfo.SerialNumber)
+	// get the hid device
+	hid, err := hidapi.Open(devInfo.VendorID, devInfo.ProductID, devInfo.SerialNumber)
 	if err != nil {
 		return nil, err
 	}
-
-	d := &Device{dev: dev}
-
-	r, err := d.info(InfoCapabilities)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Printf("(%d) %v\n", len(r), r)
-
 	j := &Jtag{
-		dev: &Device{dev: dev},
+		dev: newDevice(hid),
 	}
+
+	// make sure the CMSIS-DAP can do JTAG
+	if !j.dev.hasCap(capJtag) {
+		j.Close()
+		return nil, errors.New("jtag not supported")
+	}
+
+	fmt.Printf("%s\n", j.dev.caps)
+
 	return j, nil
 }
 
 // Close closes a CMSIS-DAP JTAG driver.
 func (j *Jtag) Close() error {
-	return j.dev.dev.Close()
+	return j.dev.close()
 }
 
 // jtagIO performs jtag IO operations.
