@@ -35,8 +35,15 @@ func NewSwd(devInfo *hidapi.DeviceInfo, speed int) (*Swd, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	dev, err := newDevice(hid)
+	if err != nil {
+		hid.Close()
+		return nil, err
+	}
+
 	swd := &Swd{
-		dev: newDevice(hid),
+		dev: dev,
 	}
 
 	// make sure the CMSIS-DAP can do SWD
@@ -46,14 +53,14 @@ func NewSwd(devInfo *hidapi.DeviceInfo, speed int) (*Swd, error) {
 	}
 
 	// connect in SWD mode
-	err = swd.dev.connect(modeSwd)
+	err = swd.dev.cmdConnect(modeSwd)
 	if err != nil {
 		swd.Close()
 		return nil, err
 	}
 
 	// set the clock speed
-	err = swd.dev.setClock(speed)
+	err = swd.dev.cmdSwjClock(speed)
 	if err != nil {
 		swd.Close()
 		return nil, err
@@ -64,19 +71,19 @@ func NewSwd(devInfo *hidapi.DeviceInfo, speed int) (*Swd, error) {
 
 // Close closes a CMSIS-DAP SWD driver.
 func (swd *Swd) Close() error {
-	swd.dev.disconnect()
+	swd.dev.cmdDisconnect()
 	swd.dev.close()
 	return nil
 }
 
 // SystemReset pulses the system reset line.
 func (swd *Swd) SystemReset(delay time.Duration) error {
-	err := swd.dev.setPins(0, pinSRST)
+	err := swd.dev.setPins(pinSRST)
 	if err != nil {
 		return err
 	}
 	time.Sleep(delay)
-	return swd.dev.setPins(pinSRST, pinSRST)
+	return swd.dev.clrPins(pinSRST)
 }
 
 //-----------------------------------------------------------------------------

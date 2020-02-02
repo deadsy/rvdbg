@@ -28,12 +28,12 @@ const (
 	statusError = 0xff
 )
 
-// commands
+// commands (* == used)
 const (
-	cmdInfo              = 0x00 // Get Information about CMSIS-DAP Debug Unit.
-	cmdHostStatus        = 0x01 // Sent status information of the debugger to Debug Unit.
-	cmdConnect           = 0x02 // Connect to Device and selected DAP mode.
-	cmdDisconnect        = 0x03 // Disconnect from active Debug Port.
+	cmdInfo              = 0x00 // * Get Information about CMSIS-DAP Debug Unit.
+	cmdHostStatus        = 0x01 // * Sent status information of the debugger to Debug Unit.
+	cmdConnect           = 0x02 // * Connect to Device and selected DAP mode.
+	cmdDisconnect        = 0x03 // * Disconnect from active Debug Port.
 	cmdTransferConfigure = 0x04 // Configure Transfers.
 	cmdTransfer          = 0x05 // Read/write single and multiple registers.
 	cmdTransferBlock     = 0x06 // Read/Write a block of data from/to a single register.
@@ -41,13 +41,13 @@ const (
 	cmdWriteAbort        = 0x08 // Write ABORT Register.
 	cmdDelay             = 0x09 // Wait for specified delay.
 	cmdResetTarget       = 0x0a // Reset Target with Device specific sequence.
-	cmdSwjPins           = 0x10 // Control and monitor SWD/JTAG Pins.
-	cmdSwjClock          = 0x11 // Select SWD/JTAG Clock.
-	cmdSwjSequence       = 0x12 // Generate SWJ sequence SWDIO/TMS @SWCLK/TCK.
+	cmdSwjPins           = 0x10 // * Control and monitor SWD/JTAG Pins.
+	cmdSwjClock          = 0x11 // * Select SWD/JTAG Clock.
+	cmdSwjSequence       = 0x12 // * Generate SWJ sequence SWDIO/TMS @SWCLK/TCK.
 	cmdSwdConfigure      = 0x13 // Configure SWD Protocol.
-	cmdJtagSequence      = 0x14 // Generate JTAG sequence TMS, TDI and capture TDO.
-	cmdJtagConfigure     = 0x15 // Configure JTAG Chain.
-	cmdJtagIDCode        = 0x16 // Read JTAG IDCODE.
+	cmdJtagSequence      = 0x14 // * Generate JTAG sequence TMS, TDI and capture TDO.
+	cmdJtagConfigure     = 0x15 // * Configure JTAG Chain.
+	cmdJtagIDCode        = 0x16 // * Read JTAG IDCODE.
 	cmdSwoTransport      = 0x17 // Set SWO transport mode.
 	cmdSwoMode           = 0x18 // Set SWO capture mode.
 	cmdSwoBaudrate       = 0x19 // Set SWO baudrate.
@@ -133,33 +133,45 @@ const usbTimeout = 500 // milliseconds
 type device struct {
 	hid     *hidapi.Device // HID device
 	caps    capabilities   // capabilities bitmap
+	version string         // firmware version
 	pktSize int            // usb packet size
-	speed   int            // lcokc speed in kHz
 }
 
 func (dev *device) String() string {
 	s := []string{}
 	s = append(s, fmt.Sprintf("%s", dev.hid))
 	s = append(s, fmt.Sprintf("capabilities: %s", dev.caps))
+	s = append(s, fmt.Sprintf("firmware: %s", dev.version))
 	s = append(s, fmt.Sprintf("pktSize: %d bytes", dev.pktSize))
-	s = append(s, fmt.Sprintf("speed: %d kHz", dev.speed))
 	return strings.Join(s, "\n")
 }
 
-func newDevice(hid *hidapi.Device) *device {
+func newDevice(hid *hidapi.Device) (*device, error) {
 	dev := &device{
 		hid:     hid,
 		pktSize: 64,
 	}
 	// get the max packet size
 	maxPktSize, err := dev.getMaxPacketSize()
-	if err == nil && int(maxPktSize) < dev.pktSize {
+	if err != nil {
+		return nil, err
+	}
+	if int(maxPktSize) < dev.pktSize {
 		dev.pktSize = int(maxPktSize)
 	}
 	// get the capabilities
-	caps, _ := dev.getCapabilities()
+	caps, err := dev.getCapabilities()
+	if err != nil {
+		return nil, err
+	}
 	dev.caps = caps
-	return dev
+	// get the firmware version
+	version, err := dev.getFirmwareVersion()
+	if err != nil {
+		return nil, err
+	}
+	dev.version = version
+	return dev, nil
 }
 
 func (dev *device) txrx(buf []byte) ([]byte, error) {
@@ -188,8 +200,8 @@ const (
 	modeJtag = 2 // connect with 4/5-pin JTAG mode
 )
 
-// connect with the selected DAP mode
-func (dev *device) connect(port byte) error {
+// cmdConnect with the selected DAP mode
+func (dev *device) cmdConnect(port byte) error {
 	rx, err := dev.txrx([]byte{dapReport, cmdConnect, port})
 	if err != nil {
 		return err
@@ -204,7 +216,7 @@ func (dev *device) connect(port byte) error {
 }
 
 // disconnect from an active debug port
-func (dev *device) disconnect() error {
+func (dev *device) cmdDisconnect() error {
 	rx, err := dev.txrx([]byte{dapReport, cmdDisconnect})
 	if err != nil {
 		return err
@@ -221,8 +233,7 @@ func (dev *device) disconnect() error {
 //-----------------------------------------------------------------------------
 // Set JTAG/SWD Clock Speed
 
-func (dev *device) setClock(speed int) error {
-	dev.speed = 0
+func (dev *device) cmdSwjClock(speed int) error {
 	clk := uint32(speed * 1000)
 	rx, err := dev.txrx([]byte{dapReport, cmdSwjClock, byte(clk), byte(clk >> 8), byte(clk >> 16), byte(clk >> 24)})
 	if err != nil {
@@ -234,7 +245,27 @@ func (dev *device) setClock(speed int) error {
 	if rx[1] != statusOk {
 		return errors.New("cmdSwjClock failed")
 	}
-	dev.speed = speed
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+
+func (dev *device) swjSequence(n int, data []byte) error {
+	if n <= 0 || n > 256 {
+		panic("bad bit count")
+	}
+	buf := []byte{dapReport, cmdSwjSequence, byte(n)}
+	buf = append(buf, data...)
+	rx, err := dev.txrx(buf)
+	if err != nil {
+		return err
+	}
+	if len(rx) < 2 || rx[0] != cmdSwjSequence {
+		return errors.New("bad response")
+	}
+	if rx[1] != statusOk {
+		return errors.New("cmdSwjSequence failed")
+	}
 	return nil
 }
 
@@ -252,12 +283,12 @@ const (
 	pinSRST  = 7 // active low
 )
 
-func (dev *device) pinControl(pinOutput, pinSelect byte, wait uint32) (byte, error) {
+func (dev *device) cmdSwjPins(pins, mask byte, delay uint32) (byte, error) {
 	buf := []byte{
 		dapReport,
 		cmdSwjPins,
-		pinOutput, pinSelect,
-		byte(wait), byte(wait >> 8), byte(wait >> 16), byte(wait >> 24),
+		pins, mask,
+		byte(delay), byte(delay >> 8), byte(delay >> 16), byte(delay >> 24),
 	}
 	rx, err := dev.txrx(buf)
 	if err != nil {
@@ -269,19 +300,102 @@ func (dev *device) pinControl(pinOutput, pinSelect byte, wait uint32) (byte, err
 	return rx[1], nil
 }
 
-func (dev *device) setPins(pinOutput, pinSelect byte) error {
-	_, err := dev.pinControl(pinOutput, pinSelect, 0)
+// setPins sets pins to 1
+func (dev *device) setPins(pins byte) error {
+	_, err := dev.cmdSwjPins(0xff, pins, 0)
 	return err
 }
 
-func (dev *device) getPins() (byte, error) {
-	return dev.pinControl(0, 0, 0)
+// clrPins sets pins to 0
+func (dev *device) clrPins(pins byte) error {
+	_, err := dev.cmdSwjPins(0, pins, 0)
+	return err
 }
 
 //-----------------------------------------------------------------------------
-// JTAG IDCodes
 
-func (dev *device) getIDCode(idx byte) (uint32, error) {
+// jtagSeq is a JTAG sequence element.
+type jtagSeq struct {
+	info byte
+	tdi  []byte
+}
+
+const infoBits = (63 << 0)
+const infoTms = (1 << 6)
+const infoTdo = (1 << 7)
+
+// nBits returns the number of bits for a JTAG sequence element.
+func (s *jtagSeq) nBits() int {
+	n := int(s.info & infoBits)
+	if n == 0 {
+		n = 64
+	}
+	return n
+}
+
+// nTdiBytes returns the number of TDI bytes for a JTAG sequence element.
+func (s *jtagSeq) nTdiBytes() int {
+	return (s.nBits() + 7) >> 3
+}
+
+// nTdoBytes returns the number of TDO bytes for a JTAG sequence element.
+func (s *jtagSeq) nTdoBytes() int {
+	n := 0
+	if s.info&infoTdo != 0 {
+		n = s.nBits()
+	}
+	return (n + 7) >> 3
+}
+
+// cmdJtagSequence
+func (dev *device) cmdJtagSequence(sequence []jtagSeq) ([]byte, error) {
+	nTdo := 0
+	buf := []byte{dapReport, cmdJtagSequence, byte(len(sequence))}
+	for _, s := range sequence {
+		nTdo += s.nTdoBytes()
+		// sanity check
+		if len(s.tdi) != s.nTdiBytes() {
+			panic("bad tdi length")
+		}
+		buf = append(buf, s.info)
+		buf = append(buf, s.tdi...)
+	}
+	rx, err := dev.txrx(buf)
+	if err != nil {
+		return nil, err
+	}
+	if len(rx) < 2+nTdo || rx[0] != cmdJtagSequence {
+		return nil, errors.New("bad response")
+	}
+	if rx[1] != statusOk {
+		return nil, errors.New("cmdJtagSequence failed")
+	}
+	return rx[2 : 2+nTdo], nil
+}
+
+//-----------------------------------------------------------------------------
+
+// cmdJtagConfigure configures the IR length of each device on the JTAG chain.
+func (dev *device) cmdJtagConfigure(irlen []byte) error {
+	buf := []byte{dapReport, cmdJtagConfigure, byte(len(irlen))}
+	buf = append(buf, irlen...)
+	rx, err := dev.txrx(buf)
+	if err != nil {
+		return err
+	}
+	if len(rx) < 2 || rx[0] != cmdJtagConfigure {
+		return errors.New("bad response")
+	}
+	if rx[1] != statusOk {
+		return errors.New("cmdJtagConfigure failed")
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+
+// cmdJtagIDCode returns the ID code of a device on the JTAG chain.
+func (dev *device) cmdJtagIDCode(idx byte) (uint32, error) {
 	rx, err := dev.txrx([]byte{dapReport, cmdJtagIDCode, idx})
 	if err != nil {
 		return 0, err
@@ -310,7 +424,7 @@ func boolToByte(x bool) byte {
 	return 0
 }
 
-func (dev *device) hostStatus(statusType byte, status bool) error {
+func (dev *device) cmdHostStatus(statusType byte, status bool) error {
 	rx, err := dev.txrx([]byte{dapReport, cmdHostStatus, statusType, boolToByte(status)})
 	if err != nil {
 		return err
@@ -323,28 +437,6 @@ func (dev *device) hostStatus(statusType byte, status bool) error {
 	}
 	return nil
 }
-
-//-----------------------------------------------------------------------------
-// General Commands
-
-/*
-
-func (dev *device) writeAbort(index byte, abort uint32) error {
-	dev.txrx([]byte{dapReport, cmdWriteAbort, index, byte(abort), byte(abort >> 8), byte(abort >> 16), byte(abort >> 24)})
-	return errors.New("TODO")
-}
-
-func (dev *device) delay(delay uint16) error {
-	dev.txrx([]byte{dapReport, cmdDelay, byte(delay), byte(delay >> 8)})
-	return errors.New("TODO")
-}
-
-func (dev *device) resetTarget() error {
-	dev.txrx([]byte{dapReport, cmdResetTarget})
-	return errors.New("TODO")
-}
-
-*/
 
 //-----------------------------------------------------------------------------
 // Device Information
@@ -364,14 +456,14 @@ const (
 	infoMaxPacketSize   = 0xff // maximum Packet Size (SHORT)
 )
 
-// info gets information about CMSIS-DAP debug unit
-func (dev *device) info(id byte) ([]byte, error) {
+// cmdInfo gets information about CMSIS-DAP debug unit
+func (dev *device) cmdInfo(id byte) ([]byte, error) {
 	return dev.txrx([]byte{dapReport, cmdInfo, id})
 }
 
 // getString gets a string type information item.
 func (dev *device) getString(id byte) (string, error) {
-	rx, err := dev.info(id)
+	rx, err := dev.cmdInfo(id)
 	if err != nil {
 		return "", err
 	}
@@ -393,7 +485,7 @@ func (dev *device) getString(id byte) (string, error) {
 
 // getByte gets a byte type information item.
 func (dev *device) getByte(id byte) (byte, error) {
-	rx, err := dev.info(id)
+	rx, err := dev.cmdInfo(id)
 	if err != nil {
 		return 0, err
 	}
@@ -405,7 +497,7 @@ func (dev *device) getByte(id byte) (byte, error) {
 
 // getShort gets a short type information item.
 func (dev *device) getShort(id byte) (uint16, error) {
-	rx, err := dev.info(id)
+	rx, err := dev.cmdInfo(id)
 	if err != nil {
 		return 0, err
 	}
@@ -417,7 +509,7 @@ func (dev *device) getShort(id byte) (uint16, error) {
 
 // getWord gets a word type information item.
 func (dev *device) getWord(id byte) (uint32, error) {
-	rx, err := dev.info(id)
+	rx, err := dev.cmdInfo(id)
 	if err != nil {
 		return 0, err
 	}
@@ -519,7 +611,7 @@ func (caps capabilities) String() string {
 
 // getCapabilities gets information about the Capabilities of the Debug Unit
 func (dev *device) getCapabilities() (capabilities, error) {
-	rx, err := dev.info(infoCapabilities)
+	rx, err := dev.cmdInfo(infoCapabilities)
 	if err != nil {
 		return 0, err
 	}

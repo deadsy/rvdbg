@@ -36,8 +36,15 @@ func NewJtag(devInfo *hidapi.DeviceInfo, speed int) (*Jtag, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	dev, err := newDevice(hid)
+	if err != nil {
+		hid.Close()
+		return nil, err
+	}
+
 	j := &Jtag{
-		dev: newDevice(hid),
+		dev: dev,
 	}
 
 	// make sure the CMSIS-DAP can do JTAG
@@ -47,14 +54,14 @@ func NewJtag(devInfo *hidapi.DeviceInfo, speed int) (*Jtag, error) {
 	}
 
 	// connect in JTAG mode
-	err = j.dev.connect(modeJtag)
+	err = j.dev.cmdConnect(modeJtag)
 	if err != nil {
 		j.Close()
 		return nil, err
 	}
 
 	// set the clock speed
-	err = j.dev.setClock(speed)
+	err = j.dev.cmdSwjClock(speed)
 	if err != nil {
 		j.Close()
 		return nil, err
@@ -65,7 +72,7 @@ func NewJtag(devInfo *hidapi.DeviceInfo, speed int) (*Jtag, error) {
 
 // Close closes a CMSIS-DAP JTAG driver.
 func (j *Jtag) Close() error {
-	j.dev.disconnect()
+	j.dev.cmdDisconnect()
 	j.dev.close()
 	return nil
 }
@@ -77,22 +84,22 @@ func (j *Jtag) jtagIO(tms, tdi *bitstr.BitString, needTdo bool) (*bitstr.BitStri
 
 // TestReset pulses the test reset line.
 func (j *Jtag) TestReset(delay time.Duration) error {
-	err := j.dev.setPins(0, pinTRST)
+	err := j.dev.setPins(pinTRST)
 	if err != nil {
 		return err
 	}
 	time.Sleep(delay)
-	return j.dev.setPins(pinTRST, pinTRST)
+	return j.dev.clrPins(pinTRST)
 }
 
 // SystemReset pulses the system reset line.
 func (j *Jtag) SystemReset(delay time.Duration) error {
-	err := j.dev.setPins(0, pinSRST)
+	err := j.dev.setPins(pinSRST)
 	if err != nil {
 		return err
 	}
 	time.Sleep(delay)
-	return j.dev.setPins(pinSRST, pinSRST)
+	return j.dev.clrPins(pinSRST)
 }
 
 // TapReset resets the TAP state machine.
