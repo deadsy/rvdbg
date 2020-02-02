@@ -97,7 +97,7 @@ func (app *debugApp) Put(s string) {
 
 //-----------------------------------------------------------------------------
 
-func foo() error {
+func foo1() error {
 
 	dapLibrary, err := dap.Init()
 	if err != nil {
@@ -115,7 +115,7 @@ func foo() error {
 		return err
 	}
 
-	jtagDriver, err := dap.NewJtag(devInfo, 4*MHz, 3000*mV)
+	jtagDriver, err := dap.NewJtag(devInfo, 4*MHz)
 	if err != nil {
 		dapLibrary.Shutdown()
 		return err
@@ -129,11 +129,43 @@ func foo() error {
 	return nil
 }
 
+func foo2() error {
+
+	dapLibrary, err := dap.Init()
+	if err != nil {
+		return err
+	}
+
+	if dapLibrary.NumDevices() == 0 {
+		dapLibrary.Shutdown()
+		return errors.New("no CMSIS-DAP devices found")
+	}
+
+	devInfo, err := dapLibrary.DeviceByIndex(0)
+	if err != nil {
+		dapLibrary.Shutdown()
+		return err
+	}
+
+	swdDriver, err := dap.NewSwd(devInfo, 4*MHz)
+	if err != nil {
+		dapLibrary.Shutdown()
+		return err
+	}
+
+	fmt.Printf("%s\n", swdDriver)
+
+	swdDriver.Close()
+	dapLibrary.Shutdown()
+
+	return nil
+}
+
 //-----------------------------------------------------------------------------
 
 func main() {
 
-	err := foo()
+	err := foo2()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 	}
