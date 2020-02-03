@@ -56,10 +56,19 @@ var cmdJtagDriver = cli.Leaf{
 	},
 }
 
+var cmdJtagSurvey = cli.Leaf{
+	Descr: "display jtag device survey",
+	F: func(c *cli.CLI, args []string) {
+		jtagDevice := c.User.(*debugApp).jtagDevice
+		c.User.Put(fmt.Sprintf("%s\n", jtagDevice.Survey()))
+	},
+}
+
 // jtagMenu submenu items
 var jtagMenu = cli.Menu{
 	{"chain", cmdJtagChain},
 	{"driver", cmdJtagDriver},
+	{"survey", cmdJtagSurvey},
 }
 
 //-----------------------------------------------------------------------------

@@ -976,6 +976,7 @@ var mfgName = map[uint]string{
 	0x3c9: "Accord Software & Systems Pvt. Ltd.",
 	0x3ca: "Active-Semi Inc.",
 	0x3cb: "Denso Corporation",
+	0x4b5: "Kendryte",
 }
 
 func mfgNameLookup(mfg uint) string {

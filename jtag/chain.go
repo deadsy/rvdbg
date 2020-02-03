@@ -136,8 +136,8 @@ func (ch *Chain) scan() error {
 		return err
 	}
 	for i, d := range ch.info {
-		if d.ID != code[i] {
-			return fmt.Errorf("expecting idcode 0x%08x at position %d, found 0x%08x", d.ID, i, code[i])
+		if uint(d.ID) != code[i] {
+			return fmt.Errorf("expecting idcode 0x%08x at position %d, found 0x%08x", uint(d.ID), i, code[i])
 		}
 	}
 	// build the devices
@@ -159,7 +159,7 @@ func (ch *Chain) scan() error {
 }
 
 // readIDcodes returns a slice of idcodes for the JTAG chain.
-func (ch *Chain) readIDCodes() ([]IDCode, error) {
+func (ch *Chain) readIDCodes() ([]uint, error) {
 	// a TAP reset leaves the idcodes in the DR chain
 	ch.drv.TapReset()
 	tdi := bitstr.Ones(ch.n * idcodeLength)
@@ -171,16 +171,7 @@ func (ch *Chain) readIDCodes() ([]IDCode, error) {
 	for i := range splits {
 		splits[i] = 32
 	}
-	x, err := tdo.Split(splits), nil
-	if err != nil {
-		return nil, err
-	}
-	// re-type uint to IDCode
-	code := make([]IDCode, ch.n)
-	for i := range code {
-		code[i] = IDCode(x[i])
-	}
-	return code, nil
+	return tdo.Split(splits), nil
 }
 
 type scanFunc func(tdi *bitstr.BitString) (*bitstr.BitString, error)
