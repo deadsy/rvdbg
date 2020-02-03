@@ -175,18 +175,19 @@ func newDevice(hid *hidapi.Device) (*device, error) {
 	return dev, nil
 }
 
-func (dev *device) txrx(buf []byte) ([]byte, error) {
-	//fmt.Printf("tx (%d) %v\n", len(buf), buf)
-	err := dev.hid.Write(buf)
+// txrx transmits a command buffer and receives a response.
+func (dev *device) txrx(txBuffer []byte, rxCount int) ([]byte, error) {
+	//fmt.Printf("tx (%d) %v\n", len(txBuffer), txBuffer)
+	err := dev.hid.Write(txBuffer)
 	if err != nil {
 		return nil, err
 	}
-	rx, err := dev.hid.ReadTimeout(dapReport, dev.pktSize, usbTimeout)
+	rxBuffer, err := dev.hid.ReadTimeout(dapReport, rxCount, usbTimeout)
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("rx (%d) %v\n", len(rx), rx)
-	return rx, nil
+	//fmt.Printf("rx (%d) %v\n", len(rxBuffer), rxBuffer)
+	return rxBuffer, nil
 }
 
 func (dev *device) close() {
@@ -203,7 +204,7 @@ const (
 
 // cmdConnect with the selected DAP mode
 func (dev *device) cmdConnect(port byte) error {
-	rx, err := dev.txrx([]byte{dapReport, cmdConnect, port})
+	rx, err := dev.txrx([]byte{dapReport, cmdConnect, port}, 2)
 	if err != nil {
 		return err
 	}
@@ -218,7 +219,7 @@ func (dev *device) cmdConnect(port byte) error {
 
 // disconnect from an active debug port
 func (dev *device) cmdDisconnect() error {
-	rx, err := dev.txrx([]byte{dapReport, cmdDisconnect})
+	rx, err := dev.txrx([]byte{dapReport, cmdDisconnect}, 2)
 	if err != nil {
 		return err
 	}
@@ -236,7 +237,12 @@ func (dev *device) cmdDisconnect() error {
 
 func (dev *device) cmdSwjClock(speed int) error {
 	clk := uint32(speed * 1000)
-	rx, err := dev.txrx([]byte{dapReport, cmdSwjClock, byte(clk), byte(clk >> 8), byte(clk >> 16), byte(clk >> 24)})
+	buf := []byte{
+		dapReport,
+		cmdSwjClock,
+		byte(clk), byte(clk >> 8), byte(clk >> 16), byte(clk >> 24),
+	}
+	rx, err := dev.txrx(buf, 2)
 	if err != nil {
 		return err
 	}
@@ -262,7 +268,7 @@ func (dev *device) cmdSwjSequence(seq *bitstr.BitString) error {
 	// run the command
 	buf := []byte{dapReport, cmdSwjSequence, byte(n)}
 	buf = append(buf, data...)
-	rx, err := dev.txrx(buf)
+	rx, err := dev.txrx(buf, 2)
 	if err != nil {
 		return err
 	}
@@ -296,7 +302,7 @@ func (dev *device) cmdSwjPins(pins, mask byte, delay uint32) (byte, error) {
 		pins, mask,
 		byte(delay), byte(delay >> 8), byte(delay >> 16), byte(delay >> 24),
 	}
-	rx, err := dev.txrx(buf)
+	rx, err := dev.txrx(buf, 2)
 	if err != nil {
 		return 0, err
 	}
@@ -333,7 +339,7 @@ func (dev *device) cmdJtagSequence(sequence []jtagSeq) ([]byte, error) {
 		buf = append(buf, s.info)
 		buf = append(buf, s.tdi...)
 	}
-	rx, err := dev.txrx(buf)
+	rx, err := dev.txrx(buf, 2+nTdo)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +358,7 @@ func (dev *device) cmdJtagSequence(sequence []jtagSeq) ([]byte, error) {
 func (dev *device) cmdJtagConfigure(irlen []byte) error {
 	buf := []byte{dapReport, cmdJtagConfigure, byte(len(irlen))}
 	buf = append(buf, irlen...)
-	rx, err := dev.txrx(buf)
+	rx, err := dev.txrx(buf, 2)
 	if err != nil {
 		return err
 	}
@@ -369,7 +375,7 @@ func (dev *device) cmdJtagConfigure(irlen []byte) error {
 
 // cmdJtagIDCode returns the ID code of a device on the JTAG chain.
 func (dev *device) cmdJtagIDCode(idx byte) (uint32, error) {
-	rx, err := dev.txrx([]byte{dapReport, cmdJtagIDCode, idx})
+	rx, err := dev.txrx([]byte{dapReport, cmdJtagIDCode, idx}, 6)
 	if err != nil {
 		return 0, err
 	}
@@ -398,7 +404,7 @@ func boolToByte(x bool) byte {
 }
 
 func (dev *device) cmdHostStatus(statusType byte, status bool) error {
-	rx, err := dev.txrx([]byte{dapReport, cmdHostStatus, statusType, boolToByte(status)})
+	rx, err := dev.txrx([]byte{dapReport, cmdHostStatus, statusType, boolToByte(status)}, 2)
 	if err != nil {
 		return err
 	}
@@ -431,7 +437,7 @@ const (
 
 // cmdInfo gets information about CMSIS-DAP debug unit
 func (dev *device) cmdInfo(id byte) ([]byte, error) {
-	return dev.txrx([]byte{dapReport, cmdInfo, id})
+	return dev.txrx([]byte{dapReport, cmdInfo, id}, dev.pktSize)
 }
 
 // getString gets a string type information item.
