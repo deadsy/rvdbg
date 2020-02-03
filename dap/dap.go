@@ -374,6 +374,7 @@ func (dev *device) cmdJtagConfigure(irlen []byte) error {
 //-----------------------------------------------------------------------------
 
 // cmdJtagIDCode returns the ID code of a device on the JTAG chain.
+// Note: Call cmdJtagConfigure to make this work correctly.
 func (dev *device) cmdJtagIDCode(idx byte) (uint32, error) {
 	rx, err := dev.txrx([]byte{dapReport, cmdJtagIDCode, idx}, 6)
 	if err != nil {
