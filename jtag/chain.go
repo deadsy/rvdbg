@@ -32,6 +32,7 @@ type Driver interface {
 	TapReset() error                                                       // reset TAP state machine
 	ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) // scan IR
 	ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) // scan DR
+	Close() error
 }
 
 //-----------------------------------------------------------------------------

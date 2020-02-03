@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/deadsy/hidapi"
+	"github.com/deadsy/rvdbg/bitstr"
 )
 
 //-----------------------------------------------------------------------------
@@ -250,10 +251,15 @@ func (dev *device) cmdSwjClock(speed int) error {
 
 //-----------------------------------------------------------------------------
 
-func (dev *device) swjSequence(n int, data []byte) error {
+// cmdSwjSequence generates clocked SWDIO/TMS bit sequences.
+func (dev *device) cmdSwjSequence(seq *bitstr.BitString) error {
+	// convert the bit string to byte form
+	n := seq.Len()
 	if n <= 0 || n > 256 {
-		panic("bad bit count")
+		return errors.New("bit string is too short/long")
 	}
+	data := seq.GetBytes()
+	// run the command
 	buf := []byte{dapReport, cmdSwjSequence, byte(n)}
 	buf = append(buf, data...)
 	rx, err := dev.txrx(buf)
@@ -314,40 +320,7 @@ func (dev *device) clrPins(pins byte) error {
 
 //-----------------------------------------------------------------------------
 
-// jtagSeq is a JTAG sequence element.
-type jtagSeq struct {
-	info byte
-	tdi  []byte
-}
-
-const infoBits = (63 << 0)
-const infoTms = (1 << 6)
-const infoTdo = (1 << 7)
-
-// nBits returns the number of bits for a JTAG sequence element.
-func (s *jtagSeq) nBits() int {
-	n := int(s.info & infoBits)
-	if n == 0 {
-		n = 64
-	}
-	return n
-}
-
-// nTdiBytes returns the number of TDI bytes for a JTAG sequence element.
-func (s *jtagSeq) nTdiBytes() int {
-	return (s.nBits() + 7) >> 3
-}
-
-// nTdoBytes returns the number of TDO bytes for a JTAG sequence element.
-func (s *jtagSeq) nTdoBytes() int {
-	n := 0
-	if s.info&infoTdo != 0 {
-		n = s.nBits()
-	}
-	return (n + 7) >> 3
-}
-
-// cmdJtagSequence
+// cmdJtagSequence generates a clocked TDI/TMS sequence with optional TDO capture.
 func (dev *device) cmdJtagSequence(sequence []jtagSeq) ([]byte, error) {
 	nTdo := 0
 	buf := []byte{dapReport, cmdJtagSequence, byte(len(sequence))}

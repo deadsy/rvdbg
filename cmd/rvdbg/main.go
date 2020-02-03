@@ -9,9 +9,9 @@ RISC-V Debugger
 package main
 
 import (
-	"broadcom/bcm47622"
 	"errors"
 	"fmt"
+	"kendryte/k210"
 	"os"
 
 	cli "github.com/deadsy/go-cli"
@@ -30,64 +30,34 @@ const mV = 1
 
 // debugApp is state associated with the RISC-V debugger application.
 type debugApp struct {
-	jlinkLibrary *jlink.Jlink
-	jtagDriver   *jlink.Jtag
-	jtagChain    *jtag.Chain
-	jtagDevice   *jtag.Device
-	prompt       string
+	jtagDriver jtag.Driver
+	jtagChain  *jtag.Chain
+	jtagDevice *jtag.Device
+	prompt     string
 }
 
 // newDebugApp returns a new RISC-V debugger application.
-func newDebugApp() (*debugApp, error) {
+func newDebugApp(jtagDriver jtag.Driver, chain []jtag.DeviceInfo, idx int) (*debugApp, error) {
 
-	jlinkLibrary, err := jlink.Init()
+	jtagChain, err := jtag.NewChain(jtagDriver, chain)
 	if err != nil {
 		return nil, err
 	}
 
-	if jlinkLibrary.NumDevices() == 0 {
-		jlinkLibrary.Shutdown()
-		return nil, errors.New("no J-Link devices found")
-	}
-
-	dev, err := jlinkLibrary.DeviceByIndex(0)
+	jtagDevice, err := jtagChain.GetDevice(idx)
 	if err != nil {
-		jlinkLibrary.Shutdown()
-		return nil, err
-	}
-
-	jtagDriver, err := jlink.NewJtag(dev, 4*MHz, 3000*mV)
-	if err != nil {
-		jlinkLibrary.Shutdown()
-		return nil, err
-	}
-
-	jtagChain, err := jtag.NewChain(jtagDriver, bcm47622.ChainInfo1)
-	if err != nil {
-		jtagDriver.Close()
-		jlinkLibrary.Shutdown()
-		return nil, err
-	}
-
-	jtagDevice, err := jtagChain.GetDevice(3)
-	if err != nil {
-		jtagDriver.Close()
-		jlinkLibrary.Shutdown()
 		return nil, err
 	}
 
 	return &debugApp{
-		jlinkLibrary: jlinkLibrary,
-		jtagDriver:   jtagDriver,
-		jtagChain:    jtagChain,
-		jtagDevice:   jtagDevice,
-		prompt:       "rvdbg> ",
+		jtagDriver: jtagDriver,
+		jtagChain:  jtagChain,
+		jtagDevice: jtagDevice,
+		prompt:     "rvdbg> ",
 	}, nil
 }
 
 func (app *debugApp) Shutdown() {
-	app.jtagDriver.Close()
-	app.jlinkLibrary.Shutdown()
 }
 
 // Put outputs a string to the user application.
@@ -97,84 +67,56 @@ func (app *debugApp) Put(s string) {
 
 //-----------------------------------------------------------------------------
 
-func foo1() error {
+func run(jtagMode string) error {
 
-	dapLibrary, err := dap.Init()
-	if err != nil {
-		return err
-	}
+	var jtagDriver jtag.Driver
+	var err error
 
-	if dapLibrary.NumDevices() == 0 {
-		dapLibrary.Shutdown()
-		return errors.New("no CMSIS-DAP devices found")
-	}
+	switch jtagMode {
+	case "J-Link":
+		jlinkLibrary, err := jlink.Init()
+		if err != nil {
+			return err
+		}
+		defer jlinkLibrary.Shutdown()
+		if jlinkLibrary.NumDevices() == 0 {
+			return errors.New("no J-Link devices found")
+		}
+		dev, err := jlinkLibrary.DeviceByIndex(0)
+		if err != nil {
+			return err
+		}
+		jtagDriver, err = jlink.NewJtag(dev, 4*MHz, 3000*mV)
+		if err != nil {
+			return err
+		}
+		defer jtagDriver.Close()
 
-	devInfo, err := dapLibrary.DeviceByIndex(0)
-	if err != nil {
-		dapLibrary.Shutdown()
-		return err
-	}
+	case "CMSIS-DAP":
+		dapLibrary, err := dap.Init()
+		if err != nil {
+			return err
+		}
+		defer dapLibrary.Shutdown()
+		if dapLibrary.NumDevices() == 0 {
+			return errors.New("no CMSIS-DAP devices found")
+		}
+		devInfo, err := dapLibrary.DeviceByIndex(0)
+		if err != nil {
+			return err
+		}
+		jtagDriver, err = dap.NewJtag(devInfo, 4*MHz)
+		if err != nil {
+			return err
+		}
+		defer jtagDriver.Close()
 
-	jtagDriver, err := dap.NewJtag(devInfo, 4*MHz)
-	if err != nil {
-		dapLibrary.Shutdown()
-		return err
-	}
-
-	fmt.Printf("%s\n", jtagDriver)
-
-	jtagDriver.Close()
-	dapLibrary.Shutdown()
-
-	return nil
-}
-
-func foo2() error {
-
-	dapLibrary, err := dap.Init()
-	if err != nil {
-		return err
-	}
-
-	if dapLibrary.NumDevices() == 0 {
-		dapLibrary.Shutdown()
-		return errors.New("no CMSIS-DAP devices found")
-	}
-
-	devInfo, err := dapLibrary.DeviceByIndex(0)
-	if err != nil {
-		dapLibrary.Shutdown()
-		return err
-	}
-
-	swdDriver, err := dap.NewSwd(devInfo, 4*MHz)
-	if err != nil {
-		dapLibrary.Shutdown()
-		return err
-	}
-
-	fmt.Printf("%s\n", swdDriver)
-
-	swdDriver.Close()
-	dapLibrary.Shutdown()
-
-	return nil
-}
-
-//-----------------------------------------------------------------------------
-
-func main() {
-
-	err := foo2()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
 	}
 
 	// create the application
-	app, err := newDebugApp()
+	app, err := newDebugApp(jtagDriver, k210.ChainInfo, 0)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
+		return err
 	}
 
 	// create the cli
@@ -191,6 +133,21 @@ func main() {
 	// exit
 	c.HistorySave(historyPath)
 	app.Shutdown()
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+
+//const jtagMode = "J-Link"
+
+const jtagMode = "CMSIS-DAP"
+
+func main() {
+	err := run(jtagMode)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
 	os.Exit(0)
 }
 

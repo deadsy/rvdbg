@@ -20,7 +20,7 @@ K210 JTAG Layout
 
 var ChainInfo = []jtag.DeviceInfo{
 	// irlen, idcode, name
-	//jtag.DeviceInfo{5, jtag.IDCode(0x0d31017f), "bcm47622.dev3"},  // some broadcom device
+	jtag.DeviceInfo{5, jtag.IDCode(0), "k210-rv64"},
 }
 
 //-----------------------------------------------------------------------------
