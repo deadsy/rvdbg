@@ -23,7 +23,10 @@ device 0: k210-rv64 irlen 5 idcode 0x04e4796b mfg 0x4b5 (Kendryte) part 0x4e47 v
 
 */
 
-var ChainInfo = []jtag.DeviceInfo{
+// CoreIndex is the index of the RV64 core on the JTAG chain.
+const CoreIndex = 0
+
+var Chain = []jtag.DeviceInfo{
 	// irlen, idcode, name
 	jtag.DeviceInfo{5, jtag.IDCode(0x04e4796b), "k210-rv64"},
 }

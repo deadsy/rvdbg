@@ -1,12 +1,12 @@
 //-----------------------------------------------------------------------------
 /*
 
-RISC-V Debugger CLI
+JTAG Menu Items
 
 */
 //-----------------------------------------------------------------------------
 
-package main
+package jtag
 
 import (
 	"fmt"
@@ -15,27 +15,12 @@ import (
 )
 
 //-----------------------------------------------------------------------------
-// cli related leaf functions
 
-var cmdHelp = cli.Leaf{
-	Descr: "general help",
-	F: func(c *cli.CLI, args []string) {
-		c.GeneralHelp()
-	},
-}
-
-var cmdHistory = cli.Leaf{
-	Descr: "command history",
-	F: func(c *cli.CLI, args []string) {
-		c.SetLine(c.DisplayHistory(args))
-	},
-}
-
-var cmdExit = cli.Leaf{
-	Descr: "exit application",
-	F: func(c *cli.CLI, args []string) {
-		c.Exit()
-	},
+// target is the interface for a target using JTAG.
+type target interface {
+	GetJtagDevice() *Device
+	GetJtagChain() *Chain
+	GetJtagDriver() Driver
 }
 
 //-----------------------------------------------------------------------------
@@ -43,7 +28,7 @@ var cmdExit = cli.Leaf{
 var cmdJtagChain = cli.Leaf{
 	Descr: "display jtag chain state",
 	F: func(c *cli.CLI, args []string) {
-		jtagChain := c.User.(*debugApp).jtagChain
+		jtagChain := c.User.(target).GetJtagChain()
 		c.User.Put(fmt.Sprintf("%s\n", jtagChain))
 	},
 }
@@ -51,7 +36,7 @@ var cmdJtagChain = cli.Leaf{
 var cmdJtagDriver = cli.Leaf{
 	Descr: "display jtag driver state",
 	F: func(c *cli.CLI, args []string) {
-		jtagDriver := c.User.(*debugApp).jtagDriver
+		jtagDriver := c.User.(target).GetJtagDriver()
 		c.User.Put(fmt.Sprintf("%s\n", jtagDriver))
 	},
 }
@@ -59,26 +44,16 @@ var cmdJtagDriver = cli.Leaf{
 var cmdJtagSurvey = cli.Leaf{
 	Descr: "display jtag device survey",
 	F: func(c *cli.CLI, args []string) {
-		jtagDevice := c.User.(*debugApp).jtagDevice
+		jtagDevice := c.User.(target).GetJtagDevice()
 		c.User.Put(fmt.Sprintf("%s\n", jtagDevice.Survey()))
 	},
 }
 
-// jtagMenu submenu items
-var jtagMenu = cli.Menu{
+// Menu submenu items
+var Menu = cli.Menu{
 	{"chain", cmdJtagChain},
 	{"driver", cmdJtagDriver},
 	{"survey", cmdJtagSurvey},
-}
-
-//-----------------------------------------------------------------------------
-
-// root menu
-var menuRoot = cli.Menu{
-	{"exit", cmdExit},
-	{"help", cmdHelp},
-	{"history", cmdHistory, cli.HistoryHelp},
-	{"jtag", jtagMenu, "jtag functions"},
 }
 
 //-----------------------------------------------------------------------------

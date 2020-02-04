@@ -96,8 +96,11 @@ ir 31 drlen 1
 
 */
 
-// ChainInfo0 is the JTAG chain layout for early BCM47622 devices.
-var ChainInfo0 = []jtag.DeviceInfo{
+// CoreIndex is the index of the ARM core on the JTAG chain.
+const CoreIndex = 3
+
+// Chain0 is the JTAG chain layout for early BCM47622 devices.
+var Chain0 = []jtag.DeviceInfo{
 	// irlen, idcode, name
 	jtag.DeviceInfo{32, jtag.IDCode(0x476220a0), "bcm47622.dev0"}, // some broadcom device
 	jtag.DeviceInfo{32, jtag.IDCode(0x006dc17f), "bcm47622.dev1"}, // some broadcom device
@@ -106,8 +109,8 @@ var ChainInfo0 = []jtag.DeviceInfo{
 	jtag.DeviceInfo{5, jtag.IDCode(0x0d31017f), "bcm47622.dev3"},  // some broadcom device
 }
 
-// ChainInfo1 is the JTAG chain layout for later BCM47622 devices.
-var ChainInfo1 = []jtag.DeviceInfo{
+// Chain1 is the JTAG chain layout for later BCM47622 devices.
+var Chain1 = []jtag.DeviceInfo{
 	// irlen, idcode, name
 	jtag.DeviceInfo{32, jtag.IDCode(0x11f0617f), "bcm47622.dev0"}, // some broadcom device
 	jtag.DeviceInfo{32, jtag.IDCode(0x206dc17f), "bcm47622.dev1"}, // some broadcom device
