@@ -25,13 +25,25 @@ const idcodeLength = 32
 
 //-----------------------------------------------------------------------------
 
+// State is the current JTAG interface state
+type State struct {
+	TargetVoltage int  // Target reference voltage in mV
+	Tck           bool // TCK pin state
+	Tdi           bool // TDI pin state
+	Tdo           bool // TDO pin state
+	Tms           bool // TMS pin state
+	Trst          bool // TRST pin state
+	Srst          bool // SRST pin state
+}
+
 // Driver is the interface for a JTAG driver.
 type Driver interface {
-	TestReset(delay time.Duration) error                                   // pulse TRST
-	SystemReset(delay time.Duration) error                                 // pulse SRST
-	TapReset() error                                                       // reset TAP state machine
-	ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) // scan IR
-	ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) // scan DR
+	TestReset(delay time.Duration) error
+	SystemReset(delay time.Duration) error
+	TapReset() error
+	ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error)
+	ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error)
+	GetState() (*State, error)
 	Close() error
 }
 

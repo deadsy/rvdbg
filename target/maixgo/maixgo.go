@@ -6,7 +6,7 @@ SiPeed MaixGo Board using Kendryte K210 RISC-V
 */
 //-----------------------------------------------------------------------------
 
-package target
+package maixgo
 
 import (
 	"os"
@@ -14,30 +14,42 @@ import (
 	"kendryte/k210"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
+	"github.com/deadsy/rvdbg/target"
 )
 
 //-----------------------------------------------------------------------------
 
-// maixGoRoot is the root menu.
-var maixGoRoot = cli.Menu{
-	{"exit", cmdExit},
-	{"help", cmdHelp},
-	{"history", cmdHistory, cli.HistoryHelp},
+// Info is target information.
+var Info = target.Info{
+	Name:  "maixgo",
+	Descr: "SiPeed MaixGo (Kendryte K210, Dual Core RISC-V RV64)",
+	Itf:   itf.TypeDap,
+	Mode:  itf.ModeJtag,
+}
+
+//-----------------------------------------------------------------------------
+
+// menuRoot is the root menu.
+var menuRoot = cli.Menu{
+	{"exit", target.CmdExit},
+	{"help", target.CmdHelp},
+	{"history", target.CmdHistory, cli.HistoryHelp},
 	{"jtag", jtag.Menu, "jtag functions"},
 }
 
 //-----------------------------------------------------------------------------
 
-// MaixGo is the application structure for the target.
-type MaixGo struct {
+// Target is the application structure for the target.
+type Target struct {
 	jtagDriver jtag.Driver
 	jtagChain  *jtag.Chain
 	jtagDevice *jtag.Device
 }
 
 // NewMaixGo returns a new target.
-func NewMaixGo(jtagDriver jtag.Driver) (*MaixGo, error) {
+func NewTarget(jtagDriver jtag.Driver) (*Target, error) {
 
 	// make the jtag chain
 	jtagChain, err := jtag.NewChain(jtagDriver, k210.Chain)
@@ -51,7 +63,7 @@ func NewMaixGo(jtagDriver jtag.Driver) (*MaixGo, error) {
 		return nil, err
 	}
 
-	return &MaixGo{
+	return &Target{
 		jtagDriver: jtagDriver,
 		jtagChain:  jtagChain,
 		jtagDevice: jtagDevice,
@@ -60,36 +72,36 @@ func NewMaixGo(jtagDriver jtag.Driver) (*MaixGo, error) {
 }
 
 // GetPrompt returns the target prompt string.
-func (t *MaixGo) GetPrompt() string {
+func (t *Target) GetPrompt() string {
 	return "maixgo> "
 }
 
 // GetMenuRoot returns the target root menu.
-func (t *MaixGo) GetMenuRoot() []cli.MenuItem {
-	return maixGoRoot
+func (t *Target) GetMenuRoot() []cli.MenuItem {
+	return menuRoot
 }
 
 // GetJtagDevice returns the JTAG device.
-func (t *MaixGo) GetJtagDevice() *jtag.Device {
+func (t *Target) GetJtagDevice() *jtag.Device {
 	return t.jtagDevice
 }
 
 // GetJtagChain returns the JTAG chain.
-func (t *MaixGo) GetJtagChain() *jtag.Chain {
+func (t *Target) GetJtagChain() *jtag.Chain {
 	return t.jtagChain
 }
 
 // GetJtagDriver returns the JTAG driver.
-func (t *MaixGo) GetJtagDriver() jtag.Driver {
+func (t *Target) GetJtagDriver() jtag.Driver {
 	return t.jtagDriver
 }
 
 // Shutdown shuts down the target application.
-func (t *MaixGo) Shutdown() {
+func (t *Target) Shutdown() {
 }
 
 // Put outputs a string to the user application.
-func (t *MaixGo) Put(s string) {
+func (t *Target) Put(s string) {
 	os.Stdout.WriteString(s)
 }
 

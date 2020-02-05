@@ -14,17 +14,16 @@ import (
 	"os"
 
 	cli "github.com/deadsy/go-cli"
-	"github.com/deadsy/rvdbg/dap"
-	"github.com/deadsy/rvdbg/jlink"
+	"github.com/deadsy/rvdbg/itf/dap"
+	"github.com/deadsy/rvdbg/itf/jlink"
 	"github.com/deadsy/rvdbg/jtag"
-	"github.com/deadsy/rvdbg/target"
+	"github.com/deadsy/rvdbg/target/wap"
 )
 
 //-----------------------------------------------------------------------------
 
 const historyPath = ".rvdbg_history"
 const MHz = 1000
-const mV = 1
 
 //-----------------------------------------------------------------------------
 
@@ -47,7 +46,7 @@ func run(jtagMode string) error {
 		if err != nil {
 			return err
 		}
-		jtagDriver, err = jlink.NewJtag(dev, 4*MHz, 3000*mV)
+		jtagDriver, err = jlink.NewJtag(dev, 4*MHz)
 		if err != nil {
 			return err
 		}
@@ -74,8 +73,8 @@ func run(jtagMode string) error {
 
 	}
 
-	//app, err := target.NewWap(jtagDriver)
-	app, err := target.NewMaixGo(jtagDriver)
+	app, err := wap.NewTarget(jtagDriver)
+	//app, err := maixgo.NewTarget(jtagDriver)
 	if err != nil {
 		return err
 	}
@@ -99,9 +98,9 @@ func run(jtagMode string) error {
 
 //-----------------------------------------------------------------------------
 
-//const jtagMode = "J-Link"
+const jtagMode = "J-Link"
 
-const jtagMode = "CMSIS-DAP"
+//const jtagMode = "CMSIS-DAP"
 
 func main() {
 	err := run(jtagMode)

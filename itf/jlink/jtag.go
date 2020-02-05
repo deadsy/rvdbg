@@ -16,6 +16,7 @@ import (
 
 	"github.com/deadsy/jaylink"
 	"github.com/deadsy/rvdbg/bitstr"
+	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/util/log"
 )
 
@@ -32,7 +33,7 @@ type Jtag struct {
 	dev     *jaylink.Device
 	hdl     *jaylink.DeviceHandle
 	version jaylink.JtagVersion
-	speed   uint16 // current JTAG clock speed in kHz
+	speed   int // current JTAG clock speed in kHz
 }
 
 func (j *Jtag) String() string {
@@ -58,7 +59,7 @@ func (j *Jtag) String() string {
 }
 
 // NewJtag returns a new J-Link JTAG driver.
-func NewJtag(dev *jaylink.Device, speed, volts uint16) (*Jtag, error) {
+func NewJtag(dev *jaylink.Device, speed int) (*Jtag, error) {
 	j := &Jtag{
 		dev: dev,
 	}
@@ -104,25 +105,6 @@ func NewJtag(dev *jaylink.Device, speed, volts uint16) (*Jtag, error) {
 		return nil, err
 	}
 
-	// get the JTAG state
-	state, err := hdl.GetHardwareStatus()
-	if err != nil {
-		hdl.Close()
-		return nil, err
-	}
-
-	// check for the required target voltage
-	if state.TargetVoltage < volts {
-		hdl.Close()
-		return nil, fmt.Errorf("target voltage is too low (%dmV), is the target connected and powered?", state.TargetVoltage)
-	}
-
-	// check the ~SRST state
-	if !state.Tres {
-		hdl.Close()
-		return nil, errors.New("target ~SRST line asserted, target is held in reset")
-	}
-
 	// check the desired interface speed
 	if caps.HasCap(jaylink.DEV_CAP_GET_SPEEDS) {
 		maxSpeed, err := hdl.GetMaxSpeed()
@@ -130,14 +112,14 @@ func NewJtag(dev *jaylink.Device, speed, volts uint16) (*Jtag, error) {
 			hdl.Close()
 			return nil, err
 		}
-		if speed > maxSpeed {
+		if speed > int(maxSpeed) {
 			log.Info.Printf("JTAG speed %dkHz is too high, limiting to %dkHz (max)", speed, maxSpeed)
-			speed = maxSpeed
+			speed = int(maxSpeed)
 		}
 	}
 
 	// set the interface speed
-	err = hdl.SetSpeed(speed)
+	err = hdl.SetSpeed(uint16(speed))
 	if err != nil {
 		hdl.Close()
 		return nil, err
@@ -150,6 +132,23 @@ func NewJtag(dev *jaylink.Device, speed, volts uint16) (*Jtag, error) {
 // Close closes a J-Link JTAG driver.
 func (j *Jtag) Close() error {
 	return j.hdl.Close()
+}
+
+// GetState returns the JTAG hardware state.
+func (j *Jtag) GetState() (*jtag.State, error) {
+	status, err := j.hdl.GetHardwareStatus()
+	if err != nil {
+		return nil, err
+	}
+	return &jtag.State{
+		TargetVoltage: int(status.TargetVoltage),
+		Tck:           status.Tck,
+		Tdi:           status.Tdi,
+		Tdo:           status.Tdo,
+		Tms:           status.Tms,
+		Trst:          status.Trst,
+		Srst:          status.Tres,
+	}, nil
 }
 
 // jtagIO performs jtag IO operations.

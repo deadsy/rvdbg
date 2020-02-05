@@ -15,6 +15,7 @@ import (
 
 	"github.com/deadsy/hidapi"
 	"github.com/deadsy/rvdbg/bitstr"
+	"github.com/deadsy/rvdbg/jtag"
 )
 
 //-----------------------------------------------------------------------------
@@ -146,6 +147,12 @@ func (j *Jtag) Close() error {
 	j.dev.cmdDisconnect()
 	j.dev.close()
 	return nil
+}
+
+// GetState returns the JTAG hardware state.
+func (j *Jtag) GetState() (*jtag.State, error) {
+	// TODO
+	return &jtag.State{}, nil
 }
 
 // TestReset pulses the test reset line.
