@@ -17,7 +17,7 @@ import (
 	"github.com/deadsy/rvdbg/itf/dap"
 	"github.com/deadsy/rvdbg/itf/jlink"
 	"github.com/deadsy/rvdbg/jtag"
-	"github.com/deadsy/rvdbg/target/wap"
+	"github.com/deadsy/rvdbg/target/gd32v"
 )
 
 //-----------------------------------------------------------------------------
@@ -73,8 +73,9 @@ func run(jtagMode string) error {
 
 	}
 
-	app, err := wap.NewTarget(jtagDriver)
+	//app, err := wap.NewTarget(jtagDriver)
 	//app, err := maixgo.NewTarget(jtagDriver)
+	app, err := gd32v.NewTarget(jtagDriver)
 	if err != nil {
 		return err
 	}
