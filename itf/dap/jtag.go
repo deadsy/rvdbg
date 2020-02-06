@@ -151,8 +151,18 @@ func (j *Jtag) Close() error {
 
 // GetState returns the JTAG hardware state.
 func (j *Jtag) GetState() (*jtag.State, error) {
-	// TODO
-	return &jtag.State{}, nil
+	pins, err := j.dev.getPins()
+	if err != nil {
+		return nil, err
+	}
+	return &jtag.State{
+		Tck:  pins&pinTCK != 0,
+		Tdi:  pins&pinTDI != 0,
+		Tdo:  pins&pinTDO != 0,
+		Tms:  pins&pinTMS != 0,
+		Trst: pins&pinTRST != 0,
+		Srst: pins&pinSRST != 0,
+	}, nil
 }
 
 // TestReset pulses the test reset line.

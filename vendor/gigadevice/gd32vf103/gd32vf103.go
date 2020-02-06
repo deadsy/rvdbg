@@ -20,7 +20,8 @@ GD32VF103 JTAG Layout
 
 var ChainInfo = []jtag.DeviceInfo{
 	// irlen, idcode, name
-	//jtag.DeviceInfo{5, jtag.IDCode(0x0d31017f), "bcm47622.dev3"},  // some broadcom device
+	jtag.DeviceInfo{4, jtag.IDCode(0x4ba00477), "gd32v.dev0"},
+	jtag.DeviceInfo{5, jtag.IDCode(0x790007a3), "gd32v.dev1"},
 }
 
 //-----------------------------------------------------------------------------

@@ -324,6 +324,11 @@ func (dev *device) clrPins(pins byte) error {
 	return err
 }
 
+// getPins gets the pin state.
+func (dev *device) getPins() (byte, error) {
+	return dev.cmdSwjPins(0, 0, 0)
+}
+
 //-----------------------------------------------------------------------------
 
 // cmdJtagSequence generates a clocked TDI/TMS sequence with optional TDO capture.
