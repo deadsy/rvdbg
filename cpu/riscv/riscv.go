@@ -11,7 +11,8 @@ package riscv
 import (
 	"fmt"
 
-	"github.com/deadsy/rvdbg/bitstr"
+	"github.com/deadsy/rvdbg/cpu/riscv/rv11"
+	"github.com/deadsy/rvdbg/cpu/riscv/rv13"
 	"github.com/deadsy/rvdbg/jtag"
 )
 
@@ -20,33 +21,10 @@ import (
 const irLength = 5
 
 const irIDCode = 0x01 // ID code
+const irDtm = 0x10    // dtm register (for version)
 
 const drIDCodeLength = 32
-
-//-----------------------------------------------------------------------------
-
-// checkDR verifies the DR length for a given IR and returns the DR value.
-func checkDR(dev *jtag.Device, ir, drlen int) (uint, error) {
-	// write IR
-	err := dev.WrIR(bitstr.FromUint(uint(ir), irLength))
-	if err != nil {
-		return 0, nil
-	}
-	// check the DR length
-	n, err := dev.GetDRLength()
-	if err != nil {
-		return 0, nil
-	}
-	if n != drlen {
-		return 0, fmt.Errorf("ir %d dr length is %d, expected %d", ir, n, drlen)
-	}
-	// get the value
-	tdo, err := dev.RdWrDR(bitstr.Zeros(drlen))
-	if err != nil {
-		return 0, err
-	}
-	return uint(tdo.Split([]int{drlen})[0]), nil
-}
+const drDtmLength = 32
 
 //-----------------------------------------------------------------------------
 
@@ -63,7 +41,7 @@ func NewDebug(dev *jtag.Device) (Debug, error) {
 	}
 
 	// check the ID code
-	idcode, err := checkDR(dev, irIDCode, drIDCodeLength)
+	idcode, err := dev.CheckDR(irIDCode, drIDCodeLength)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +50,7 @@ func NewDebug(dev *jtag.Device) (Debug, error) {
 	}
 
 	// check the DTM register
-	version, err := checkDR(dev, irDtmcs, drDtmcsLength)
+	version, err := dev.CheckDR(irDtm, drDtmLength)
 	if err != nil {
 		return nil, err
 	}
@@ -80,10 +58,10 @@ func NewDebug(dev *jtag.Device) (Debug, error) {
 
 	// return the version specific debugger
 	if version == 0 {
-		return newRv11(dev)
+		return rv11.NewDebug(dev)
 	}
 	if version == 1 {
-		return newRv13(dev)
+		return rv13.NewDebug(dev)
 	}
 	return nil, fmt.Errorf("unknown dtm version %d", version)
 }

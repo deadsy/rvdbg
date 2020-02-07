@@ -118,6 +118,29 @@ func (dev *Device) GetDRLength() (int, error) {
 	return n, nil
 }
 
+// CheckDR verifies the DR length for a given IR and returns the DR value.
+func (dev *Device) CheckDR(ir uint, drlen int) (uint, error) {
+	// write IR
+	err := dev.WrIR(bitstr.FromUint(ir, dev.irlen))
+	if err != nil {
+		return 0, nil
+	}
+	// check the DR length
+	n, err := dev.GetDRLength()
+	if err != nil {
+		return 0, nil
+	}
+	if n != drlen {
+		return 0, fmt.Errorf("ir %d dr length is %d, expected %d", ir, n, drlen)
+	}
+	// get the value
+	tdo, err := dev.RdWrDR(bitstr.Zeros(drlen))
+	if err != nil {
+		return 0, err
+	}
+	return uint(tdo.Split([]int{drlen})[0]), nil
+}
+
 // GetIDCode returns the JTAG ID code for the device.
 func (dev *Device) GetIDCode() IDCode {
 	return dev.idcode

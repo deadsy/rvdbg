@@ -6,7 +6,7 @@ RISC-V Debugger 0.13 Functions
 */
 //-----------------------------------------------------------------------------
 
-package riscv
+package rv13
 
 import (
 	"fmt"
@@ -26,20 +26,22 @@ const mask32 = (1 << 32) - 1
 
 //-----------------------------------------------------------------------------
 
-type rv13 struct {
+type Debug struct {
 	dev         *jtag.Device
 	ir          uint // cache of ir value
 	abits       uint // address bits in dtmcs
 	amask       uint // mask for address bits
 	idle        uint // idle value in dtmcs
-	drDmiLength int
+	irlen       int  // IR length
+	drDmiLength int  // DR length for dmi
 	dmiZeros    *bitstr.BitString
 }
 
-func newRv13(dev *jtag.Device) (*rv13, error) {
+func NewDebug(dev *jtag.Device) (*Debug, error) {
 
-	dbg := &rv13{
-		dev: dev,
+	dbg := &Debug{
+		dev:   dev,
+		irlen: dev.GetIRLength(),
 	}
 
 	// get parameters from dtmcs
@@ -55,7 +57,7 @@ func newRv13(dev *jtag.Device) (*rv13, error) {
 	dbg.dmiZeros = bitstr.Zeros(dbg.drDmiLength)
 
 	// check dmi for the correct length
-	_, err = checkDR(dev, irDmi, dbg.drDmiLength)
+	_, err = dev.CheckDR(irDmi, dbg.drDmiLength)
 	if err != nil {
 		return nil, err
 	}
@@ -66,11 +68,11 @@ func newRv13(dev *jtag.Device) (*rv13, error) {
 //-----------------------------------------------------------------------------
 
 // wrIR writes the instruction register.
-func (dbg *rv13) wrIR(ir uint) error {
+func (dbg *Debug) wrIR(ir uint) error {
 	if ir == dbg.ir {
 		return nil
 	}
-	err := dbg.dev.WrIR(bitstr.FromUint(ir, irLength))
+	err := dbg.dev.WrIR(bitstr.FromUint(ir, dbg.irlen))
 	if err != nil {
 		return err
 	}
@@ -79,7 +81,7 @@ func (dbg *rv13) wrIR(ir uint) error {
 }
 
 // rdDtmcs reads the DTMCS register.
-func (dbg *rv13) rdDtmcs() (uint, error) {
+func (dbg *Debug) rdDtmcs() (uint, error) {
 	err := dbg.wrIR(irDtmcs)
 	if err != nil {
 		return 0, err
@@ -137,7 +139,7 @@ const opFail = 2
 const opBusy = 3
 const opMask = (1 << 2) - 1
 
-func (dbg *rv13) rdDebugModule(addr uint) (uint32, error) {
+func (dbg *Debug) rdDebugModule(addr uint) (uint32, error) {
 	err := dbg.wrIR(irDmi)
 	if err != nil {
 		return 0, err
@@ -164,7 +166,7 @@ func (dbg *rv13) rdDebugModule(addr uint) (uint32, error) {
 	return data, nil
 }
 
-func (dbg *rv13) wrDebugModule(addr uint, data uint32) error {
+func (dbg *Debug) wrDebugModule(addr uint, data uint32) error {
 	err := dbg.wrIR(irDmi)
 	if err != nil {
 		return err

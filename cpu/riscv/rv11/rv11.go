@@ -6,16 +6,16 @@ RISC-V Debugger 0.11 Functions
 */
 //-----------------------------------------------------------------------------
 
-package riscv
+package rv11
 
 import "github.com/deadsy/rvdbg/jtag"
 
 //-----------------------------------------------------------------------------
 
-type rv11 struct {
+type Debug struct {
 }
 
-func newRv11(dev *jtag.Device) (*rv11, error) {
+func NewDebug(dev *jtag.Device) (*Debug, error) {
 	return nil, nil
 }
 
