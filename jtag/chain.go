@@ -191,7 +191,7 @@ type scanFunc func(tdi *bitstr.BitString) (*bitstr.BitString, error)
 // chainLength returns the length of the JTAG chain.
 func (ch *Chain) chainLength(scan scanFunc) (int, error) {
 	// build a 000...001000...000 flush buffer for tdi
-	tdi := bitstr.Zeroes(flushSize).Tail1(1).Tail0(flushSize)
+	tdi := bitstr.Zeros(flushSize).Tail1(1).Tail0(flushSize)
 	tdo, err := scan(tdi)
 	if err != nil {
 		return 0, err

@@ -353,8 +353,8 @@ func Ones(n int) *BitString {
 	return NewBitString().Tail1(n)
 }
 
-// Zeroes returns a bit string with n-zero bits.
-func Zeroes(n int) *BitString {
+// Zeros returns a bit string with n-zero bits.
+func Zeros(n int) *BitString {
 	return NewBitString().Tail0(n)
 }
 

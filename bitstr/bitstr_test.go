@@ -89,12 +89,12 @@ func Test_BitString(t *testing.T) {
 		t.Error("FAIL")
 	}
 
-	b = Zeroes(7)
+	b = Zeros(7)
 	if b.LenBits() != "(7) 0000000" {
 		t.Error("FAIL")
 	}
 
-	b = Zeroes(7).Tail1(4)
+	b = Zeros(7).Tail1(4)
 	if b.LenBits() != "(11) 11110000000" {
 		t.Error("FAIL")
 	}

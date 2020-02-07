@@ -182,7 +182,7 @@ func (j *Jtag) SystemReset(delay time.Duration) error {
 
 // TapReset resets the TAP state machine.
 func (j *Jtag) TapReset() error {
-	tdi := bitstr.Zeroes(xToIdle.Len())
+	tdi := bitstr.Zeros(xToIdle.Len())
 	_, err := j.jtagIO(xToIdle, tdi, false)
 	return err
 }
@@ -190,7 +190,7 @@ func (j *Jtag) TapReset() error {
 // ScanIR scans bits through the JTAG IR chain
 func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
 	tms := bitstr.Null().Tail(idleToIRshift).Tail0(tdi.Len() - 1).Tail(xShiftToIdle)
-	tdi = bitstr.Zeroes(idleToIRshift.Len()).Tail(tdi).Tail0(xShiftToIdle.Len() - 1)
+	tdi = bitstr.Zeros(idleToIRshift.Len()).Tail(tdi).Tail0(xShiftToIdle.Len() - 1)
 	//log.Debug.Printf("tms %s\n", tms.LenBits())
 	//log.Debug.Printf("tdi %s\n", tdi.LenBits())
 	tdo, err := j.jtagIO(tms, tdi, needTdo)
@@ -208,7 +208,7 @@ func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 // ScanDR scans bits through the JTAG DR chain
 func (j *Jtag) ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
 	tms := bitstr.Null().Tail(idleToDRshift).Tail0(tdi.Len() - 1).Tail(xShiftToIdle)
-	tdi = bitstr.Zeroes(idleToDRshift.Len()).Tail(tdi).Tail0(xShiftToIdle.Len() - 1)
+	tdi = bitstr.Zeros(idleToDRshift.Len()).Tail(tdi).Tail0(xShiftToIdle.Len() - 1)
 	//log.Debug.Printf("tms %s\n", tms.LenBits())
 	//log.Debug.Printf("tdi %s\n", tdi.LenBits())
 	tdo, err := j.jtagIO(tms, tdi, needTdo)

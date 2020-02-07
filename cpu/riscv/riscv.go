@@ -41,7 +41,7 @@ func checkDR(dev *jtag.Device, ir, drlen int) (uint, error) {
 		return 0, fmt.Errorf("ir %d dr length is %d, expected %d", ir, n, drlen)
 	}
 	// get the value
-	tdo, err := dev.RdWrDR(bitstr.Zeroes(drlen))
+	tdo, err := dev.RdWrDR(bitstr.Zeros(drlen))
 	if err != nil {
 		return 0, err
 	}
