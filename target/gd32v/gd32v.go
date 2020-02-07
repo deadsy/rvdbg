@@ -17,6 +17,7 @@ import (
 	"os"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/cpu/riscv"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/target"
@@ -51,6 +52,7 @@ type Target struct {
 	jtagDriver jtag.Driver
 	jtagChain  *jtag.Chain
 	jtagDevice *jtag.Device
+	riscvDebug riscv.Debug
 }
 
 // NewTarget returns a new target.
@@ -84,10 +86,16 @@ func NewTarget(jtagDriver jtag.Driver) (*Target, error) {
 		return nil, err
 	}
 
+	riscvDebug, err := riscv.NewDebug(jtagDevice)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Target{
 		jtagDriver: jtagDriver,
 		jtagChain:  jtagChain,
 		jtagDevice: jtagDevice,
+		riscvDebug: riscvDebug,
 	}, nil
 
 }

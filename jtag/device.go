@@ -103,6 +103,26 @@ func (dev *Device) testIRCapture() (bool, error) {
 	return val&3 == 1, nil
 }
 
+// GetIRLength returns the IR length for the device.
+func (dev *Device) GetIRLength() int {
+	return dev.irlen
+}
+
+// GetDRLength returns the current DR length for the device.
+func (dev *Device) GetDRLength() (int, error) {
+	n, err := dev.chain.drLength()
+	if err != nil {
+		return 0, err
+	}
+	n = n - dev.devsAfter - dev.devsBefore
+	return n, nil
+}
+
+// GetIDCode returns the JTAG ID code for the device.
+func (dev *Device) GetIDCode() IDCode {
+	return dev.idcode
+}
+
 // Survey returns a string with all IR values and corresponding DR lengths.
 func (dev *Device) Survey() string {
 	s := []string{}
