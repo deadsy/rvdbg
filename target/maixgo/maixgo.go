@@ -23,10 +23,12 @@ import (
 
 // Info is target information.
 var Info = target.Info{
-	Name:  "maixgo",
-	Descr: "SiPeed MaixGo (Kendryte K210, Dual Core RISC-V RV64)",
-	Itf:   itf.TypeDap,
-	Mode:  itf.ModeJtag,
+	Name:     "maixgo",
+	Descr:    "SiPeed MaixGo (Kendryte K210, Dual Core RISC-V RV64)",
+	DbgType:  itf.TypeCmsisDap,
+	DbgMode:  itf.ModeJtag,
+	DbgSpeed: 4000,
+	Volts:    3300,
 }
 
 //-----------------------------------------------------------------------------

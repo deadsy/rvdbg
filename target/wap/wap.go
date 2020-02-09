@@ -24,13 +24,13 @@ import (
 
 // Info is target information.
 var Info = target.Info{
-	Name:  "wap",
-	Descr: "WAP Board (Broadcom BCM47622, Quad Core ARM 32-bit Cortex-A7)",
-	Itf:   itf.TypeJlink,
-	Mode:  itf.ModeJtag,
+	Name:     "wap",
+	Descr:    "WAP Board (Broadcom BCM47622, Quad Core ARM 32-bit Cortex-A7)",
+	DbgType:  itf.TypeJlink,
+	DbgMode:  itf.ModeJtag,
+	DbgSpeed: 4000,
+	Volts:    3300,
 }
-
-const requiredVoltage = 3300
 
 //-----------------------------------------------------------------------------
 
@@ -61,7 +61,7 @@ func NewTarget(jtagDriver jtag.Driver) (*Target, error) {
 	}
 
 	// check the voltage
-	if float32(state.TargetVoltage) < 0.9*float32(requiredVoltage) {
+	if float32(state.TargetVoltage) < 0.9*float32(Info.Volts) {
 		return nil, fmt.Errorf("target voltage is too low (%dmV), is the target connected and powered?", state.TargetVoltage)
 	}
 

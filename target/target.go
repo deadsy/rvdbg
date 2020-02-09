@@ -17,10 +17,26 @@ import (
 
 // Info provides general target information.
 type Info struct {
-	Name  string   // short name for target (command line)
-	Descr string   // description of target
-	Itf   itf.Type // default debugger type
-	Mode  itf.Mode // debugger interface mode
+	Name     string   // short name for target (command line)
+	Descr    string   // description of target
+	DbgType  itf.Type // default debugger type
+	DbgMode  itf.Mode // debugger interface mode
+	DbgSpeed int      // debugger clock speed
+	Volts    int      // target voltage
+}
+
+//-----------------------------------------------------------------------------
+
+var targetDb = map[string]*Info{}
+
+// Add a target to the database.
+func Add(info *Info) {
+	targetDb[info.Name] = info
+}
+
+// Lookup target information by name.
+func Lookup(name string) *Info {
+	return targetDb[name]
 }
 
 //-----------------------------------------------------------------------------
