@@ -10,6 +10,7 @@ package rv13
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/deadsy/rvdbg/bitstr"
 	"github.com/deadsy/rvdbg/jtag"
@@ -62,6 +63,11 @@ func NewDebug(dev *jtag.Device) (*Debug, error) {
 		return nil, err
 	}
 
+	err = dbg.wrDtmcs(dmihardreset | dmireset)
+	if err != nil {
+		return nil, err
+	}
+
 	return dbg, nil
 }
 
@@ -80,6 +86,12 @@ func (dbg *Debug) wrIR(ir uint) error {
 	return nil
 }
 
+//-----------------------------------------------------------------------------
+// dtmcs
+
+const dmireset = (1 << 16)
+const dmihardreset = (1 << 17)
+
 // rdDtmcs reads the DTMCS register.
 func (dbg *Debug) rdDtmcs() (uint, error) {
 	err := dbg.wrIR(irDtmcs)
@@ -91,6 +103,15 @@ func (dbg *Debug) rdDtmcs() (uint, error) {
 		return 0, err
 	}
 	return tdo.Split([]int{drDtmcsLength})[0], nil
+}
+
+// wrDtmcs writes the DTMCS register.
+func (dbg *Debug) wrDtmcs(val uint) error {
+	err := dbg.wrIR(irDtmcs)
+	if err != nil {
+		return err
+	}
+	return dbg.dev.WrDR(bitstr.FromUint(val, drDtmcsLength))
 }
 
 //-----------------------------------------------------------------------------
@@ -139,57 +160,99 @@ const opFail = 2
 const opBusy = 3
 const opMask = (1 << 2) - 1
 
-func (dbg *Debug) rdDebugModule(addr uint) (uint32, error) {
+type dmiOp uint
+
+func dmiRd(addr uint) dmiOp {
+	return dmiOp((addr << 34) | opRd)
+}
+
+func dmiWr(addr uint, data uint32) dmiOp {
+	return dmiOp((addr << 34) | (uint(data) << 2) | opWr)
+}
+
+func dmiEnd() dmiOp {
+	return dmiOp(opIgnore)
+}
+
+func (x dmiOp) isRead() bool {
+	return (x & opMask) == opRd
+}
+
+func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
+	data := []uint32{}
+
+	// select dmi
 	err := dbg.wrIR(irDmi)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	// write the dmi
-	dmi := ((addr & dbg.amask) << 34) | opRd
-	err = dbg.dev.WrDR(bitstr.FromUint(dmi, dbg.drDmiLength))
-	if err != nil {
-		return 0, err
+
+	read := false
+	for _, dmi := range ops {
+		// run the operation
+		tdo, err := dbg.dev.RdWrDR(bitstr.FromUint(uint(dmi), dbg.drDmiLength))
+		if err != nil {
+			return nil, err
+		}
+		x := tdo.Split([]int{dbg.drDmiLength})[0]
+		// check the result
+		result := x & opMask
+		if result != opOk {
+			// clear error condition
+			dbg.wrDtmcs(dmireset)
+			// re-select dmi
+			dbg.wrIR(irDmi)
+
+			// TODO auto-adjust timing
+			return nil, fmt.Errorf("dmi operation error %d", result)
+		}
+		// get the read data
+		if read {
+			data = append(data, uint32((x>>2)&mask32))
+			read = false
+		}
+		// setup the next read
+		read = dmi.isRead()
 	}
-	// read the result
-	tdo, err := dbg.dev.RdWrDR(dbg.dmiZeros)
-	if err != nil {
-		return 0, err
-	}
-	dmi = tdo.Split([]int{dbg.drDmiLength})[0]
-	// check the result
-	result := dmi & opMask
-	if result != opOk {
-		// TODO clear error condition, auto-adjust timing
-		return 0, fmt.Errorf("read from addr 0x%x failed, result %d", addr, result)
-	}
-	data := uint32((dmi >> 2) & mask32)
 	return data, nil
 }
 
+//-----------------------------------------------------------------------------
+
+func (dbg *Debug) rdDebugModule(addr uint) (uint32, error) {
+	ops := []dmiOp{
+		dmiRd(addr),
+		dmiEnd(),
+	}
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return 0, err
+	}
+	return data[0], nil
+}
+
 func (dbg *Debug) wrDebugModule(addr uint, data uint32) error {
-	err := dbg.wrIR(irDmi)
-	if err != nil {
-		return err
+	ops := []dmiOp{
+		dmiWr(addr, data),
+		dmiEnd(),
 	}
-	// write the dmi
-	dmi := ((addr & dbg.amask) << 34) | (uint(data) << 2) | opWr
-	err = dbg.dev.WrDR(bitstr.FromUint(dmi, dbg.drDmiLength))
-	if err != nil {
-		return err
+	_, err := dbg.dmiOps(ops)
+	return err
+}
+
+//-----------------------------------------------------------------------------
+
+func (dbg *Debug) Test() string {
+	s := []string{}
+	for i := 0x04; i <= 0x40; i++ {
+		x, err := dbg.rdDebugModule(uint(i))
+		if err != nil {
+			s = append(s, fmt.Sprintf("%02x: %s", i, err))
+		} else {
+			s = append(s, fmt.Sprintf("%02x: %08x", i, x))
+		}
 	}
-	// read the result
-	tdo, err := dbg.dev.RdWrDR(dbg.dmiZeros)
-	if err != nil {
-		return err
-	}
-	dmi = tdo.Split([]int{dbg.drDmiLength})[0]
-	// check the result
-	result := dmi & opMask
-	if result != opOk {
-		// TODO clear error condition, auto-adjust timing
-		return fmt.Errorf("write to addr 0x%x failed, result %d", addr, result)
-	}
-	return nil
+	return strings.Join(s, "\n")
 }
 
 //-----------------------------------------------------------------------------

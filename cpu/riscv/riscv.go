@@ -29,11 +29,17 @@ const drDtmLength = 32
 //-----------------------------------------------------------------------------
 
 type Debug interface {
+	Test() string
+}
+
+// Cpu is a RISC-V cpu.
+type Cpu struct {
+	dbg Debug // interface to the cpu debug functions
 }
 
 //-----------------------------------------------------------------------------
 
-func NewDebug(dev *jtag.Device) (Debug, error) {
+func NewCpu(dev *jtag.Device) (*Cpu, error) {
 
 	// check the IR length
 	if dev.GetIRLength() != irLength {
@@ -56,14 +62,24 @@ func NewDebug(dev *jtag.Device) (Debug, error) {
 	}
 	version &= 15
 
-	// return the version specific debugger
-	if version == 0 {
-		return rv11.NewDebug(dev)
+	cpu := &Cpu{}
+
+	switch version {
+	case 0:
+		cpu.dbg, err = rv11.NewDebug(dev)
+		if err != nil {
+			return nil, err
+		}
+	case 1:
+		cpu.dbg, err = rv13.NewDebug(dev)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unknown dtm version %d", version)
 	}
-	if version == 1 {
-		return rv13.NewDebug(dev)
-	}
-	return nil, fmt.Errorf("unknown dtm version %d", version)
+
+	return cpu, nil
 }
 
 //-----------------------------------------------------------------------------

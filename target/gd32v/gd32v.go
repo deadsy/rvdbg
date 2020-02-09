@@ -39,6 +39,7 @@ const requiredVoltage = 3300
 
 // menuRoot is the root menu.
 var menuRoot = cli.Menu{
+	{"cpu", riscv.Menu, "cpu functions"},
 	{"exit", target.CmdExit},
 	{"help", target.CmdHelp},
 	{"history", target.CmdHistory, cli.HistoryHelp},
@@ -52,7 +53,7 @@ type Target struct {
 	jtagDriver jtag.Driver
 	jtagChain  *jtag.Chain
 	jtagDevice *jtag.Device
-	riscvDebug riscv.Debug
+	riscvCpu   *riscv.Cpu
 }
 
 // NewTarget returns a new target.
@@ -86,7 +87,7 @@ func NewTarget(jtagDriver jtag.Driver) (*Target, error) {
 		return nil, err
 	}
 
-	riscvDebug, err := riscv.NewDebug(jtagDevice)
+	riscvCpu, err := riscv.NewCpu(jtagDevice)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +96,7 @@ func NewTarget(jtagDriver jtag.Driver) (*Target, error) {
 		jtagDriver: jtagDriver,
 		jtagChain:  jtagChain,
 		jtagDevice: jtagDevice,
-		riscvDebug: riscvDebug,
+		riscvCpu:   riscvCpu,
 	}, nil
 
 }
@@ -123,6 +124,11 @@ func (t *Target) GetJtagChain() *jtag.Chain {
 // GetJtagDriver returns the JTAG driver.
 func (t *Target) GetJtagDriver() jtag.Driver {
 	return t.jtagDriver
+}
+
+// GetCpu returns the RISC-V CPU.
+func (t *Target) GetCpu() *riscv.Cpu {
+	return t.riscvCpu
 }
 
 // Shutdown shuts down the target application.

@@ -17,7 +17,7 @@ import (
 	"github.com/deadsy/rvdbg/itf/dap"
 	"github.com/deadsy/rvdbg/itf/jlink"
 	"github.com/deadsy/rvdbg/jtag"
-	"github.com/deadsy/rvdbg/target/gd32v"
+	"github.com/deadsy/rvdbg/target/maixgo"
 )
 
 //-----------------------------------------------------------------------------
@@ -74,8 +74,8 @@ func run(jtagMode string) error {
 	}
 
 	//app, err := wap.NewTarget(jtagDriver)
-	//app, err := maixgo.NewTarget(jtagDriver)
-	app, err := gd32v.NewTarget(jtagDriver)
+	app, err := maixgo.NewTarget(jtagDriver)
+	//app, err := gd32v.NewTarget(jtagDriver)
 	if err != nil {
 		return err
 	}
@@ -99,9 +99,9 @@ func run(jtagMode string) error {
 
 //-----------------------------------------------------------------------------
 
-const jtagMode = "J-Link"
+//const jtagMode = "J-Link"
 
-//const jtagMode = "CMSIS-DAP"
+const jtagMode = "CMSIS-DAP"
 
 func main() {
 	err := run(jtagMode)
