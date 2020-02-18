@@ -30,12 +30,10 @@ const mask32 = (1 << 32) - 1
 type Debug struct {
 	dev         *jtag.Device
 	ir          uint // cache of ir value
-	abits       uint // address bits in dtmcs
-	amask       uint // mask for address bits
-	idle        uint // idle value in dtmcs
 	irlen       int  // IR length
 	drDmiLength int  // DR length for dmi
-	dmiZeros    *bitstr.BitString
+	abits       uint // address bits in dtmcs
+	idle        uint // idle value in dtmcs
 }
 
 func NewDebug(dev *jtag.Device) (*Debug, error) {
@@ -54,8 +52,6 @@ func NewDebug(dev *jtag.Device) (*Debug, error) {
 	dbg.abits = (dtmcs >> 4) & 0x3f
 	dbg.idle = (dtmcs >> 12) & 7
 	dbg.drDmiLength = 33 + int(dbg.abits) + 1
-	dbg.amask = (1 << dbg.abits) - 1
-	dbg.dmiZeros = bitstr.Zeros(dbg.drDmiLength)
 
 	// check dmi for the correct length
 	_, err = dev.CheckDR(irDmi, dbg.drDmiLength)
@@ -244,6 +240,9 @@ func (dbg *Debug) wrDebugModule(addr uint, data uint32) error {
 
 func (dbg *Debug) Test() string {
 	s := []string{}
+
+	fmt.Printf("%+v\n", dbg)
+
 	for i := 0x04; i <= 0x40; i++ {
 		x, err := dbg.rdDebugModule(uint(i))
 		if err != nil {
