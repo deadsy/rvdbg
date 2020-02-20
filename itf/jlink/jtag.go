@@ -22,12 +22,6 @@ import (
 
 //-----------------------------------------------------------------------------
 
-// pre-canned TAP state machine transitions
-var xToIdle = bitstr.FromString("011111")     // any state -> run-test/idle
-var idleToIRshift = bitstr.FromString("0011") // run-test/idle -> shift-ir
-var idleToDRshift = bitstr.FromString("001")  // run-test/idle -> shift-dr
-var xShiftToIdle = bitstr.FromString("011")   // shift-x -> run-test/idle
-
 // Jtag is a driver for J-link JTAG operations.
 type Jtag struct {
 	dev     *jaylink.Device
@@ -182,15 +176,15 @@ func (j *Jtag) SystemReset(delay time.Duration) error {
 
 // TapReset resets the TAP state machine.
 func (j *Jtag) TapReset() error {
-	tdi := bitstr.Zeros(xToIdle.Len())
-	_, err := j.jtagIO(xToIdle, tdi, false)
+	tdi := bitstr.Zeros(jtag.ToIdle.Len())
+	_, err := j.jtagIO(jtag.ToIdle, tdi, false)
 	return err
 }
 
 // ScanIR scans bits through the JTAG IR chain
 func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
-	tms := bitstr.Null().Tail(idleToIRshift).Tail0(tdi.Len() - 1).Tail(xShiftToIdle)
-	tdi = bitstr.Zeros(idleToIRshift.Len()).Tail(tdi).Tail0(xShiftToIdle.Len() - 1)
+	tms := bitstr.Null().Tail(jtag.IdleToIRshift).Tail0(tdi.Len() - 1).Tail(jtag.ShiftToIdle[0])
+	tdi = bitstr.Zeros(jtag.IdleToIRshift.Len()).Tail(tdi).Tail0(jtag.ShiftToIdle[0].Len() - 1)
 	//log.Debug.Printf("tms %s\n", tms.LenBits())
 	//log.Debug.Printf("tdi %s\n", tdi.LenBits())
 	tdo, err := j.jtagIO(tms, tdi, needTdo)
@@ -198,7 +192,7 @@ func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 		return nil, err
 	}
 	if needTdo {
-		tdo.DropHead(idleToIRshift.Len()).DropTail(xShiftToIdle.Len() - 1)
+		tdo.DropHead(jtag.IdleToIRshift.Len()).DropTail(jtag.ShiftToIdle[0].Len() - 1)
 		//log.Debug.Printf("tdo %s\n", tdo.LenBits())
 		return tdo, nil
 	}
@@ -207,8 +201,8 @@ func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 
 // ScanDR scans bits through the JTAG DR chain
 func (j *Jtag) ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
-	tms := bitstr.Null().Tail(idleToDRshift).Tail0(tdi.Len() - 1).Tail(xShiftToIdle)
-	tdi = bitstr.Zeros(idleToDRshift.Len()).Tail(tdi).Tail0(xShiftToIdle.Len() - 1)
+	tms := bitstr.Null().Tail(jtag.IdleToDRshift).Tail0(tdi.Len() - 1).Tail(jtag.ShiftToIdle[0])
+	tdi = bitstr.Zeros(jtag.IdleToDRshift.Len()).Tail(tdi).Tail0(jtag.ShiftToIdle[0].Len() - 1)
 	//log.Debug.Printf("tms %s\n", tms.LenBits())
 	//log.Debug.Printf("tdi %s\n", tdi.LenBits())
 	tdo, err := j.jtagIO(tms, tdi, needTdo)
@@ -216,7 +210,7 @@ func (j *Jtag) ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 		return nil, err
 	}
 	if needTdo {
-		tdo.DropHead(idleToDRshift.Len()).DropTail(xShiftToIdle.Len() - 1)
+		tdo.DropHead(jtag.IdleToDRshift.Len()).DropTail(jtag.ShiftToIdle[0].Len() - 1)
 		//log.Debug.Printf("tdo %s\n", tdo.LenBits())
 		return tdo, nil
 	}

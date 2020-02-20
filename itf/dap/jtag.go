@@ -85,12 +85,6 @@ func bitStringToJtagSeq(bs *bitstr.BitString, needTdo bool) []jtagSeq {
 
 //-----------------------------------------------------------------------------
 
-// pre-canned TAP state machine transitions
-var xToIdle = bitstr.FromString("011111")     // any state -> run-test/idle
-var idleToIRshift = bitstr.FromString("0011") // run-test/idle -> shift-ir
-var idleToDRshift = bitstr.FromString("001")  // run-test/idle -> shift-dr
-var xShiftToIdle = bitstr.FromString("011")   // shift-x -> run-test/idle
-
 // Jtag is a driver for CMSIS-DAP JTAG operations.
 type Jtag struct {
 	dev *device
@@ -187,7 +181,7 @@ func (j *Jtag) SystemReset(delay time.Duration) error {
 
 // TapReset resets the TAP state machine.
 func (j *Jtag) TapReset() error {
-	return j.dev.cmdSwjSequence(xToIdle)
+	return j.dev.cmdSwjSequence(jtag.ToIdle)
 }
 
 // scanXR handles the back half of an IR/DR scan ooperation
@@ -196,7 +190,7 @@ func (j *Jtag) scanXR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 	if err != nil {
 		return nil, err
 	}
-	err = j.dev.cmdSwjSequence(xShiftToIdle)
+	err = j.dev.cmdSwjSequence(jtag.ShiftToIdle[0])
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +202,7 @@ func (j *Jtag) scanXR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 
 // ScanIR scans bits through the JTAG IR chain
 func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
-	err := j.dev.cmdSwjSequence(idleToIRshift)
+	err := j.dev.cmdSwjSequence(jtag.IdleToIRshift)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +211,7 @@ func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 
 // ScanDR scans bits through the JTAG DR chain
 func (j *Jtag) ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
-	err := j.dev.cmdSwjSequence(idleToDRshift)
+	err := j.dev.cmdSwjSequence(jtag.IdleToDRshift)
 	if err != nil {
 		return nil, err
 	}
