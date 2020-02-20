@@ -23,6 +23,10 @@ const irDmi = 0x11   // debug module interface access
 
 const drDtmcsLength = 32
 
+// maxIdle is the maximum number of TCK cycles to spend in the TAP Run-Test/Idle
+// state while we wait for a DMI access to complete.
+const maxIdle = 16
+
 const mask32 = (1 << 32) - 1
 
 //-----------------------------------------------------------------------------
@@ -94,7 +98,7 @@ func (dbg *Debug) rdDtmcs() (uint, error) {
 	if err != nil {
 		return 0, err
 	}
-	tdo, err := dbg.dev.RdWrDR(bitstr.Zeros(drDtmcsLength))
+	tdo, err := dbg.dev.RdWrDR(bitstr.Zeros(drDtmcsLength), 0)
 	if err != nil {
 		return 0, err
 	}
@@ -107,7 +111,7 @@ func (dbg *Debug) wrDtmcs(val uint) error {
 	if err != nil {
 		return err
 	}
-	return dbg.dev.WrDR(bitstr.FromUint(val, drDtmcsLength))
+	return dbg.dev.WrDR(bitstr.FromUint(val, drDtmcsLength), 0)
 }
 
 //-----------------------------------------------------------------------------
@@ -184,9 +188,10 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 	}
 
 	read := false
-	for _, dmi := range ops {
+	for i := 0; i < len(ops); i++ {
+		dmi := ops[i]
 		// run the operation
-		tdo, err := dbg.dev.RdWrDR(bitstr.FromUint(uint(dmi), dbg.drDmiLength))
+		tdo, err := dbg.dev.RdWrDR(bitstr.FromUint(uint(dmi), dbg.drDmiLength), dbg.idle)
 		if err != nil {
 			return nil, err
 		}
@@ -198,9 +203,17 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 			dbg.wrDtmcs(dmireset)
 			// re-select dmi
 			dbg.wrIR(irDmi)
-
-			// TODO auto-adjust timing
-			return nil, fmt.Errorf("dmi operation error %d", result)
+			if result == opBusy {
+				// auto-adjust timing
+				dbg.idle++
+				if dbg.idle > maxIdle {
+					return nil, fmt.Errorf("dmi operation error %d", result)
+				}
+				// redo the operation
+				i--
+			} else {
+				return nil, fmt.Errorf("dmi operation error %d", result)
+			}
 		}
 		// get the read data
 		if read {
@@ -215,7 +228,8 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 
 //-----------------------------------------------------------------------------
 
-func (dbg *Debug) rdDebugModule(addr uint) (uint32, error) {
+// wrDmi reads a debug module interface register.
+func (dbg *Debug) rdDmi(addr uint) (uint32, error) {
 	ops := []dmiOp{
 		dmiRd(addr),
 		dmiEnd(),
@@ -227,7 +241,8 @@ func (dbg *Debug) rdDebugModule(addr uint) (uint32, error) {
 	return data[0], nil
 }
 
-func (dbg *Debug) wrDebugModule(addr uint, data uint32) error {
+// wrDmi writes a debug module interface register.
+func (dbg *Debug) wrDmi(addr uint, data uint32) error {
 	ops := []dmiOp{
 		dmiWr(addr, data),
 		dmiEnd(),
@@ -244,7 +259,7 @@ func (dbg *Debug) Test() string {
 	fmt.Printf("%+v\n", dbg)
 
 	for i := 0x04; i <= 0x40; i++ {
-		x, err := dbg.rdDebugModule(uint(i))
+		x, err := dbg.rdDmi(uint(i))
 		if err != nil {
 			s = append(s, fmt.Sprintf("%02x: %s", i, err))
 		} else {
