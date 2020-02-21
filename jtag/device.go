@@ -75,14 +75,14 @@ func (dev *Device) RdWrIR(wr *bitstr.BitString) (*bitstr.BitString, error) {
 func (dev *Device) WrDR(wr *bitstr.BitString, idle uint) error {
 	// other devices are assumed to be in bypass mode (DR length = 1)
 	tdi := bitstr.Ones(dev.devsBefore).Tail(wr).Tail1(dev.devsAfter)
-	_, err := dev.drv.ScanDR(tdi, false)
+	_, err := dev.drv.ScanDR(tdi, idle, false)
 	return err
 }
 
 // RdWrDR reads and writes DR for a device.
 func (dev *Device) RdWrDR(wr *bitstr.BitString, idle uint) (*bitstr.BitString, error) {
 	tdi := bitstr.Ones(dev.devsBefore).Tail(wr).Tail1(dev.devsAfter)
-	tdo, err := dev.drv.ScanDR(tdi, true)
+	tdo, err := dev.drv.ScanDR(tdi, idle, true)
 	if err != nil {
 		return nil, err
 	}

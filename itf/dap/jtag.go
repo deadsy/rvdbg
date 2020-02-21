@@ -185,12 +185,12 @@ func (j *Jtag) TapReset() error {
 }
 
 // scanXR handles the back half of an IR/DR scan ooperation
-func (j *Jtag) scanXR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
+func (j *Jtag) scanXR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
 	rx, err := j.dev.cmdJtagSequence(bitStringToJtagSeq(tdi, needTdo))
 	if err != nil {
 		return nil, err
 	}
-	err = j.dev.cmdSwjSequence(jtag.ShiftToIdle[0])
+	err = j.dev.cmdSwjSequence(jtag.ShiftToIdle[idle])
 	if err != nil {
 		return nil, err
 	}
@@ -206,16 +206,16 @@ func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 	if err != nil {
 		return nil, err
 	}
-	return j.scanXR(tdi, needTdo)
+	return j.scanXR(tdi, 0, needTdo)
 }
 
 // ScanDR scans bits through the JTAG DR chain
-func (j *Jtag) ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
+func (j *Jtag) ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
 	err := j.dev.cmdSwjSequence(jtag.IdleToDRshift)
 	if err != nil {
 		return nil, err
 	}
-	return j.scanXR(tdi, needTdo)
+	return j.scanXR(tdi, idle, needTdo)
 }
 
 //-----------------------------------------------------------------------------

@@ -42,7 +42,7 @@ type Driver interface {
 	SystemReset(delay time.Duration) error
 	TapReset() error
 	ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error)
-	ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error)
+	ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error)
 	GetState() (*State, error)
 	Close() error
 }
@@ -175,7 +175,7 @@ func (ch *Chain) readIDCodes() ([]uint, error) {
 	// a TAP reset leaves the idcodes in the DR chain
 	ch.drv.TapReset()
 	tdi := bitstr.Ones(ch.n * idcodeLength)
-	tdo, err := ch.drv.ScanDR(tdi, true)
+	tdo, err := ch.drv.ScanDR(tdi, 0, true)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func (ch *Chain) chainLength(scan scanFunc) (int, error) {
 // The DR chain length is a function of current IR chain state.
 func (ch *Chain) drLength() (int, error) {
 	scan := func(tdi *bitstr.BitString) (*bitstr.BitString, error) {
-		return ch.drv.ScanDR(tdi, true)
+		return ch.drv.ScanDR(tdi, 0, true)
 	}
 	return ch.chainLength(scan)
 }

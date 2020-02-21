@@ -183,35 +183,31 @@ func (j *Jtag) TapReset() error {
 
 // ScanIR scans bits through the JTAG IR chain
 func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
-	tms := bitstr.Null().Tail(jtag.IdleToIRshift).Tail0(tdi.Len() - 1).Tail(jtag.ShiftToIdle[0])
-	tdi = bitstr.Zeros(jtag.IdleToIRshift.Len()).Tail(tdi).Tail0(jtag.ShiftToIdle[0].Len() - 1)
-	//log.Debug.Printf("tms %s\n", tms.LenBits())
-	//log.Debug.Printf("tdi %s\n", tdi.LenBits())
+	shiftToIdle := jtag.ShiftToIdle[0]
+	tms := bitstr.Null().Tail(jtag.IdleToIRshift).Tail0(tdi.Len() - 1).Tail(shiftToIdle)
+	tdi = bitstr.Zeros(jtag.IdleToIRshift.Len()).Tail(tdi).Tail0(shiftToIdle.Len() - 1)
 	tdo, err := j.jtagIO(tms, tdi, needTdo)
 	if err != nil {
 		return nil, err
 	}
 	if needTdo {
-		tdo.DropHead(jtag.IdleToIRshift.Len()).DropTail(jtag.ShiftToIdle[0].Len() - 1)
-		//log.Debug.Printf("tdo %s\n", tdo.LenBits())
+		tdo.DropHead(jtag.IdleToIRshift.Len()).DropTail(shiftToIdle.Len() - 1)
 		return tdo, nil
 	}
 	return nil, nil
 }
 
 // ScanDR scans bits through the JTAG DR chain
-func (j *Jtag) ScanDR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
-	tms := bitstr.Null().Tail(jtag.IdleToDRshift).Tail0(tdi.Len() - 1).Tail(jtag.ShiftToIdle[0])
-	tdi = bitstr.Zeros(jtag.IdleToDRshift.Len()).Tail(tdi).Tail0(jtag.ShiftToIdle[0].Len() - 1)
-	//log.Debug.Printf("tms %s\n", tms.LenBits())
-	//log.Debug.Printf("tdi %s\n", tdi.LenBits())
+func (j *Jtag) ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
+	shiftToIdle := jtag.ShiftToIdle[idle]
+	tms := bitstr.Null().Tail(jtag.IdleToDRshift).Tail0(tdi.Len() - 1).Tail(shiftToIdle)
+	tdi = bitstr.Zeros(jtag.IdleToDRshift.Len()).Tail(tdi).Tail0(shiftToIdle.Len() - 1)
 	tdo, err := j.jtagIO(tms, tdi, needTdo)
 	if err != nil {
 		return nil, err
 	}
 	if needTdo {
-		tdo.DropHead(jtag.IdleToDRshift.Len()).DropTail(jtag.ShiftToIdle[0].Len() - 1)
-		//log.Debug.Printf("tdo %s\n", tdo.LenBits())
+		tdo.DropHead(jtag.IdleToDRshift.Len()).DropTail(shiftToIdle.Len() - 1)
 		return tdo, nil
 	}
 	return nil, nil
