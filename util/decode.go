@@ -50,7 +50,7 @@ type Field struct {
 
 // Display returns a display string for a bit field.
 func (f *Field) Display(x uint) string {
-	val := GetBits(x, f.Msb, f.Lsb)
+	val := Bits(x, f.Msb, f.Lsb)
 	return fmt.Sprintf("%s %s", f.Name, f.Fmt(val))
 }
 

@@ -16,9 +16,14 @@ func BitMask(msb, lsb uint) uint {
 	return ((1 << n) - 1) << lsb
 }
 
-// GetBits reads a bit field from a value.
-func GetBits(x, msb, lsb uint) uint {
+// Bits reads a bit field from a value.
+func Bits(x, msb, lsb uint) uint {
 	return (x & BitMask(msb, lsb)) >> lsb
+}
+
+// Bit reads a bit from a value.
+func Bit(x, n uint) uint {
+	return (x & BitMask(n, n)) >> n
 }
 
 // MaskBits masks a bit field within a value.

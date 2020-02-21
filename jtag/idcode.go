@@ -1188,9 +1188,9 @@ type IDCode uint32
 
 func (code IDCode) String() string {
 	id := uint(code)
-	ver := util.GetBits(id, 31, 28)
-	part := util.GetBits(id, 27, 12)
-	mfg := util.GetBits(id, 11, 1)
+	ver := util.Bits(id, 31, 28)
+	part := util.Bits(id, 27, 12)
+	mfg := util.Bits(id, 11, 1)
 	s := []string{}
 	s = append(s, fmt.Sprintf("idcode 0x%08x", id))
 	s = append(s, fmt.Sprintf("mfg 0x%03x (%s)", mfg, mfgNameLookup(mfg)))
