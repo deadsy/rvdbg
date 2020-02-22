@@ -48,4 +48,12 @@ func BoolToInt(x bool) int {
 	return 0
 }
 
+// BoolToUint converts a boolean to an usnigned int (1 or 0).
+func BoolToUint(x bool) uint {
+	if x {
+		return 1
+	}
+	return 0
+}
+
 //-----------------------------------------------------------------------------

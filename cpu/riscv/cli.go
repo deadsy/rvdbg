@@ -18,7 +18,7 @@ import (
 
 // target is the interface for a target using a RISC-V CPU.
 type target interface {
-	GetCpu() *Cpu
+	GetCpu() *CPU
 }
 
 //-----------------------------------------------------------------------------

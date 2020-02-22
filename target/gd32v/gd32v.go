@@ -53,7 +53,7 @@ type Target struct {
 	jtagDriver jtag.Driver
 	jtagChain  *jtag.Chain
 	jtagDevice *jtag.Device
-	riscvCpu   *riscv.Cpu
+	riscvCpu   *riscv.CPU
 }
 
 // NewTarget returns a new target.
@@ -87,7 +87,7 @@ func NewTarget(jtagDriver jtag.Driver) (*Target, error) {
 		return nil, err
 	}
 
-	riscvCpu, err := riscv.NewCpu(jtagDevice)
+	riscvCpu, err := riscv.NewCPU(jtagDevice)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (t *Target) GetJtagDriver() jtag.Driver {
 }
 
 // GetCpu returns the RISC-V CPU.
-func (t *Target) GetCpu() *riscv.Cpu {
+func (t *Target) GetCpu() *riscv.CPU {
 	return t.riscvCpu
 }
 

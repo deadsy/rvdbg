@@ -23,10 +23,9 @@ const irDmi = 0x11   // debug module interface access
 
 const drDtmcsLength = 32
 
-const mask32 = (1 << 32) - 1
-
 //-----------------------------------------------------------------------------
 
+// Debug is a RISC-V 0.13 debugger.
 type Debug struct {
 	dev         *jtag.Device
 	ir          uint // cache of ir value
@@ -36,7 +35,8 @@ type Debug struct {
 	idle        uint // idle value in dtmcs
 }
 
-func NewDebug(dev *jtag.Device) (*Debug, error) {
+// New returns a RISC-V 0.13 debugger.
+func New(dev *jtag.Device) (*Debug, error) {
 
 	dbg := &Debug{
 		dev:   dev,
@@ -112,6 +112,7 @@ func (dbg *Debug) wrDtmcs(val uint) error {
 
 //-----------------------------------------------------------------------------
 
+// Test is a test routine.
 func (dbg *Debug) Test() string {
 	s := []string{}
 
