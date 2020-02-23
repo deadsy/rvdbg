@@ -53,7 +53,7 @@ var cmdJtagSurvey = cli.Leaf{
 var Menu = cli.Menu{
 	{"chain", cmdJtagChain},
 	{"driver", cmdJtagDriver},
-	{"survey", cmdJtagSurvey},
+	//{"survey", cmdJtagSurvey},
 }
 
 //-----------------------------------------------------------------------------

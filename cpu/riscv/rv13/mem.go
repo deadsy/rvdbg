@@ -18,7 +18,7 @@ func (dbg *Debug) Rd32(addr uint32) (uint32, error) {
 	ops := []dmiOp{
 		// setup the program buffer
 		dmiWr(progbuf0, rv.InsLW(rv.RegS0, rv.RegS0, 0)), // lw s0, 0(s0)
-		dmiWr(progbuf1, rv.InsEBREAK()),                  // ebreak
+		dmiWr(progbuf0+1, rv.InsEBREAK()),                // ebreak
 		// s0 = addr, execute program buffer
 		dmiWr(data0, addr),
 		dmiWr(command, cmdRegister(regGPR(rv.RegS0), size32, false, true, true, true)),
@@ -42,7 +42,7 @@ func (dbg *Debug) Wr32(addr, val uint32) error {
 	ops := []dmiOp{
 		// setup the program buffer
 		dmiWr(progbuf0, rv.InsSW(rv.RegS1, rv.RegS0, 0)), // sw s1, 0(s0)
-		dmiWr(progbuf1, rv.InsEBREAK()),                  // ebreak
+		dmiWr(progbuf0+1, rv.InsEBREAK()),                // ebreak
 		// s0 = addr
 		dmiWr(data0, addr),
 		dmiWr(command, cmdRegister(regGPR(rv.RegS0), size32, false, false, true, true)),

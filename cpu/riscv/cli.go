@@ -23,6 +23,16 @@ type target interface {
 
 //-----------------------------------------------------------------------------
 
+var cmdRiscvDebug = cli.Leaf{
+	Descr: "debug module status",
+	F: func(c *cli.CLI, args []string) {
+		cpu := c.User.(target).GetCpu()
+		c.User.Put(fmt.Sprintf("%s\n", cpu.dbg))
+	},
+}
+
+//-----------------------------------------------------------------------------
+
 var cmdRiscvTest = cli.Leaf{
 	Descr: "test routine",
 	F: func(c *cli.CLI, args []string) {
@@ -31,8 +41,11 @@ var cmdRiscvTest = cli.Leaf{
 	},
 }
 
+//-----------------------------------------------------------------------------
+
 // Menu submenu items
 var Menu = cli.Menu{
+	{"debug", cmdRiscvDebug},
 	{"test", cmdRiscvTest},
 }
 

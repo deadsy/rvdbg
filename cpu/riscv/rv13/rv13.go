@@ -14,6 +14,7 @@ import (
 
 	"github.com/deadsy/rvdbg/bitstr"
 	"github.com/deadsy/rvdbg/jtag"
+	"github.com/deadsy/rvdbg/util"
 )
 
 //-----------------------------------------------------------------------------
@@ -27,12 +28,17 @@ const drDtmcsLength = 32
 
 // Debug is a RISC-V 0.13 debugger.
 type Debug struct {
-	dev         *jtag.Device
-	ir          uint // cache of ir value
-	irlen       int  // IR length
-	drDmiLength int  // DR length for dmi
-	abits       uint // address bits in dtmcs
-	idle        uint // idle value in dtmcs
+	dev             *jtag.Device
+	ir              uint // cache of ir value
+	irlen           int  // IR length
+	drDmiLength     int  // DR length for dmi
+	abits           uint // address bits in dtmcs
+	idle            uint // idle value in dtmcs
+	progbufsize     uint // number of progbuf words implemented
+	datacount       uint // number of data words implemented
+	autoexecprogbuf bool // can we autoexec on progbufX access?
+	autoexecdata    bool // can we autoexec on dataX access?
+	sbasize         uint // width of system bus address (0 = no access)
 }
 
 // New returns a RISC-V 0.13 debugger.
@@ -59,12 +65,74 @@ func New(dev *jtag.Device) (*Debug, error) {
 		return nil, err
 	}
 
+	// reset dmi
 	err = dbg.wrDtmcs(dmihardreset | dmireset)
 	if err != nil {
 		return nil, err
 	}
 
+	// make the dmi active
+	err = dbg.wrDmi(dmcontrol, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	// work out how many program and data words we have
+	x, err := dbg.rdDmi(abstractcs)
+	if err != nil {
+		return nil, err
+	}
+	dbg.progbufsize = util.Bits(uint(x), 28, 24)
+	dbg.datacount = util.Bits(uint(x), 3, 0)
+
+	// test program buffers
+	err = dbg.testBuffers(progbuf0, dbg.progbufsize)
+	if err != nil {
+		return nil, err
+	}
+
+	// test data buffers
+	err = dbg.testBuffers(data0, dbg.datacount)
+	if err != nil {
+		return nil, err
+	}
+
+	// work out if we can autoexec on progbuf/data access
+	err = dbg.wrDmi(abstractauto, 0xffffffff)
+	if err != nil {
+		return nil, err
+	}
+	x, err = dbg.rdDmi(abstractauto)
+	if err != nil {
+		return nil, err
+	}
+	if util.Bits(uint(x), 31, 16) == ((1 << dbg.progbufsize) - 1) {
+		dbg.autoexecprogbuf = true
+	}
+	if util.Bits(uint(x), 11, 0) == ((1 << dbg.datacount) - 1) {
+		dbg.autoexecdata = true
+	}
+
+	// work out the system bus address size
+	x, err = dbg.rdDmi(sbcs)
+	if err != nil {
+		return nil, err
+	}
+	dbg.sbasize = util.Bits(uint(x), 11, 5)
+
 	return dbg, nil
+}
+
+func (dbg *Debug) String() string {
+	s := []string{}
+	s = append(s, fmt.Sprintf("version 0.13"))
+	s = append(s, fmt.Sprintf("idle cycles %d", dbg.idle))
+	s = append(s, fmt.Sprintf("sbasize %d", dbg.sbasize))
+	s = append(s, fmt.Sprintf("progbufsize %d", dbg.progbufsize))
+	s = append(s, fmt.Sprintf("datacount %d", dbg.datacount))
+	s = append(s, fmt.Sprintf("autoexecprogbuf %t", dbg.autoexecprogbuf))
+	s = append(s, fmt.Sprintf("autoexecdata %t", dbg.autoexecdata))
+	return strings.Join(s, "\n")
 }
 
 //-----------------------------------------------------------------------------
