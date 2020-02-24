@@ -79,25 +79,7 @@ var dmcontrolFields = util.FieldSet{
 	{"dmactive", 0, 0, util.FmtDec},
 }
 
-// getHartSelectLength returns the HARTSELLEN
-func (dbg *Debug) getHartSelectLength() (uint, error) {
-	// write all ones to the hartsel
-	hartsel := uint32(((1 << 20) - 1) << 6)
-	err := dbg.rmwDmi(dmcontrol, hartsel, hartsel)
-	if err != nil {
-		return 0, err
-	}
-	x, err := dbg.rdDmi(dmcontrol)
-	if err != nil {
-		return 0, err
-	}
-
-	x &= hartsel
-
-	fmt.Printf("hartsel readback %08x\n", x)
-
-	return 0, nil
-}
+const dmactive = (1 << 0)
 
 func (dbg *Debug) ndmResetPulse() error {
 	ndmreset := uint32(1 << 1 /*ndmreset*/)
