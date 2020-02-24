@@ -120,6 +120,9 @@ func New(dev *jtag.Device) (*Debug, error) {
 	}
 	dbg.sbasize = util.Bits(uint(x), 11, 5)
 
+	// work out the HARTSELLEN
+	_, err = dbg.getHartSelectLength()
+
 	return dbg, nil
 }
 
@@ -184,14 +187,25 @@ func (dbg *Debug) wrDtmcs(val uint) error {
 func (dbg *Debug) Test() string {
 	s := []string{}
 
-	for i := 0x04; i <= 0x40; i++ {
-		x, err := dbg.rdDmi(uint(i))
-		if err != nil {
-			s = append(s, fmt.Sprintf("%02x: %s", i, err))
-		} else {
-			s = append(s, fmt.Sprintf("%02x: %08x", i, x))
+	x, err := dbg.rdReg32(regGPR(0))
+	s = append(s, fmt.Sprintf("%08x %s", x, err))
+
+	x, err = dbg.rdReg32(regCSR(0))
+	s = append(s, fmt.Sprintf("%08x %s", x, err))
+
+	/*
+
+		for i := 0x04; i <= 0x40; i++ {
+			x, err := dbg.rdDmi(uint(i))
+			if err != nil {
+				s = append(s, fmt.Sprintf("%02x: %s", i, err))
+			} else {
+				s = append(s, fmt.Sprintf("%02x: %08x", i, x))
+			}
 		}
-	}
+
+	*/
+
 	return strings.Join(s, "\n")
 }
 

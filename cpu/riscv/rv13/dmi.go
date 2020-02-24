@@ -10,8 +10,10 @@ Debug Module Interface
 package rv13
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
+	"time"
 
 	"github.com/deadsy/rvdbg/bitstr"
 	"github.com/deadsy/rvdbg/jtag"
@@ -21,8 +23,8 @@ import (
 //-----------------------------------------------------------------------------
 // debug module registers
 
-const data0 = 0x04 + 0    // Abstract Data 0-11
-const progbuf0 = 0x20 + 0 // Program Buffer 0-15
+const data0 = 0x04    // Abstract Data 0-11
+const progbuf0 = 0x20 // Program Buffer 0-15
 
 const dmcontrol = 0x10 // Debug Module Control
 const dmstatus = 0x11  // Debug Module Status
@@ -77,6 +79,51 @@ var dmcontrolFields = util.FieldSet{
 	{"dmactive", 0, 0, util.FmtDec},
 }
 
+// getHartSelectLength returns the HARTSELLEN
+func (dbg *Debug) getHartSelectLength() (uint, error) {
+	// write all ones to the hartsel
+	hartsel := uint32(((1 << 20) - 1) << 6)
+	err := dbg.rmwDmi(dmcontrol, hartsel, hartsel)
+	if err != nil {
+		return 0, err
+	}
+	x, err := dbg.rdDmi(dmcontrol)
+	if err != nil {
+		return 0, err
+	}
+
+	x &= hartsel
+
+	fmt.Printf("hartsel readback %08x\n", x)
+
+	return 0, nil
+}
+
+func (dbg *Debug) ndmResetPulse() error {
+	ndmreset := uint32(1 << 1 /*ndmreset*/)
+	// write 1
+	err := dbg.setDmi(dmcontrol, ndmreset)
+	if err != nil {
+		return err
+	}
+	// write 0
+	return dbg.clrDmi(dmcontrol, ndmreset)
+}
+
+func (dbg *Debug) dmActivePulse() error {
+	dmactive := uint32(1 << 0 /*dmactive*/)
+	// write 0
+	err := dbg.clrDmi(dmcontrol, dmactive)
+	if err != nil {
+		return err
+	}
+	// write 1
+	return dbg.setDmi(dmcontrol, dmactive)
+}
+
+//-----------------------------------------------------------------------------
+// DM status
+
 var dmstatusFields = util.FieldSet{
 	{"impebreak", 22, 22, util.FmtDec},
 	{"allhavereset", 19, 19, util.FmtDec},
@@ -105,15 +152,6 @@ var hartinfoFields = util.FieldSet{
 	{"dataaccess", 16, 16, util.FmtDec},
 	{"datasize", 15, 12, util.FmtDec},
 	{"dataaddr", 11, 0, util.FmtHex},
-}
-
-//-----------------------------------------------------------------------------
-
-var abstractcsFields = util.FieldSet{
-	{"progbufsize", 28, 24, util.FmtDec},
-	{"busy", 12, 12, util.FmtDec},
-	{"cmderr", 10, 8, util.FmtDec},
-	{"datacount", 3, 0, util.FmtDec},
 }
 
 //-----------------------------------------------------------------------------
@@ -200,6 +238,24 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 //-----------------------------------------------------------------------------
 // abstract commands
 
+var abstractcsFields = util.FieldSet{
+	{"progbufsize", 28, 24, util.FmtDec},
+	{"busy", 12, 12, util.FmtDec},
+	{"cmderr", 10, 8, util.FmtDec},
+	{"datacount", 3, 0, util.FmtDec},
+}
+
+// command errors
+const (
+	errOk           = 0
+	errBusy         = 1
+	errNotSupported = 2
+	errException    = 3
+	errHaltResume   = 4
+	errBusError     = 5
+	errOther        = 6
+)
+
 // regCSR returns the abstract register number for a control and status register.
 func regCSR(i uint) uint {
 	return 0 + (i & 0xfff)
@@ -245,9 +301,73 @@ func cmdMemory(size uint, virtual, postinc, write bool) uint32 {
 		(util.BoolToUint(write) << 16))
 }
 
-//-----------------------------------------------------------------------------
+type cmdStatus uint32
+type cmdErr uint
 
-// wrDmi reads a debug module interface register.
+// isDone returns if a command has completed.
+func (cs cmdStatus) isDone() bool {
+	return cs&(1<<12 /*busy*/) == 0
+}
+
+// getError returns the error field of the command status.
+func (cs cmdStatus) getError() cmdErr {
+	return cmdErr(util.Bits(uint(cs), 10, 8))
+}
+
+// cmdErrorClr resets a command error.
+func (dbg *Debug) cmdErrorClr() error {
+	return dbg.wrDmi(abstractcs, 7<<8 /*cmderr*/)
+}
+
+const cmdTimeout = 10 * time.Millisecond
+
+// cmdWait waits for command completion.
+func (dbg *Debug) cmdWait(cs cmdStatus, to time.Duration) error {
+	// wait for the command to complete
+	t := time.Now().Add(to)
+	for t.After(time.Now()) {
+		// is the command complete?
+		if cs.isDone() {
+			// check for command error
+			ce := cs.getError()
+			if ce != errOk {
+				// clear the error
+				err := dbg.cmdErrorClr()
+				if err != nil {
+					return err
+				}
+				return fmt.Errorf("command error %d", ce)
+			}
+			return nil
+		}
+		// wait a while
+		time.Sleep(1 * time.Millisecond)
+		// read the command status
+		x, err := dbg.rdDmi(abstractcs)
+		if err != nil {
+			return err
+		}
+		cs = cmdStatus(x)
+	}
+	// timeout
+	// reset the hart
+	err := dbg.ndmResetPulse()
+	if err != nil {
+		return err
+
+	}
+	// reset the debug module
+	err = dbg.dmActivePulse()
+	if err != nil {
+		return err
+	}
+	return errors.New("command timeout")
+}
+
+//-----------------------------------------------------------------------------
+// debug module interface
+
+// wrDmi reads a dmi register.
 func (dbg *Debug) rdDmi(addr uint) (uint32, error) {
 	ops := []dmiOp{
 		dmiRd(addr),
@@ -260,7 +380,7 @@ func (dbg *Debug) rdDmi(addr uint) (uint32, error) {
 	return data[0], nil
 }
 
-// wrDmi writes a debug module interface register.
+// wrDmi writes a dmi register.
 func (dbg *Debug) wrDmi(addr uint, data uint32) error {
 	ops := []dmiOp{
 		dmiWr(addr, data),
@@ -268,6 +388,58 @@ func (dbg *Debug) wrDmi(addr uint, data uint32) error {
 	}
 	_, err := dbg.dmiOps(ops)
 	return err
+}
+
+// rmwDmi read/write/modify a dmi register.
+func (dbg *Debug) rmwDmi(addr uint, mask, bits uint32) error {
+	// read
+	x, err := dbg.rdDmi(addr)
+	if err != nil {
+		return err
+	}
+	// modify
+	x &= ^mask
+	x |= bits
+	// write
+	return dbg.wrDmi(addr, x)
+}
+
+// setDmi sets bits in a dmi register.
+func (dbg *Debug) setDmi(addr uint, bits uint32) error {
+	return dbg.rmwDmi(addr, bits, bits)
+}
+
+// clrDmi clears bits in a dmi register.
+func (dbg *Debug) clrDmi(addr uint, bits uint32) error {
+	return dbg.rmwDmi(addr, bits, 0)
+}
+
+//-----------------------------------------------------------------------------
+// read/write data value buffers
+
+func (dbg *Debug) rdData32() (uint32, error) {
+	ops := []dmiOp{
+		dmiRd(data0),
+		dmiEnd(),
+	}
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return 0, err
+	}
+	return data[0], nil
+}
+
+func (dbg *Debug) rdData64() (uint64, error) {
+	ops := []dmiOp{
+		dmiRd(data0),
+		dmiRd(data0 + 1),
+		dmiEnd(),
+	}
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return 0, err
+	}
+	return (uint64(data[1]) << 32) | uint64(data[0]), nil
 }
 
 //-----------------------------------------------------------------------------

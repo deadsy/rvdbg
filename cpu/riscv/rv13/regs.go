@@ -9,6 +9,33 @@ RISC-V Debugger 0.13 Register Operations
 package rv13
 
 //-----------------------------------------------------------------------------
+
+// rdReg32 reads a 32-bit GPR/FPR/CSR using an abstract register read command.
+func (dbg *Debug) rdReg32(reg uint) (uint32, error) {
+
+	ops := []dmiOp{
+		// read the register
+		dmiWr(command, cmdRegister(reg, size32, false, false, true, false)),
+		// readback the command status
+		dmiRd(abstractcs),
+		// done
+		dmiEnd(),
+	}
+
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return 0, err
+	}
+
+	err = dbg.cmdWait(cmdStatus(data[0]), cmdTimeout)
+	if err != nil {
+		return 0, err
+	}
+
+	return dbg.rdData32()
+}
+
+//-----------------------------------------------------------------------------
 // general purpose registers
 
 // RdGPR reads a general purpose register.
