@@ -245,16 +245,44 @@ var abstractcsFields = util.FieldSet{
 	{"datacount", 3, 0, util.FmtDec},
 }
 
-// command errors
+// command error
+type cmdErr uint
+
+// command error values
 const (
-	errOk           = 0
-	errBusy         = 1
-	errNotSupported = 2
-	errException    = 3
-	errHaltResume   = 4
-	errBusError     = 5
-	errOther        = 6
+	errOk           cmdErr = 0
+	errBusy         cmdErr = 1
+	errNotSupported cmdErr = 2
+	errException    cmdErr = 3
+	errHaltResume   cmdErr = 4
+	errBusError     cmdErr = 5
+	errReserved     cmdErr = 6
+	errOther        cmdErr = 7
 )
+
+func (ce cmdErr) String() string {
+	return [8]string{
+		"ok",
+		"busy",
+		"not supported",
+		"exception",
+		"halt/resume",
+		"bus error",
+		"reserved",
+		"other",
+	}[ce]
+}
+
+// getError returns the error field of the command status.
+func (cs cmdStatus) getError() cmdErr {
+	return cmdErr(util.Bits(uint(cs), 10, 8))
+}
+
+// cmdErrorClr resets a command error.
+func (dbg *Debug) cmdErrorClr() error {
+	// write all-ones to the cmderr field.
+	return dbg.wrDmi(abstractcs, 7<<8 /*cmderr*/)
+}
 
 // regCSR returns the abstract register number for a control and status register.
 func regCSR(i uint) uint {
@@ -302,24 +330,13 @@ func cmdMemory(size uint, virtual, postinc, write bool) uint32 {
 }
 
 type cmdStatus uint32
-type cmdErr uint
 
 // isDone returns if a command has completed.
 func (cs cmdStatus) isDone() bool {
 	return cs&(1<<12 /*busy*/) == 0
 }
 
-// getError returns the error field of the command status.
-func (cs cmdStatus) getError() cmdErr {
-	return cmdErr(util.Bits(uint(cs), 10, 8))
-}
-
-// cmdErrorClr resets a command error.
-func (dbg *Debug) cmdErrorClr() error {
-	return dbg.wrDmi(abstractcs, 7<<8 /*cmderr*/)
-}
-
-const cmdTimeout = 10 * time.Millisecond
+const cmdTimeout = 500 * time.Millisecond
 
 // cmdWait waits for command completion.
 func (dbg *Debug) cmdWait(cs cmdStatus, to time.Duration) error {
@@ -336,12 +353,12 @@ func (dbg *Debug) cmdWait(cs cmdStatus, to time.Duration) error {
 				if err != nil {
 					return err
 				}
-				return fmt.Errorf("command error %d", ce)
+				return fmt.Errorf("command error %s (%d)", ce, ce)
 			}
 			return nil
 		}
 		// wait a while
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 		// read the command status
 		x, err := dbg.rdDmi(abstractcs)
 		if err != nil {
