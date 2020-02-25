@@ -25,27 +25,73 @@ const irDmi = 0x11   // debug module interface access
 
 const drDtmcsLength = 32
 
+const maxHarts = 32
+
+//-----------------------------------------------------------------------------
+
+// min returns the minimum of a, b.
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+//-----------------------------------------------------------------------------
+
+// hartInfo stores per-hart information.
+type hartInfo struct {
+	nscratch   uint // number of dscratch registers
+	datasize   uint // number of data registers in csr/memory
+	dataaccess uint // data registers in csr(0)/memory(1)
+	dataaddr   uint // csr/memory address
+}
+
+func (hi *hartInfo) String() string {
+	s := []string{}
+	s = append(s, fmt.Sprintf("nscratch %d words", hi.nscratch))
+	s = append(s, fmt.Sprintf("datasize %d %s", hi.datasize, []string{"csr", "words"}[hi.dataaccess]))
+	s = append(s, fmt.Sprintf("dataaccess %s(%d)", []string{"csr", "memory"}[hi.dataaccess], hi.dataaccess))
+	s = append(s, fmt.Sprintf("dataaddr 0x%x", hi.dataaddr))
+	return strings.Join(s, "\n")
+}
+
 //-----------------------------------------------------------------------------
 
 // Debug is a RISC-V 0.13 debugger.
 type Debug struct {
 	dev             *jtag.Device
-	ir              uint // cache of ir value
-	irlen           int  // IR length
-	drDmiLength     int  // DR length for dmi
-	abits           uint // address bits in dtmcs
-	idle            uint // idle value in dtmcs
-	progbufsize     uint // number of progbuf words implemented
-	datacount       uint // number of data words implemented
-	autoexecprogbuf bool // can we autoexec on progbufX access?
-	autoexecdata    bool // can we autoexec on dataX access?
-	sbasize         uint // width of system bus address (0 = no access)
-	hartsellen      uint // hart select length 0..20
-	nscratch        uint // number of dscratch registers
-	datasize        uint // number of data registers in csr/memory
-	dataaccess      uint // data registers in csr(0)/memory(1)
-	dataaddr        uint // csr/memory address
-	impebreak       uint // implicit ebreak in progbuf
+	hart            []*hartInfo // implemented harts
+	ir              uint        // cache of ir value
+	irlen           int         // IR length
+	drDmiLength     int         // DR length for dmi
+	abits           uint        // address bits in dtmcs
+	idle            uint        // idle value in dtmcs
+	progbufsize     uint        // number of progbuf words implemented
+	datacount       uint        // number of data words implemented
+	autoexecprogbuf bool        // can we autoexec on progbufX access?
+	autoexecdata    bool        // can we autoexec on dataX access?
+	sbasize         uint        // width of system bus address (0 = no access)
+	hartsellen      uint        // hart select length 0..20
+	impebreak       uint        // implicit ebreak in progbuf
+}
+
+func (dbg *Debug) String() string {
+	s := []string{}
+	s = append(s, fmt.Sprintf("version 0.13"))
+	s = append(s, fmt.Sprintf("idle cycles %d", dbg.idle))
+	s = append(s, fmt.Sprintf("sbasize %d bits", dbg.sbasize))
+	s = append(s, fmt.Sprintf("progbufsize %d words", dbg.progbufsize))
+	s = append(s, fmt.Sprintf("datacount %d words", dbg.datacount))
+	s = append(s, fmt.Sprintf("autoexecprogbuf %t", dbg.autoexecprogbuf))
+	s = append(s, fmt.Sprintf("autoexecdata %t", dbg.autoexecdata))
+	s = append(s, fmt.Sprintf("hartsellen %d bits", dbg.hartsellen))
+	s = append(s, fmt.Sprintf("impebreak %d", dbg.impebreak))
+	for i := range dbg.hart {
+		s = append(s, fmt.Sprintf("\nhart %d", i))
+		s = append(s, fmt.Sprintf("%s", dbg.hart[i]))
+	}
+	return strings.Join(s, "\n")
 }
 
 // New returns a RISC-V 0.13 debugger.
@@ -93,10 +139,8 @@ func New(dev *jtag.Device) (*Debug, error) {
 		return nil, err
 	}
 
-	// write all-ones to hartsel lo/hi.
-	const hartsello = ((1 << 10) - 1) << 16
-	const hartselhi = ((1 << 10) - 1) << 6
-	err = dbg.wrDmi(dmcontrol, hartselhi|hartsello|dmactive)
+	// write all-ones to hartsel
+	err = dbg.selectHart((1 << 20) - 1)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +155,7 @@ func New(dev *jtag.Device) (*Debug, error) {
 		return nil, errors.New("dmi is not active")
 	}
 	// work out hartsellen
-	hartsel := (util.Bits(uint(x), 15, 6) << 10) | util.Bits(uint(x), 25, 16)
+	hartsel := getHartSelect(x)
 	for hartsel&1 != 0 {
 		dbg.hartsellen++
 		hartsel >>= 1
@@ -132,16 +176,6 @@ func New(dev *jtag.Device) (*Debug, error) {
 	}
 	// implicit ebreak after progbuf
 	dbg.impebreak = util.Bit(uint(x), 22)
-
-	// get hartinfo parameters
-	x, err = dbg.rdDmi(hartinfo)
-	if err != nil {
-		return nil, err
-	}
-	dbg.nscratch = util.Bits(uint(x), 23, 20)
-	dbg.datasize = util.Bits(uint(x), 15, 12)
-	dbg.dataaccess = util.Bit(uint(x), 16)
-	dbg.dataaddr = util.Bits(uint(x), 11, 0)
 
 	// work out the system bus address size
 	x, err = dbg.rdDmi(sbcs)
@@ -179,25 +213,42 @@ func New(dev *jtag.Device) (*Debug, error) {
 		dbg.autoexecdata = true
 	}
 
-	return dbg, nil
-}
+	// enumerate the harts
+	for i := 0; i < min(maxHarts, 1<<dbg.hartsellen); i++ {
 
-func (dbg *Debug) String() string {
-	s := []string{}
-	s = append(s, fmt.Sprintf("version 0.13"))
-	s = append(s, fmt.Sprintf("idle cycles %d", dbg.idle))
-	s = append(s, fmt.Sprintf("sbasize %d", dbg.sbasize))
-	s = append(s, fmt.Sprintf("progbufsize %d", dbg.progbufsize))
-	s = append(s, fmt.Sprintf("datacount %d", dbg.datacount))
-	s = append(s, fmt.Sprintf("autoexecprogbuf %t", dbg.autoexecprogbuf))
-	s = append(s, fmt.Sprintf("autoexecdata %t", dbg.autoexecdata))
-	s = append(s, fmt.Sprintf("hartsellen %d", dbg.hartsellen))
-	s = append(s, fmt.Sprintf("nscratch %d", dbg.nscratch))
-	s = append(s, fmt.Sprintf("datasize %d", dbg.datasize))
-	s = append(s, fmt.Sprintf("dataaccess %d", dbg.dataaccess))
-	s = append(s, fmt.Sprintf("dataaddr %d", dbg.dataaddr))
-	s = append(s, fmt.Sprintf("impebreak %d", dbg.impebreak))
-	return strings.Join(s, "\n")
+		// select the hart
+		err := dbg.selectHart(i)
+		if err != nil {
+			return nil, err
+		}
+
+		// get the hart status
+		x, err = dbg.rdDmi(dmstatus)
+		if err != nil {
+			return nil, err
+		}
+		if x&anynonexistent != 0 {
+			// this hart does not exist - we're done
+			break
+		}
+
+		hi := &hartInfo{}
+
+		// get hartinfo parameters
+		x, err = dbg.rdDmi(hartinfo)
+		if err != nil {
+			return nil, err
+		}
+		hi.nscratch = util.Bits(uint(x), 23, 20)
+		hi.datasize = util.Bits(uint(x), 15, 12)
+		hi.dataaccess = util.Bit(uint(x), 16)
+		hi.dataaddr = util.Bits(uint(x), 11, 0)
+
+		dbg.hart = append(dbg.hart, hi)
+
+	}
+
+	return dbg, nil
 }
 
 //-----------------------------------------------------------------------------

@@ -63,7 +63,7 @@ const sbdata2 = 0x3e // System Bus Data 95:64
 const sbdata3 = 0x3f // System Bus Data 127:96
 
 //-----------------------------------------------------------------------------
-// DM control and status
+// DM control
 
 var dmcontrolFields = util.FieldSet{
 	{"haltreq", 31, 31, util.FmtDec},
@@ -79,10 +79,9 @@ var dmcontrolFields = util.FieldSet{
 	{"dmactive", 0, 0, util.FmtDec},
 }
 
-const dmactive = (1 << 0)
+const ndmreset = (1 << 1)
 
 func (dbg *Debug) ndmResetPulse() error {
-	ndmreset := uint32(1 << 1 /*ndmreset*/)
 	// write 1
 	err := dbg.setDmi(dmcontrol, ndmreset)
 	if err != nil {
@@ -92,8 +91,9 @@ func (dbg *Debug) ndmResetPulse() error {
 	return dbg.clrDmi(dmcontrol, ndmreset)
 }
 
+const dmactive = (1 << 0)
+
 func (dbg *Debug) dmActivePulse() error {
-	dmactive := uint32(1 << 0 /*dmactive*/)
 	// write 0
 	err := dbg.clrDmi(dmcontrol, dmactive)
 	if err != nil {
@@ -101,6 +101,32 @@ func (dbg *Debug) dmActivePulse() error {
 	}
 	// write 1
 	return dbg.setDmi(dmcontrol, dmactive)
+}
+
+const hartsello = ((1 << 10) - 1) << 16
+const hartselhi = ((1 << 10) - 1) << 6
+
+// setHartSelect sets the hart select value in a dmcontrol value.
+func setHartSelect(x uint32, id int) uint32 {
+	x &= ^uint32(hartselhi | hartsello)
+	hi := ((id >> 10) << 6) & hartselhi
+	lo := (id << 16) & hartsello
+	return x | uint32(hi) | uint32(lo)
+}
+
+// getHartSelect gets the hart select value from a dmcontrol value.
+func getHartSelect(x uint32) int {
+	return int((util.Bits(uint(x), 15, 6) << 10) | util.Bits(uint(x), 25, 16))
+}
+
+// selectHart sets the dmcontrol hartsel value.
+func (dbg *Debug) selectHart(id int) error {
+	x, err := dbg.rdDmi(dmcontrol)
+	if err != nil {
+		return err
+	}
+	x = setHartSelect(x, id)
+	return dbg.wrDmi(dmcontrol, x)
 }
 
 //-----------------------------------------------------------------------------
@@ -126,6 +152,8 @@ var dmstatusFields = util.FieldSet{
 	{"confstrptrvalid", 4, 4, util.FmtDec},
 	{"version", 3, 0, util.FmtDec},
 }
+
+const anynonexistent = (1 << 14)
 
 //-----------------------------------------------------------------------------
 
