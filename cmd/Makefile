@@ -1,5 +1,6 @@
 
 DIRS = rvdbg \
+       svd \
 
 all:
 	for dir in $(DIRS); do \
