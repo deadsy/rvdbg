@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/deadsy/rvdbg/bitstr"
+	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/util"
 )
@@ -25,43 +26,14 @@ const irDmi = 0x11   // debug module interface access
 
 const drDtmcsLength = 32
 
-const maxHarts = 32
-
-//-----------------------------------------------------------------------------
-
-// min returns the minimum of a, b.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-//-----------------------------------------------------------------------------
-
-// hartInfo stores per-hart information.
-type hartInfo struct {
-	nscratch   uint // number of dscratch registers
-	datasize   uint // number of data registers in csr/memory
-	dataaccess uint // data registers in csr(0)/memory(1)
-	dataaddr   uint // csr/memory address
-}
-
-func (hi *hartInfo) String() string {
-	s := []string{}
-	s = append(s, fmt.Sprintf("nscratch %d words", hi.nscratch))
-	s = append(s, fmt.Sprintf("datasize %d %s", hi.datasize, []string{"csr", "words"}[hi.dataaccess]))
-	s = append(s, fmt.Sprintf("dataaccess %s(%d)", []string{"csr", "memory"}[hi.dataaccess], hi.dataaccess))
-	s = append(s, fmt.Sprintf("dataaddr 0x%x", hi.dataaddr))
-	return strings.Join(s, "\n")
-}
-
 //-----------------------------------------------------------------------------
 
 // Debug is a RISC-V 0.13 debugger.
+// It implements the rv.Debug interface.
 type Debug struct {
 	dev             *jtag.Device
 	hart            []*hartInfo // implemented harts
+	hartid          int         // currently selected hart
 	ir              uint        // cache of ir value
 	irlen           int         // IR length
 	drDmiLength     int         // DR length for dmi
@@ -88,14 +60,13 @@ func (dbg *Debug) String() string {
 	s = append(s, fmt.Sprintf("hartsellen %d bits", dbg.hartsellen))
 	s = append(s, fmt.Sprintf("impebreak %d", dbg.impebreak))
 	for i := range dbg.hart {
-		s = append(s, fmt.Sprintf("\nhart %d", i))
-		s = append(s, fmt.Sprintf("%s", dbg.hart[i]))
+		s = append(s, fmt.Sprintf("\n%s", dbg.hart[i]))
 	}
 	return strings.Join(s, "\n")
 }
 
 // New returns a RISC-V 0.13 debugger.
-func New(dev *jtag.Device) (*Debug, error) {
+func New(dev *jtag.Device) (rv.Debug, error) {
 
 	dbg := &Debug{
 		dev:   dev,
@@ -172,7 +143,7 @@ func New(dev *jtag.Device) (*Debug, error) {
 	}
 	// check authentication
 	if util.Bit(uint(x), 7) != 1 {
-		return nil, fmt.Errorf("debugger is not authenticated")
+		return nil, errors.New("debugger is not authenticated")
 	}
 	// implicit ebreak after progbuf
 	dbg.impebreak = util.Bit(uint(x), 22)
@@ -214,10 +185,11 @@ func New(dev *jtag.Device) (*Debug, error) {
 	}
 
 	// enumerate the harts
-	for i := 0; i < min(maxHarts, 1<<dbg.hartsellen); i++ {
+	maxHarts := 1 << dbg.hartsellen
+	for id := 0; id < maxHarts; id++ {
 
 		// select the hart
-		err := dbg.selectHart(i)
+		err := dbg.selectHart(id)
 		if err != nil {
 			return nil, err
 		}
@@ -232,20 +204,18 @@ func New(dev *jtag.Device) (*Debug, error) {
 			break
 		}
 
-		hi := &hartInfo{}
-
-		// get hartinfo parameters
-		x, err = dbg.rdDmi(hartinfo)
+		// create a new hart
+		hi, err := dbg.newHart(id)
 		if err != nil {
 			return nil, err
 		}
-		hi.nscratch = util.Bits(uint(x), 23, 20)
-		hi.datasize = util.Bits(uint(x), 15, 12)
-		hi.dataaccess = util.Bit(uint(x), 16)
-		hi.dataaddr = util.Bits(uint(x), 11, 0)
 
+		// add the hart to the list
 		dbg.hart = append(dbg.hart, hi)
+	}
 
+	if len(dbg.hart) == 0 {
+		return nil, errors.New("no harts found")
 	}
 
 	return dbg, nil
@@ -304,16 +274,47 @@ func (dbg *Debug) wrDtmcs(val uint) error {
 }
 
 //-----------------------------------------------------------------------------
+// hart control
+
+// GetHartCount returns the number of harts.
+func (dbg *Debug) GetHartCount() int {
+	return len(dbg.hart)
+}
+
+// GetHartInfo returns the hart info. id < 0 gives the current hart info.
+func (dbg *Debug) GetHartInfo(id int) (*rv.HartInfo, error) {
+	if id < 0 {
+		id = dbg.hartid
+	}
+	if id >= len(dbg.hart) {
+		return nil, errors.New("hart id is out of range")
+	}
+	return &dbg.hart[id].info, nil
+}
+
+// SetCurrentHart sets the current hart.
+func (dbg *Debug) SetCurrentHart(id int) error {
+	if id < 0 || id >= len(dbg.hart) {
+		return errors.New("hart id is out of range")
+	}
+	// TODO get hart state
+	return dbg.selectHart(id)
+}
+
+//-----------------------------------------------------------------------------
 
 // Test is a test routine.
 func (dbg *Debug) Test() string {
+
+	dbg.selectHart(0)
+
 	s := []string{}
 
 	x, err := dbg.rdReg32(regGPR(0))
-	s = append(s, fmt.Sprintf("%08x %s", x, err))
+	s = append(s, fmt.Sprintf("%08x %v", x, err))
 
-	x, err = dbg.rdReg32(regCSR(0))
-	s = append(s, fmt.Sprintf("%08x %s", x, err))
+	x, err = dbg.rdReg32(regCSR(0x301))
+	s = append(s, fmt.Sprintf("%08x %v", x, err))
 
 	/*
 

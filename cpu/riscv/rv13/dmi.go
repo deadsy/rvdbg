@@ -79,7 +79,12 @@ var dmcontrolFields = util.FieldSet{
 	{"dmactive", 0, 0, util.FmtDec},
 }
 
+const haltreq = (1 << 31)
+const ackhavereset = (1 << 28)
+const hartsello = ((1 << 10) - 1) << 16
+const hartselhi = ((1 << 10) - 1) << 6
 const ndmreset = (1 << 1)
+const dmactive = (1 << 0)
 
 func (dbg *Debug) ndmResetPulse() error {
 	// write 1
@@ -91,8 +96,6 @@ func (dbg *Debug) ndmResetPulse() error {
 	return dbg.clrDmi(dmcontrol, ndmreset)
 }
 
-const dmactive = (1 << 0)
-
 func (dbg *Debug) dmActivePulse() error {
 	// write 0
 	err := dbg.clrDmi(dmcontrol, dmactive)
@@ -103,8 +106,8 @@ func (dbg *Debug) dmActivePulse() error {
 	return dbg.setDmi(dmcontrol, dmactive)
 }
 
-const hartsello = ((1 << 10) - 1) << 16
-const hartselhi = ((1 << 10) - 1) << 6
+//-----------------------------------------------------------------------------
+// hart selection
 
 // setHartSelect sets the hart select value in a dmcontrol value.
 func setHartSelect(x uint32, id int) uint32 {
@@ -121,11 +124,16 @@ func getHartSelect(x uint32) int {
 
 // selectHart sets the dmcontrol hartsel value.
 func (dbg *Debug) selectHart(id int) error {
+	if dbg.hartid == id {
+		// already selected
+		return nil
+	}
 	x, err := dbg.rdDmi(dmcontrol)
 	if err != nil {
 		return err
 	}
 	x = setHartSelect(x, id)
+	dbg.hartid = id
 	return dbg.wrDmi(dmcontrol, x)
 }
 
@@ -153,7 +161,10 @@ var dmstatusFields = util.FieldSet{
 	{"version", 3, 0, util.FmtDec},
 }
 
+const anyhavereset = (1 << 18)
 const anynonexistent = (1 << 14)
+const anyunavail = (1 << 12)
+const allhalted = (1 << 9)
 
 //-----------------------------------------------------------------------------
 

@@ -11,6 +11,7 @@ package riscv
 import (
 	"fmt"
 
+	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv11"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv13"
 	"github.com/deadsy/rvdbg/jtag"
@@ -28,14 +29,9 @@ const drDtmLength = 32
 
 //-----------------------------------------------------------------------------
 
-// Debug is the RISC-V debug interface.
-type Debug interface {
-	Test() string
-}
-
 // CPU is a RISC-V cpu.
 type CPU struct {
-	dbg Debug
+	dbg rv.Debug
 }
 
 //-----------------------------------------------------------------------------

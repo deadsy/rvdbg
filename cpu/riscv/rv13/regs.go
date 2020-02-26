@@ -12,7 +12,6 @@ package rv13
 
 // rdReg32 reads a 32-bit GPR/FPR/CSR using an abstract register read command.
 func (dbg *Debug) rdReg32(reg uint) (uint32, error) {
-
 	ops := []dmiOp{
 		// read the register
 		dmiWr(command, cmdRegister(reg, size32, false, false, true, false)),
@@ -21,18 +20,36 @@ func (dbg *Debug) rdReg32(reg uint) (uint32, error) {
 		// done
 		dmiEnd(),
 	}
-
 	data, err := dbg.dmiOps(ops)
 	if err != nil {
 		return 0, err
 	}
-
 	err = dbg.cmdWait(cmdStatus(data[0]), cmdTimeout)
 	if err != nil {
 		return 0, err
 	}
-
 	return dbg.rdData32()
+}
+
+// rdReg64 reads a 64-bit GPR/FPR/CSR using an abstract register read command.
+func (dbg *Debug) rdReg64(reg uint) (uint64, error) {
+	ops := []dmiOp{
+		// read the register
+		dmiWr(command, cmdRegister(reg, size64, false, false, true, false)),
+		// readback the command status
+		dmiRd(abstractcs),
+		// done
+		dmiEnd(),
+	}
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return 0, err
+	}
+	err = dbg.cmdWait(cmdStatus(data[0]), cmdTimeout)
+	if err != nil {
+		return 0, err
+	}
+	return dbg.rdData64()
 }
 
 //-----------------------------------------------------------------------------
