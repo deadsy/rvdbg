@@ -76,8 +76,8 @@ func (dbg *Debug) halt() (bool, error) {
 
 //-----------------------------------------------------------------------------
 
-// getMxlen returns the MXLEN for the current hart.
-func (dbg *Debug) getMxlen() (int, error) {
+// getMXLEN returns the GPR length for the current hart.
+func (dbg *Debug) getMXLEN() (int, error) {
 	// try a 128-bit register read
 	_, _, err := dbg.rdReg128(regGPR(rv.RegS0))
 	if err == nil {
@@ -96,6 +96,26 @@ func (dbg *Debug) getMxlen() (int, error) {
 	return 0, errors.New("unable to determine MXLEN")
 }
 
+// getFLEN returns the FPR length for the current hart.
+func (dbg *Debug) getFLEN() (int, error) {
+	// try a 128-bit register read
+	_, _, err := dbg.rdReg128(regFPR(0))
+	if err == nil {
+		return 128, nil
+	}
+	// try a 64-bit register read
+	_, err = dbg.rdReg64(regFPR(0))
+	if err == nil {
+		return 64, nil
+	}
+	// try a 32-bit register read
+	_, err = dbg.rdReg32(regFPR(0))
+	if err == nil {
+		return 32, nil
+	}
+	return 0, errors.New("unable to determine FLEN")
+}
+
 //-----------------------------------------------------------------------------
 
 // hartInfo stores per hart information.
@@ -110,10 +130,7 @@ type hartInfo struct {
 
 func (hi *hartInfo) String() string {
 	s := []string{}
-	s = append(s, fmt.Sprintf("hartid %d", hi.info.ID))
-	s = append(s, fmt.Sprintf("mxlen %d", hi.info.Mxlen))
-	s = append(s, fmt.Sprintf("sxlen %d", hi.info.Sxlen))
-	s = append(s, fmt.Sprintf("uxlen %d", hi.info.Uxlen))
+	s = append(s, fmt.Sprintf("%s", &hi.info))
 	s = append(s, fmt.Sprintf("nscratch %d words", hi.nscratch))
 	s = append(s, fmt.Sprintf("datasize %d %s", hi.datasize, []string{"csr", "words"}[hi.dataaccess]))
 	s = append(s, fmt.Sprintf("dataaccess %s(%d)", []string{"csr", "memory"}[hi.dataaccess], hi.dataaccess))
@@ -121,47 +138,111 @@ func (hi *hartInfo) String() string {
 	return strings.Join(s, "\n")
 }
 
-// newHart creates a hart info structure.
-func (dbg *Debug) newHart(id int) (*hartInfo, error) {
+func (hi *hartInfo) examine() error {
 
-	hi := &hartInfo{
-		dbg: dbg,
+	dbg := hi.dbg
+
+	// select the hart
+	err := dbg.selectHart(hi.info.ID)
+	if err != nil {
+		return err
 	}
-
-	// set the identifier
-	hi.info.ID = id
 
 	// get the hart status
 	x, err := dbg.rdDmi(dmstatus)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if x&anyhavereset != 0 {
 		err := dbg.setDmi(dmcontrol, ackhavereset)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
 	// halt the hart
 	wasHalted, err := dbg.halt()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// get the MXLEN value
-	hi.info.Mxlen, err = dbg.getMxlen()
+	hi.info.MXLEN, err = dbg.getMXLEN()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	// get the MISA value
+	// read the MISA value
+	hi.info.MISA, err = dbg.RdCSR(rv.MISA)
+	if err != nil {
+		return err
+	}
+
+	// does MISA.mxl match our MXLEN?
+	if rv.GetMxlMISA(hi.info.MISA, uint(hi.info.MXLEN)) != hi.info.MXLEN {
+		return errors.New("MXLEN != misa.mxl")
+	}
+
+	// do we have supervisor mode?
+	if rv.CheckExtMISA(hi.info.MISA, 's') {
+		if hi.info.MXLEN == 32 {
+			hi.info.SXLEN = 32
+		} else {
+			panic("TODO")
+		}
+	}
+
+	// do we have user mode?
+	if rv.CheckExtMISA(hi.info.MISA, 'u') {
+		if hi.info.MXLEN == 32 {
+			hi.info.UXLEN = 32
+		} else {
+			panic("TODO")
+		}
+	}
+
+	// do we have hypervisor mode?
+	if rv.CheckExtMISA(hi.info.MISA, 'h') {
+		if hi.info.MXLEN == 32 {
+			hi.info.HXLEN = 32
+		} else {
+			panic("TODO")
+		}
+	}
+
+	// get the FLEN value
+	hi.info.FLEN, err = dbg.getFLEN()
+	if err != nil {
+		// ignore errors - we probably don't have floating point support.
+		fmt.Printf("%v\n", err)
+	}
+
+	// check 32-bit float support
+	if rv.CheckExtMISA(hi.info.MISA, 'f') && hi.info.FLEN < 32 {
+		// TODO
+	}
+
+	// check 64-bit float support
+	if rv.CheckExtMISA(hi.info.MISA, 'd') && hi.info.FLEN < 64 {
+		// TODO
+	}
+
+	// check 128-bit float support
+	if rv.CheckExtMISA(hi.info.MISA, 'q') && hi.info.FLEN < 128 {
+		// TODO
+	}
+
+	// get the hart id per the CSR
+	hi.info.MHARTID, err = dbg.RdCSR(rv.MHARTID)
+	if err != nil {
+		return err
+	}
 
 	// get hartinfo parameters
 	x, err = dbg.rdDmi(hartinfo)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	hi.nscratch = util.Bits(uint(x), 23, 20)
 	hi.datasize = util.Bits(uint(x), 15, 12)
@@ -172,7 +253,16 @@ func (dbg *Debug) newHart(id int) (*hartInfo, error) {
 		fmt.Printf("was running\n")
 	}
 
-	return hi, nil
+	return nil
+}
+
+// newHart creates a hart info structure.
+func (dbg *Debug) newHart(id int) *hartInfo {
+	hi := &hartInfo{
+		dbg: dbg,
+	}
+	hi.info.ID = id
+	return hi
 }
 
 //-----------------------------------------------------------------------------

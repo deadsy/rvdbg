@@ -187,13 +187,11 @@ func New(dev *jtag.Device) (rv.Debug, error) {
 	// enumerate the harts
 	maxHarts := 1 << dbg.hartsellen
 	for id := 0; id < maxHarts; id++ {
-
 		// select the hart
 		err := dbg.selectHart(id)
 		if err != nil {
 			return nil, err
 		}
-
 		// get the hart status
 		x, err = dbg.rdDmi(dmstatus)
 		if err != nil {
@@ -203,19 +201,20 @@ func New(dev *jtag.Device) (rv.Debug, error) {
 			// this hart does not exist - we're done
 			break
 		}
-
-		// create a new hart
-		hi, err := dbg.newHart(id)
-		if err != nil {
-			return nil, err
-		}
-
-		// add the hart to the list
-		dbg.hart = append(dbg.hart, hi)
+		// add a hart to the list
+		dbg.hart = append(dbg.hart, dbg.newHart(id))
 	}
 
 	if len(dbg.hart) == 0 {
 		return nil, errors.New("no harts found")
+	}
+
+	// examine each hart
+	for i := range dbg.hart {
+		err := dbg.hart[i].examine()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return dbg, nil
@@ -283,13 +282,14 @@ func (dbg *Debug) GetHartCount() int {
 
 // GetHartInfo returns the hart info. id < 0 gives the current hart info.
 func (dbg *Debug) GetHartInfo(id int) (*rv.HartInfo, error) {
-	if id < 0 {
-		id = dbg.hartid
-	}
-	if id >= len(dbg.hart) {
+	if id < 0 || id >= len(dbg.hart) {
 		return nil, errors.New("hart id is out of range")
 	}
 	return &dbg.hart[id].info, nil
+}
+
+func (dbg *Debug) GetCurrentHart() *rv.HartInfo {
+	return &dbg.hart[dbg.hartid].info
 }
 
 // SetCurrentHart sets the current hart.
@@ -310,11 +310,8 @@ func (dbg *Debug) Test() string {
 
 	s := []string{}
 
-	x, err := dbg.rdReg32(regGPR(0))
-	s = append(s, fmt.Sprintf("%08x %v", x, err))
-
-	x, err = dbg.rdReg32(regCSR(0x301))
-	s = append(s, fmt.Sprintf("%08x %v", x, err))
+	misa, err := dbg.RdCSR(rv.MISA)
+	s = append(s, fmt.Sprintf("%08x %v", misa, err))
 
 	/*
 

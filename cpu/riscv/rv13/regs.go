@@ -8,6 +8,12 @@ RISC-V Debugger 0.13 Register Operations
 
 package rv13
 
+import (
+	"fmt"
+
+	"github.com/deadsy/rvdbg/cpu/riscv/rv"
+)
+
 //-----------------------------------------------------------------------------
 
 // rdReg32 reads a 32-bit GPR/FPR/CSR using an abstract register read command.
@@ -74,6 +80,34 @@ func (dbg *Debug) rdReg128(reg uint) (uint64, uint64, error) {
 }
 
 //-----------------------------------------------------------------------------
+// control and status registers
+
+// RdCSR reads a control and status register for the current hart.
+func (dbg *Debug) RdCSR(reg uint) (uint, error) {
+	var err error
+	var val uint
+	size := rv.GetCSRLength(reg, dbg.GetCurrentHart())
+	switch size {
+	case 32:
+		var x uint32
+		x, err = dbg.rdReg32(regCSR(reg))
+		val = uint(x)
+	case 64:
+		var x uint64
+		x, err = dbg.rdReg64(regCSR(reg))
+		val = uint(x)
+	default:
+		return 0, fmt.Errorf("%d-bit csr read not supported", size)
+	}
+	return val, err
+}
+
+// WrCSR writes a control and status register.
+func (dbg *Debug) WrCSR(reg, val uint64) error {
+	return nil
+}
+
+//-----------------------------------------------------------------------------
 // general purpose registers
 
 // rdGPR reads a general purpose register.
@@ -96,19 +130,6 @@ func (hi *hartInfo) rdFPR(reg uint) (uint64, error) {
 
 // wrFPR writes a floating point register.
 func (hi *hartInfo) wrFPR(reg uint, val uint64) error {
-	return nil
-}
-
-//-----------------------------------------------------------------------------
-// control and status registers
-
-// rdCSR reads a control and status register.
-func (hi *hartInfo) rdCSR(csr uint) (uint, error) {
-	return 0, nil
-}
-
-// wrCSR writes a control and status register.
-func (hi *hartInfo) wrCSR(csr, val uint) error {
 	return nil
 }
 
