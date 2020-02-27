@@ -52,6 +52,27 @@ func (dbg *Debug) rdReg64(reg uint) (uint64, error) {
 	return dbg.rdData64()
 }
 
+// rdReg128 reads a 128-bit GPR/FPR/CSR using an abstract register read command.
+func (dbg *Debug) rdReg128(reg uint) (uint64, uint64, error) {
+	ops := []dmiOp{
+		// read the register
+		dmiWr(command, cmdRegister(reg, size128, false, false, true, false)),
+		// readback the command status
+		dmiRd(abstractcs),
+		// done
+		dmiEnd(),
+	}
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return 0, 0, err
+	}
+	err = dbg.cmdWait(cmdStatus(data[0]), cmdTimeout)
+	if err != nil {
+		return 0, 0, err
+	}
+	return dbg.rdData128()
+}
+
 //-----------------------------------------------------------------------------
 // general purpose registers
 

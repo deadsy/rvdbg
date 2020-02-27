@@ -11,6 +11,7 @@ Hart Functions
 package rv13
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -75,6 +76,28 @@ func (dbg *Debug) halt() (bool, error) {
 
 //-----------------------------------------------------------------------------
 
+// getMxlen returns the MXLEN for the current hart.
+func (dbg *Debug) getMxlen() (int, error) {
+	// try a 128-bit register read
+	_, _, err := dbg.rdReg128(regGPR(rv.RegS0))
+	if err == nil {
+		return 128, nil
+	}
+	// try a 64-bit register read
+	_, err = dbg.rdReg64(regGPR(rv.RegS0))
+	if err == nil {
+		return 64, nil
+	}
+	// try a 32-bit register read
+	_, err = dbg.rdReg32(regGPR(rv.RegS0))
+	if err == nil {
+		return 32, nil
+	}
+	return 0, errors.New("unable to determine MXLEN")
+}
+
+//-----------------------------------------------------------------------------
+
 // hartInfo stores per hart information.
 type hartInfo struct {
 	dbg        *Debug      // pointer back to parent debugger
@@ -88,7 +111,9 @@ type hartInfo struct {
 func (hi *hartInfo) String() string {
 	s := []string{}
 	s = append(s, fmt.Sprintf("hartid %d", hi.info.ID))
-	s = append(s, fmt.Sprintf("xlen %d", hi.info.Xlen))
+	s = append(s, fmt.Sprintf("mxlen %d", hi.info.Mxlen))
+	s = append(s, fmt.Sprintf("sxlen %d", hi.info.Sxlen))
+	s = append(s, fmt.Sprintf("uxlen %d", hi.info.Uxlen))
 	s = append(s, fmt.Sprintf("nscratch %d words", hi.nscratch))
 	s = append(s, fmt.Sprintf("datasize %d %s", hi.datasize, []string{"csr", "words"}[hi.dataaccess]))
 	s = append(s, fmt.Sprintf("dataaccess %s(%d)", []string{"csr", "memory"}[hi.dataaccess], hi.dataaccess))
@@ -125,9 +150,11 @@ func (dbg *Debug) newHart(id int) (*hartInfo, error) {
 		return nil, err
 	}
 
-	// get the GPR bit length
-	_, err = dbg.rdReg64(regGPR(rv.RegS0))
-	hi.info.Xlen = []int{32, 64}[util.BoolToInt(err == nil)]
+	// get the MXLEN value
+	hi.info.Mxlen, err = dbg.getMxlen()
+	if err != nil {
+		return nil, err
+	}
 
 	// get the MISA value
 

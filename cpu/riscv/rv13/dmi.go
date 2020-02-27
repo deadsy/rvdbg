@@ -456,6 +456,9 @@ func (dbg *Debug) clrDmi(addr uint, bits uint32) error {
 // read/write data value buffers
 
 func (dbg *Debug) rdData32() (uint32, error) {
+	if dbg.datacount < 1 {
+		return 0, errors.New("need datacount >= 1 for 32-bit reads")
+	}
 	ops := []dmiOp{
 		dmiRd(data0),
 		dmiEnd(),
@@ -468,6 +471,9 @@ func (dbg *Debug) rdData32() (uint32, error) {
 }
 
 func (dbg *Debug) rdData64() (uint64, error) {
+	if dbg.datacount < 2 {
+		return 0, errors.New("need datacount >= 2 for 64-bit reads")
+	}
 	ops := []dmiOp{
 		dmiRd(data0),
 		dmiRd(data0 + 1),
@@ -478,6 +484,26 @@ func (dbg *Debug) rdData64() (uint64, error) {
 		return 0, err
 	}
 	return (uint64(data[1]) << 32) | uint64(data[0]), nil
+}
+
+func (dbg *Debug) rdData128() (uint64, uint64, error) {
+	if dbg.datacount < 4 {
+		return 0, 0, errors.New("need datacount >= 4 for 128-bit reads")
+	}
+	ops := []dmiOp{
+		dmiRd(data0),
+		dmiRd(data0 + 1),
+		dmiRd(data0 + 2),
+		dmiRd(data0 + 3),
+		dmiEnd(),
+	}
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return 0, 0, err
+	}
+	lo := (uint64(data[1]) << 32) | uint64(data[0])
+	hi := (uint64(data[3]) << 32) | uint64(data[2])
+	return lo, hi, nil
 }
 
 //-----------------------------------------------------------------------------
