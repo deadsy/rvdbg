@@ -405,7 +405,7 @@ func (dbg *Debug) cmdWait(cs cmdStatus, to time.Duration) error {
 //-----------------------------------------------------------------------------
 // debug module interface
 
-// wrDmi reads a dmi register.
+// rdDmi reads a dmi register.
 func (dbg *Debug) rdDmi(addr uint) (uint32, error) {
 	ops := []dmiOp{
 		dmiRd(addr),
@@ -428,7 +428,7 @@ func (dbg *Debug) wrDmi(addr uint, data uint32) error {
 	return err
 }
 
-// rmwDmi read/write/modify a dmi register.
+// rmwDmi read/modify/write a dmi register.
 func (dbg *Debug) rmwDmi(addr uint, mask, bits uint32) error {
 	// read
 	x, err := dbg.rdDmi(addr)
@@ -455,6 +455,7 @@ func (dbg *Debug) clrDmi(addr uint, bits uint32) error {
 //-----------------------------------------------------------------------------
 // read/write data value buffers
 
+// rdData32 reads a 32-bit data value.
 func (dbg *Debug) rdData32() (uint32, error) {
 	if dbg.datacount < 1 {
 		return 0, errors.New("need datacount >= 1 for 32-bit reads")
@@ -470,6 +471,7 @@ func (dbg *Debug) rdData32() (uint32, error) {
 	return data[0], nil
 }
 
+// rdData64 reads a 64-bit data value.
 func (dbg *Debug) rdData64() (uint64, error) {
 	if dbg.datacount < 2 {
 		return 0, errors.New("need datacount >= 2 for 64-bit reads")
@@ -486,6 +488,7 @@ func (dbg *Debug) rdData64() (uint64, error) {
 	return (uint64(data[1]) << 32) | uint64(data[0]), nil
 }
 
+// rdData128 reads a 128-bit data value.
 func (dbg *Debug) rdData128() (uint64, uint64, error) {
 	if dbg.datacount < 4 {
 		return 0, 0, errors.New("need datacount >= 4 for 128-bit reads")
