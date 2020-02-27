@@ -33,6 +33,7 @@ type HartInfo struct {
 	SXLEN   int       // supervisor XLEN (0 == no S-mode)
 	UXLEN   int       // user XLEN (0 == no U-mode)
 	HXLEN   int       // hypervisor XLEN (0 == no H-mode)
+	DXLEN   int       // debug XLEN
 	FLEN    int       // foating point register width
 	MISA    uint      // MISA value
 	MHARTID uint      // MHARTID value
@@ -45,6 +46,7 @@ func (hi *HartInfo) String() string {
 	s = append(s, fmt.Sprintf("sxlen %d", hi.SXLEN))
 	s = append(s, fmt.Sprintf("uxlen %d", hi.UXLEN))
 	s = append(s, fmt.Sprintf("hxlen %d", hi.HXLEN))
+	s = append(s, fmt.Sprintf("dxlen %d", hi.DXLEN))
 	s = append(s, fmt.Sprintf("flen %d", hi.FLEN))
 	s = append(s, fmt.Sprintf("misa %s", DisplayMISA(hi.MISA, uint(hi.MXLEN))))
 	s = append(s, fmt.Sprintf("mhartid 0x%x", hi.MHARTID))

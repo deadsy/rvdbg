@@ -19,6 +19,10 @@ import (
 const (
 	MSTATUS   = 0x300
 	MISA      = 0x301
+	DCSR      = 0x7b0
+	DPC       = 0x7b1
+	DCRATCH0  = 0x7b2
+	DCRATCH1  = 0x7b3
 	MVENDORID = 0xf11
 	MARCHID   = 0xf12
 	MIMPID    = 0xf13
@@ -81,8 +85,10 @@ func CheckExtMISA(misa uint, ext rune) bool {
 func GetCSRLength(reg uint, hi *HartInfo) int {
 	// exceptions
 	switch reg {
-	case MVENDORID:
+	case MVENDORID, DCSR:
 		return 32
+	case DPC:
+		return hi.DXLEN
 	}
 	// normal
 	switch reg & modeMask {
