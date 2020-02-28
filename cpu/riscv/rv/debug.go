@@ -42,6 +42,7 @@ func (s HartState) String() string {
 type HartInfo struct {
 	ID      int       // hart identifier
 	State   HartState // hart state
+	Nregs   int       // number of GPRs (normally 32, 16 for rv32e)
 	MXLEN   int       // machine XLEN
 	SXLEN   int       // supervisor XLEN (0 == no S-mode)
 	UXLEN   int       // user XLEN (0 == no U-mode)
@@ -64,6 +65,7 @@ func (hi *HartInfo) String() string {
 	s = append(s, []string{fmt.Sprintf("hart%d", hi.ID), fmt.Sprintf("%s", hi.State)})
 	s = append(s, []string{"mhartid", fmt.Sprintf("%d", hi.MHARTID)})
 	s = append(s, []string{"misa", fmt.Sprintf("%s", DisplayMISA(hi.MISA, uint(hi.MXLEN)))})
+	s = append(s, []string{"nregs", fmt.Sprintf("%d", hi.Nregs)})
 	s = append(s, []string{"mxlen", fmt.Sprintf("%d", hi.MXLEN)})
 	s = append(s, []string{"sxlen", xlenString(hi.SXLEN, "s-mode")})
 	s = append(s, []string{"uxlen", xlenString(hi.UXLEN, "u-mode")})

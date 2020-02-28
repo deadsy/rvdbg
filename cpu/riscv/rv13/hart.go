@@ -253,6 +253,11 @@ func (hi *hartInfo) examine() error {
 		return errors.New("MXLEN != misa.mxl")
 	}
 
+	// are we rv32e?
+	if rv.CheckExtMISA(hi.info.MISA, 'e') {
+		hi.info.Nregs = 16
+	}
+
 	// do we have supervisor mode?
 	if rv.CheckExtMISA(hi.info.MISA, 's') {
 		if hi.info.MXLEN == 32 {
@@ -342,6 +347,7 @@ func (dbg *Debug) newHart(id int) *hartInfo {
 		dbg: dbg,
 	}
 	hi.info.ID = id
+	hi.info.Nregs = 32
 	return hi
 }
 

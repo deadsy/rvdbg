@@ -184,7 +184,7 @@ func New(dev *jtag.Device) (rv.Debug, error) {
 		dbg.autoexecdata = true
 	}
 
-	// enumerate the harts
+	// 1st pass: enumerate the harts
 	maxHarts := 1 << dbg.hartsellen
 	for id := 0; id < maxHarts; id++ {
 		// select the hart
@@ -209,7 +209,7 @@ func New(dev *jtag.Device) (rv.Debug, error) {
 		return nil, errors.New("no harts found")
 	}
 
-	// examine each hart
+	// 2nd pass: examine each hart
 	for i := range dbg.hart {
 		err := dbg.hart[i].examine()
 		if err != nil {

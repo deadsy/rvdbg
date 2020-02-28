@@ -84,6 +84,9 @@ func (dbg *Debug) rdReg128(reg uint) (uint64, uint64, error) {
 
 // RdCSR reads a control and status register for the current hart.
 func (dbg *Debug) RdCSR(reg uint) (uint, error) {
+	if reg > 0xfff {
+		return 0, fmt.Errorf("csr 0x%x is invalid", reg)
+	}
 	var err error
 	var val uint
 	size := rv.GetCSRLength(reg, dbg.GetCurrentHart())
@@ -110,26 +113,59 @@ func (dbg *Debug) WrCSR(reg, val uint64) error {
 //-----------------------------------------------------------------------------
 // general purpose registers
 
-// rdGPR reads a general purpose register.
-func (hi *hartInfo) rdGPR(reg uint) (uint64, error) {
-	return 0, nil
+// RdGPR reads a general purpose register.
+func (dbg *Debug) RdGPR(reg uint) (uint64, error) {
+	hi := dbg.GetCurrentHart()
+	if reg >= uint(hi.Nregs) {
+		return 0, fmt.Errorf("gpr %d is invalid", reg)
+	}
+	var err error
+	var val uint64
+	size := hi.MXLEN
+	switch size {
+	case 32:
+		var x uint32
+		x, err = dbg.rdReg32(regGPR(reg))
+		val = uint64(x)
+	case 64:
+		val, err = dbg.rdReg64(regGPR(reg))
+	default:
+		return 0, fmt.Errorf("%d-bit gpr read not supported", size)
+	}
+	return val, err
 }
 
-// wrGPR writes a general purpose register.
-func (hi *hartInfo) wrGPR(reg uint, val uint64) error {
+// WrGPR writes a general purpose register.
+func (dbg *Debug) WrGPR(reg uint, val uint64) error {
 	return nil
 }
 
 //-----------------------------------------------------------------------------
 // floating point registers
 
-// rdFPR reads a floating point register.
-func (hi *hartInfo) rdFPR(reg uint) (uint64, error) {
-	return 0, nil
+// RdFPR reads a floating point register.
+func (dbg *Debug) RdFPR(reg uint) (uint64, error) {
+	if reg >= 32 {
+		return 0, fmt.Errorf("fpr %d is invalid", reg)
+	}
+	var err error
+	var val uint64
+	size := dbg.GetCurrentHart().FLEN
+	switch size {
+	case 32:
+		var x uint32
+		x, err = dbg.rdReg32(regGPR(reg))
+		val = uint64(x)
+	case 64:
+		val, err = dbg.rdReg64(regGPR(reg))
+	default:
+		return 0, fmt.Errorf("%d-bit gpr read not supported", size)
+	}
+	return val, err
 }
 
-// wrFPR writes a floating point register.
-func (hi *hartInfo) wrFPR(reg uint, val uint64) error {
+// WrFPR writes a floating point register.
+func (dbg *Debug) WrFPR(reg uint, val uint64) error {
 	return nil
 }
 
