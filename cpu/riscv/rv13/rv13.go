@@ -293,39 +293,43 @@ func (dbg *Debug) GetCurrentHart() *rv.HartInfo {
 }
 
 // SetCurrentHart sets the current hart.
-func (dbg *Debug) SetCurrentHart(id int) error {
+func (dbg *Debug) SetCurrentHart(id int) (*rv.HartInfo, error) {
 	if id < 0 || id >= len(dbg.hart) {
-		return errors.New("hart id is out of range")
+		return nil, errors.New("hart id is out of range")
 	}
-	// TODO get hart state
-	return dbg.selectHart(id)
+	err := dbg.selectHart(id)
+	dbg.hartid = id
+	return &dbg.hart[dbg.hartid].info, err
+}
+
+// HaltHart halts the current hart.
+func (dbg *Debug) HaltHart() error {
+	_, err := dbg.halt()
+	halted, _ := dbg.isHalted()
+	if halted {
+		dbg.hart[dbg.hartid].info.State = rv.Halted
+	}
+	return err
+}
+
+// ResumeHart resumes the current hart.
+func (dbg *Debug) ResumeHart() error {
+	_, err := dbg.resume()
+	running, _ := dbg.isRunning()
+	if running {
+		dbg.hart[dbg.hartid].info.State = rv.Running
+	}
+	return err
 }
 
 //-----------------------------------------------------------------------------
 
 // Test is a test routine.
 func (dbg *Debug) Test() string {
-
-	dbg.selectHart(0)
-
+	dbg.SetCurrentHart(0)
 	s := []string{}
-
 	misa, err := dbg.RdCSR(rv.MISA)
 	s = append(s, fmt.Sprintf("%08x %v", misa, err))
-
-	/*
-
-		for i := 0x04; i <= 0x40; i++ {
-			x, err := dbg.rdDmi(uint(i))
-			if err != nil {
-				s = append(s, fmt.Sprintf("%02x: %s", i, err))
-			} else {
-				s = append(s, fmt.Sprintf("%02x: %08x", i, x))
-			}
-		}
-
-	*/
-
 	return strings.Join(s, "\n")
 }
 

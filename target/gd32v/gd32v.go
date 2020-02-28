@@ -63,9 +63,12 @@ var Info = target.Info{
 var menuRoot = cli.Menu{
 	{"cpu", riscv.Menu, "cpu functions"},
 	{"exit", target.CmdExit},
+	{"halt", riscv.CmdHalt},
+	{"hart", riscv.CmdHart, riscv.HartHelp},
 	{"help", target.CmdHelp},
 	{"history", target.CmdHistory, cli.HistoryHelp},
 	{"jtag", jtag.Menu, "jtag functions"},
+	{"resume", riscv.CmdResume},
 }
 
 //-----------------------------------------------------------------------------

@@ -12,7 +12,6 @@ package rv13
 import (
 	"errors"
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/deadsy/rvdbg/bitstr"
@@ -80,6 +79,7 @@ var dmcontrolFields = util.FieldSet{
 }
 
 const haltreq = (1 << 31)
+const resumereq = (1 << 30)
 const ackhavereset = (1 << 28)
 const hartsello = ((1 << 10) - 1) << 16
 const hartselhi = ((1 << 10) - 1) << 6
@@ -124,16 +124,11 @@ func getHartSelect(x uint32) int {
 
 // selectHart sets the dmcontrol hartsel value.
 func (dbg *Debug) selectHart(id int) error {
-	if dbg.hartid == id {
-		// already selected
-		return nil
-	}
 	x, err := dbg.rdDmi(dmcontrol)
 	if err != nil {
 		return err
 	}
 	x = setHartSelect(x, id)
-	dbg.hartid = id
 	return dbg.wrDmi(dmcontrol, x)
 }
 
@@ -162,9 +157,21 @@ var dmstatusFields = util.FieldSet{
 }
 
 const anyhavereset = (1 << 18)
+const allresumeack = (1 << 17)
+const anyresumeack = (1 << 16)
 const anynonexistent = (1 << 14)
 const anyunavail = (1 << 12)
+const allrunning = (1 << 11)
 const allhalted = (1 << 9)
+
+// checkStatus checks the dmstatus register for a flag.
+func (dbg *Debug) checkStatus(flag uint32) (bool, error) {
+	x, err := dbg.rdDmi(dmstatus)
+	if err != nil {
+		return false, err
+	}
+	return x&flag != 0, nil
+}
 
 //-----------------------------------------------------------------------------
 
@@ -248,7 +255,6 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 		// get the read data
 		if read {
 			data = append(data, uint32((x>>2)&mask32))
-			read = false
 		}
 		// setup the next read
 		read = dmi.isRead()
@@ -507,39 +513,6 @@ func (dbg *Debug) rdData128() (uint64, uint64, error) {
 	lo := (uint64(data[1]) << 32) | uint64(data[0])
 	hi := (uint64(data[3]) << 32) | uint64(data[2])
 	return lo, hi, nil
-}
-
-//-----------------------------------------------------------------------------
-
-// testBuffers tests dmi r/w buffers.
-func (dbg *Debug) testBuffers(addr, n uint) error {
-
-	// random write values
-	wr := make([]uint32, n)
-	for i := range wr {
-		wr[i] = rand.Uint32()
-	}
-
-	// write to dmi registers
-	for i := range wr {
-		err := dbg.wrDmi(addr+uint(i), wr[i])
-		if err != nil {
-			return err
-		}
-	}
-
-	// read back from dmi registers
-	for i := range wr {
-		x, err := dbg.rdDmi(addr + uint(i))
-		if err != nil {
-			return err
-		}
-		if x != wr[i] {
-			return fmt.Errorf("dmi buffer r/w mismatch at addr 0x%x", addr+uint(i))
-		}
-	}
-
-	return nil
 }
 
 //-----------------------------------------------------------------------------

@@ -18,18 +18,15 @@ import (
 
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/util"
+	"github.com/deadsy/rvdbg/util/log"
 )
 
 //-----------------------------------------------------------------------------
+// halt a hart
 
 // isHalted returns true if the currently selected hart is halted.
 func (dbg *Debug) isHalted() (bool, error) {
-	// get the hart status
-	x, err := dbg.rdDmi(dmstatus)
-	if err != nil {
-		return false, err
-	}
-	return x&allhalted != 0, nil
+	return dbg.checkStatus(allhalted)
 }
 
 const haltTimeout = 5 * time.Millisecond
@@ -64,10 +61,61 @@ func (dbg *Debug) halt() (bool, error) {
 	}
 	// did we timeout?
 	if !halted {
-		return false, fmt.Errorf("unable to halt hart %d", dbg.hartid)
+		return false, fmt.Errorf("unable to halt hart%d", dbg.hartid)
 	}
 	// clear the halt request
 	err = dbg.clrDmi(dmcontrol, haltreq)
+	if err != nil {
+		return false, err
+	}
+	return false, nil
+}
+
+//-----------------------------------------------------------------------------
+// resume a hart
+
+// isRunning returns true if the currently selected hart is running.
+func (dbg *Debug) isRunning() (bool, error) {
+	return dbg.checkStatus(allrunning)
+}
+
+const resumeTimeout = 5 * time.Millisecond
+
+// resume the current hart, return true if it was already running.
+func (dbg *Debug) resume() (bool, error) {
+	// get the current state
+	running, err := dbg.isRunning()
+	if err != nil {
+		return false, err
+	}
+	// is the current hart already running?
+	if running {
+		return true, nil
+	}
+	// request the resume
+	err = dbg.setDmi(dmcontrol, resumereq)
+	if err != nil {
+		return false, err
+	}
+	// wait for the hart to resume
+	t := time.Now().Add(resumeTimeout)
+	ack := false
+	for t.After(time.Now()) {
+		ack, err = dbg.checkStatus(allresumeack)
+		if err != nil {
+			return false, err
+		}
+		if ack {
+			break
+		}
+		time.Sleep(1 * time.Millisecond)
+	}
+	// did we timeout?
+	if !ack {
+		return false, fmt.Errorf("unable to resume hart%d", dbg.hartid)
+	}
+	// clear the resume request
+	err = dbg.clrDmi(dmcontrol, resumereq)
 	if err != nil {
 		return false, err
 	}
@@ -116,6 +164,26 @@ func (dbg *Debug) getFLEN() (int, error) {
 	return 0, errors.New("unable to determine FLEN")
 }
 
+// getDXLEN returns the debug register length for the current hart.
+func (dbg *Debug) getDXLEN() (int, error) {
+	// try a 128-bit register read
+	_, _, err := dbg.rdReg128(regCSR(rv.DPC))
+	if err == nil {
+		return 128, nil
+	}
+	// try a 64-bit register read
+	_, err = dbg.rdReg64(regCSR(rv.DPC))
+	if err == nil {
+		return 64, nil
+	}
+	// try a 32-bit register read
+	_, err = dbg.rdReg32(regCSR(rv.DPC))
+	if err == nil {
+		return 32, nil
+	}
+	return 0, errors.New("unable to determine DXLEN")
+}
+
 //-----------------------------------------------------------------------------
 
 // hartInfo stores per hart information.
@@ -143,7 +211,7 @@ func (hi *hartInfo) examine() error {
 	dbg := hi.dbg
 
 	// select the hart
-	err := dbg.selectHart(hi.info.ID)
+	_, err := dbg.SetCurrentHart(hi.info.ID)
 	if err != nil {
 		return err
 	}
@@ -166,6 +234,7 @@ func (hi *hartInfo) examine() error {
 	if err != nil {
 		return err
 	}
+	hi.info.State = rv.Halted
 
 	// get the MXLEN value
 	hi.info.MXLEN, err = dbg.getMXLEN()
@@ -189,7 +258,7 @@ func (hi *hartInfo) examine() error {
 		if hi.info.MXLEN == 32 {
 			hi.info.SXLEN = 32
 		} else {
-			panic("TODO")
+			log.Debug.Printf("TODO")
 		}
 	}
 
@@ -198,7 +267,7 @@ func (hi *hartInfo) examine() error {
 		if hi.info.MXLEN == 32 {
 			hi.info.UXLEN = 32
 		} else {
-			panic("TODO")
+			log.Debug.Printf("TODO")
 		}
 	}
 
@@ -207,30 +276,36 @@ func (hi *hartInfo) examine() error {
 		if hi.info.MXLEN == 32 {
 			hi.info.HXLEN = 32
 		} else {
-			panic("TODO")
+			log.Debug.Printf("TODO")
 		}
+	}
+
+	// get the DXLEN value
+	hi.info.DXLEN, err = dbg.getDXLEN()
+	if err != nil {
+		return err
 	}
 
 	// get the FLEN value
 	hi.info.FLEN, err = dbg.getFLEN()
 	if err != nil {
 		// ignore errors - we probably don't have floating point support.
-		fmt.Printf("%v\n", err)
+		log.Info.Printf(fmt.Sprintf("%v", err))
 	}
 
 	// check 32-bit float support
 	if rv.CheckExtMISA(hi.info.MISA, 'f') && hi.info.FLEN < 32 {
-		// TODO
+		log.Error.Printf("misa has 32-bit floating point but FLEN < 32")
 	}
 
 	// check 64-bit float support
 	if rv.CheckExtMISA(hi.info.MISA, 'd') && hi.info.FLEN < 64 {
-		// TODO
+		log.Error.Printf("misa has 64-bit floating point but FLEN < 64")
 	}
 
 	// check 128-bit float support
 	if rv.CheckExtMISA(hi.info.MISA, 'q') && hi.info.FLEN < 128 {
-		// TODO
+		log.Error.Printf("misa has 128-bit floating point but FLEN < 128")
 	}
 
 	// get the hart id per the CSR
@@ -250,7 +325,12 @@ func (hi *hartInfo) examine() error {
 	hi.dataaddr = util.Bits(uint(x), 11, 0)
 
 	if !wasHalted {
-		fmt.Printf("was running\n")
+		// resume the hart
+		_, err := dbg.resume()
+		if err != nil {
+			return err
+		}
+		hi.info.State = rv.Running
 	}
 
 	return nil

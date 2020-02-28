@@ -10,7 +10,8 @@ package rv
 
 import (
 	"fmt"
-	"strings"
+
+	cli "github.com/deadsy/go-cli"
 )
 
 //-----------------------------------------------------------------------------
@@ -24,6 +25,18 @@ const (
 	Running                  // hart is running
 	Halted                   // hart is halted
 )
+
+var stateName = map[HartState]string{
+	Running: "running",
+	Halted:  "halted",
+}
+
+func (s HartState) String() string {
+	if name, ok := stateName[s]; ok {
+		return name
+	}
+	return "unknown"
+}
 
 // HartInfo stores hart information.
 type HartInfo struct {
@@ -39,18 +52,25 @@ type HartInfo struct {
 	MHARTID uint      // MHARTID value
 }
 
+func xlenString(n int, msg string) string {
+	if n != 0 {
+		return fmt.Sprintf("%d", n)
+	}
+	return fmt.Sprintf("no %s", msg)
+}
+
 func (hi *HartInfo) String() string {
-	s := []string{}
-	s = append(s, fmt.Sprintf("hartid %d", hi.ID))
-	s = append(s, fmt.Sprintf("mxlen %d", hi.MXLEN))
-	s = append(s, fmt.Sprintf("sxlen %d", hi.SXLEN))
-	s = append(s, fmt.Sprintf("uxlen %d", hi.UXLEN))
-	s = append(s, fmt.Sprintf("hxlen %d", hi.HXLEN))
-	s = append(s, fmt.Sprintf("dxlen %d", hi.DXLEN))
-	s = append(s, fmt.Sprintf("flen %d", hi.FLEN))
-	s = append(s, fmt.Sprintf("misa %s", DisplayMISA(hi.MISA, uint(hi.MXLEN))))
-	s = append(s, fmt.Sprintf("mhartid 0x%x", hi.MHARTID))
-	return strings.Join(s, "\n")
+	s := make([][]string, 0)
+	s = append(s, []string{fmt.Sprintf("hart%d", hi.ID), fmt.Sprintf("%s", hi.State)})
+	s = append(s, []string{"mhartid", fmt.Sprintf("%d", hi.MHARTID)})
+	s = append(s, []string{"misa", fmt.Sprintf("%s", DisplayMISA(hi.MISA, uint(hi.MXLEN)))})
+	s = append(s, []string{"mxlen", fmt.Sprintf("%d", hi.MXLEN)})
+	s = append(s, []string{"sxlen", xlenString(hi.SXLEN, "s-mode")})
+	s = append(s, []string{"uxlen", xlenString(hi.UXLEN, "u-mode")})
+	s = append(s, []string{"hxlen", xlenString(hi.HXLEN, "h-mode")})
+	s = append(s, []string{"flen", xlenString(hi.FLEN, "floating point")})
+	s = append(s, []string{"dxlen", fmt.Sprintf("%d", hi.DXLEN)})
+	return cli.TableString(s, []int{0, 0}, 1)
 }
 
 // Debug is the RISC-V debug interface.
@@ -58,7 +78,9 @@ type Debug interface {
 	GetHartCount() int
 	GetHartInfo(id int) (*HartInfo, error)
 	GetCurrentHart() *HartInfo
-	SetCurrentHart(id int) error
+	SetCurrentHart(id int) (*HartInfo, error)
+	HaltHart() error
+	ResumeHart() error
 
 	Test() string
 }
