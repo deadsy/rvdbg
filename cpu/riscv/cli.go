@@ -52,6 +52,37 @@ func gprString(reg []uint64, pc uint64, xlen int) string {
 	return strings.Join(s, "\n")
 }
 
+// CmdGpr displays the general purpose registers.
+var CmdGpr = cli.Leaf{
+	Descr: "display general purpose registers",
+	F: func(c *cli.CLI, args []string) {
+		dbg := c.User.(target).GetCpu().dbg
+		hi := dbg.GetCurrentHart()
+		err := dbg.HaltHart()
+		if err != nil {
+			c.User.Put(fmt.Sprintf("unable to halt hart%d: %v\n", hi.ID, err))
+			return
+		}
+		reg := make([]uint64, hi.Nregs)
+		// read the GPRs
+		for i := range reg {
+			var err error
+			reg[i], err = dbg.RdGPR(uint(i))
+			if err != nil {
+				c.User.Put(fmt.Sprintf("unable to read gpr%d: %v\n", i, err))
+				return
+			}
+		}
+		// read the PC
+		pc, err := dbg.RdCSR(rv.DPC)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("unable to read pc: %v\n", err))
+			return
+		}
+		c.User.Put(fmt.Sprintf("%s\n", gprString(reg, uint64(pc), hi.MXLEN)))
+	},
+}
+
 //-----------------------------------------------------------------------------
 // display floating point register set
 
@@ -78,6 +109,7 @@ func fprString(reg []uint64, flen int) string {
 
 //-----------------------------------------------------------------------------
 
+// CmdHalt halts the current hart.
 var CmdHalt = cli.Leaf{
 	Descr: "halt the current hart",
 	F: func(c *cli.CLI, args []string) {
@@ -95,6 +127,7 @@ var CmdHalt = cli.Leaf{
 	},
 }
 
+// CmdResume resumes the current hart.
 var CmdResume = cli.Leaf{
 	Descr: "resume the current hart",
 	F: func(c *cli.CLI, args []string) {
@@ -130,17 +163,21 @@ var CmdHart = cli.Leaf{
 			c.User.Put(fmt.Sprintf("%s\n", hi))
 			return
 		}
-
 	},
 }
 
 //-----------------------------------------------------------------------------
 
-var cmdRiscvDebug = cli.Leaf{
-	Descr: "debug module status",
+var cmdDebugInfo = cli.Leaf{
+	Descr: "debug module information",
 	F: func(c *cli.CLI, args []string) {
-		cpu := c.User.(target).GetCpu()
-		c.User.Put(fmt.Sprintf("%s\n", cpu.dbg))
+		dbg := c.User.(target).GetCpu().dbg
+		di, err := dbg.GetInfo()
+		if err != nil {
+			c.User.Put(fmt.Sprintf("unable to get debug info: %v\n", err))
+			return
+		}
+		c.User.Put(fmt.Sprintf("%s\n", di))
 	},
 }
 
@@ -154,7 +191,7 @@ var cmdRiscvTest = cli.Leaf{
 
 // Menu submenu items
 var Menu = cli.Menu{
-	{"debug", cmdRiscvDebug},
+	{"debug", cmdDebugInfo},
 	{"test", cmdRiscvTest},
 }
 

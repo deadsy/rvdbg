@@ -17,6 +17,7 @@ import (
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/util"
+	"github.com/deadsy/rvdbg/util/log"
 )
 
 //-----------------------------------------------------------------------------
@@ -210,6 +211,7 @@ func New(dev *jtag.Device) (rv.Debug, error) {
 	}
 
 	// 2nd pass: examine each hart
+	log.Info.Printf("%d hart(s) found", len(dbg.hart))
 	for i := range dbg.hart {
 		err := dbg.hart[i].examine()
 		if err != nil {
@@ -324,12 +326,32 @@ func (dbg *Debug) ResumeHart() error {
 
 //-----------------------------------------------------------------------------
 
+// GetInfo returns a string of debugger information.
+func (dbg *Debug) GetInfo() (string, error) {
+	s := []string{}
+	dump, err := dbg.dmiDump()
+	if err != nil {
+		return "", err
+	}
+	s = append(s, dump)
+	return strings.Join(s, "\n"), nil
+}
+
+//-----------------------------------------------------------------------------
+
+const testReg = 25
+
 // Test is a test routine.
 func (dbg *Debug) Test() string {
-	dbg.SetCurrentHart(0)
+	//dbg.SetCurrentHart(0)
+
 	s := []string{}
-	misa, err := dbg.RdCSR(rv.MISA)
-	s = append(s, fmt.Sprintf("%08x %v", misa, err))
+	err := dbg.testBuffers(data0, 4)
+	s = append(s, fmt.Sprintf("%v", err))
+	err = dbg.WrGPR(testReg, 0xdeadbeef)
+	s = append(s, fmt.Sprintf("%v", err))
+	val, err := dbg.RdGPR(testReg)
+	s = append(s, fmt.Sprintf("%x %v", val, err))
 	return strings.Join(s, "\n")
 }
 

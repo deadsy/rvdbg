@@ -295,22 +295,22 @@ func (hi *hartInfo) examine() error {
 	hi.info.FLEN, err = dbg.getFLEN()
 	if err != nil {
 		// ignore errors - we probably don't have floating point support.
-		log.Info.Printf(fmt.Sprintf("%v", err))
+		log.Info.Printf(fmt.Sprintf("hart%d: %v", hi.info.ID, err))
 	}
 
 	// check 32-bit float support
 	if rv.CheckExtMISA(hi.info.MISA, 'f') && hi.info.FLEN < 32 {
-		log.Error.Printf("misa has 32-bit floating point but FLEN < 32")
+		log.Error.Printf("hart%d: misa has 32-bit floating point but FLEN < 32", hi.info.ID)
 	}
 
 	// check 64-bit float support
 	if rv.CheckExtMISA(hi.info.MISA, 'd') && hi.info.FLEN < 64 {
-		log.Error.Printf("misa has 64-bit floating point but FLEN < 64")
+		log.Error.Printf("hart%d: misa has 64-bit floating point but FLEN < 64", hi.info.ID)
 	}
 
 	// check 128-bit float support
 	if rv.CheckExtMISA(hi.info.MISA, 'q') && hi.info.FLEN < 128 {
-		log.Error.Printf("misa has 128-bit floating point but FLEN < 128")
+		log.Error.Printf("hart%d: misa has 128-bit floating point but FLEN < 128", hi.info.ID)
 	}
 
 	// get the hart id per the CSR

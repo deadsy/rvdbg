@@ -12,8 +12,10 @@ package rv13
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"time"
 
+	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/bitstr"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/util"
@@ -22,8 +24,35 @@ import (
 //-----------------------------------------------------------------------------
 // debug module registers
 
-const data0 = 0x04    // Abstract Data 0-11
+const data0 = 0x04 // Abstract Data 0-11
+const data1 = 0x05
+const data2 = 0x06
+const data3 = 0x07
+const data4 = 0x08
+const data5 = 0x09
+const data6 = 0x0a
+const data7 = 0x0b
+const data8 = 0x0c
+const data9 = 0x0d
+const data10 = 0x0e
+const data11 = 0x0f
+
 const progbuf0 = 0x20 // Program Buffer 0-15
+const progbuf1 = 0x21
+const progbuf2 = 0x22
+const progbuf3 = 0x23
+const progbuf4 = 0x24
+const progbuf5 = 0x25
+const progbuf6 = 0x26
+const progbuf7 = 0x27
+const progbuf8 = 0x28
+const progbuf9 = 0x29
+const progbuf10 = 0x2a
+const progbuf11 = 0x2b
+const progbuf12 = 0x2c
+const progbuf13 = 0x2d
+const progbuf14 = 0x2e
+const progbuf15 = 0x2f
 
 const dmcontrol = 0x10 // Debug Module Control
 const dmstatus = 0x11  // Debug Module Status
@@ -60,6 +89,71 @@ const sbdata0 = 0x3c // System Bus Data 31:0
 const sbdata1 = 0x3d // System Bus Data 63:32
 const sbdata2 = 0x3e // System Bus Data 95:64
 const sbdata3 = 0x3f // System Bus Data 127:96
+
+var dmiName = map[uint]string{
+	data0:        "data0",
+	data1:        "data1",
+	data2:        "data2",
+	data3:        "data3",
+	data4:        "data4",
+	data5:        "data5",
+	data6:        "data6",
+	data7:        "data7",
+	data8:        "data8",
+	data9:        "data9",
+	data10:       "data10",
+	data11:       "data11",
+	progbuf0:     "progbuf0",
+	progbuf1:     "progbuf1",
+	progbuf2:     "progbuf2",
+	progbuf3:     "progbuf3",
+	progbuf4:     "progbuf4",
+	progbuf5:     "progbuf5",
+	progbuf6:     "progbuf6",
+	progbuf7:     "progbuf7",
+	progbuf8:     "progbuf8",
+	progbuf9:     "progbuf9",
+	progbuf10:    "progbuf10",
+	progbuf11:    "progbuf11",
+	progbuf12:    "progbuf12",
+	progbuf13:    "progbuf13",
+	progbuf14:    "progbuf14",
+	progbuf15:    "progbuf15",
+	dmcontrol:    "dmcontrol",
+	dmstatus:     "dmstatus",
+	hartinfo:     "hartinfo",
+	hawindowsel:  "hawindowsel",
+	hawindow:     "hawindow",
+	abstractcs:   "abstractcs",
+	command:      "command",
+	abstractauto: "abstractauto",
+	confstrptr0:  "confstrptr0",
+	confstrptr1:  "confstrptr1",
+	confstrptr2:  "confstrptr2",
+	confstrptr3:  "confstrptr3",
+	nextdm:       "nextdm",
+	authdata:     "authdata",
+	haltsum0:     "haltsum0",
+	haltsum1:     "haltsum1",
+	haltsum2:     "haltsum2",
+	haltsum3:     "haltsum3",
+	sbcs:         "sbcs",
+	sbaddress0:   "sbaddress0",
+	sbaddress1:   "sbaddress1",
+	sbaddress2:   "sbaddress2",
+	sbaddress3:   "sbaddress3",
+	sbdata0:      "sbdata0",
+	sbdata1:      "sbdata1",
+	sbdata2:      "sbdata2",
+	sbdata3:      "sbdata3",
+}
+
+func dmiNameLookup(addr uint) string {
+	if name, ok := dmiName[addr]; ok {
+		return fmt.Sprintf("%02x %s", addr, name)
+	}
+	return fmt.Sprintf("%02x ?", addr)
+}
 
 //-----------------------------------------------------------------------------
 // DM control
@@ -513,6 +607,61 @@ func (dbg *Debug) rdData128() (uint64, uint64, error) {
 	lo := (uint64(data[1]) << 32) | uint64(data[0])
 	hi := (uint64(data[3]) << 32) | uint64(data[2])
 	return lo, hi, nil
+}
+
+//-----------------------------------------------------------------------------
+
+const dmiStartAddr = 0x4
+const dmiEndAddr = 0x40
+
+func (dbg *Debug) dmiDump() (string, error) {
+	ops := []dmiOp{}
+	for addr := uint(dmiStartAddr); addr <= dmiEndAddr; addr++ {
+		ops = append(ops, dmiRd(addr))
+	}
+	ops = append(ops, dmiEnd())
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return "", err
+	}
+	s := make([][]string, len(data))
+	for i, v := range data {
+		s[i] = []string{dmiNameLookup(uint(i) + dmiStartAddr), fmt.Sprintf("%08x", v)}
+	}
+	return cli.TableString(s, []int{0, 0}, 1), nil
+}
+
+//-----------------------------------------------------------------------------
+
+// testBuffers tests dmi r/w buffers.
+func (dbg *Debug) testBuffers(addr, n uint) error {
+
+	// random write values
+	wr := make([]uint32, n)
+	for i := range wr {
+		wr[i] = rand.Uint32()
+	}
+
+	// write to dmi registers
+	for i := range wr {
+		err := dbg.wrDmi(addr+uint(i), wr[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	// read back from dmi registers
+	for i := range wr {
+		x, err := dbg.rdDmi(addr + uint(i))
+		if err != nil {
+			return err
+		}
+		if x != wr[i] {
+			return fmt.Errorf("dmi buffer r/w mismatch at addr 0x%x", addr+uint(i))
+		}
+	}
+
+	return nil
 }
 
 //-----------------------------------------------------------------------------
