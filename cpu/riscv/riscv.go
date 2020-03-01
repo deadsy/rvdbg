@@ -15,6 +15,7 @@ import (
 	"github.com/deadsy/rvdbg/cpu/riscv/rv11"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv13"
 	"github.com/deadsy/rvdbg/jtag"
+	"github.com/deadsy/rvdbg/util"
 )
 
 //-----------------------------------------------------------------------------
@@ -78,6 +79,15 @@ func NewCPU(dev *jtag.Device) (*CPU, error) {
 	}
 
 	return cpu, nil
+}
+
+//-----------------------------------------------------------------------------
+
+// PromptState returns a short cpu state string for the prompt.
+func (cpu *CPU) PromptState() string {
+	hi := cpu.dbg.GetCurrentHart()
+	state := []string{"h", "r"}[util.BoolToInt(hi.State == rv.Running)]
+	return fmt.Sprintf("%d%s", hi.ID, state)
 }
 
 //-----------------------------------------------------------------------------

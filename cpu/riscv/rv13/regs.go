@@ -158,10 +158,6 @@ func (dbg *Debug) WrCSR(reg, val uint64) error {
 
 // RdGPR reads a general purpose register.
 func (dbg *Debug) RdGPR(reg uint) (uint64, error) {
-	if reg == 0 {
-		// zero register
-		return 0, nil
-	}
 	hi := dbg.GetCurrentHart()
 	if reg >= uint(hi.Nregs) {
 		return 0, fmt.Errorf("gpr%d is invalid", reg)
@@ -184,10 +180,6 @@ func (dbg *Debug) RdGPR(reg uint) (uint64, error) {
 
 // WrGPR writes a general purpose register.
 func (dbg *Debug) WrGPR(reg uint, val uint64) error {
-	if reg == 0 {
-		// zero register
-		return nil
-	}
 	hi := dbg.GetCurrentHart()
 	if reg >= uint(hi.Nregs) {
 		return fmt.Errorf("gpr%d is invalid", reg)

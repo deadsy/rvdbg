@@ -79,7 +79,7 @@ type Target struct {
 	jtagDriver jtag.Driver
 	jtagChain  *jtag.Chain
 	jtagDevice *jtag.Device
-	riscvCpu   *riscv.CPU
+	riscvCPU   *riscv.CPU
 }
 
 // NewTarget returns a new target.
@@ -113,7 +113,7 @@ func NewTarget(jtagDriver jtag.Driver) (*Target, error) {
 		return nil, err
 	}
 
-	riscvCpu, err := riscv.NewCPU(jtagDevice)
+	riscvCPU, err := riscv.NewCPU(jtagDevice)
 	if err != nil {
 		return nil, err
 	}
@@ -122,14 +122,14 @@ func NewTarget(jtagDriver jtag.Driver) (*Target, error) {
 		jtagDriver: jtagDriver,
 		jtagChain:  jtagChain,
 		jtagDevice: jtagDevice,
-		riscvCpu:   riscvCpu,
+		riscvCPU:   riscvCPU,
 	}, nil
 
 }
 
 // GetPrompt returns the target prompt string.
 func (t *Target) GetPrompt() string {
-	return "gd32v> "
+	return fmt.Sprintf("gd32v.%s> ", t.riscvCPU.PromptState())
 }
 
 // GetMenuRoot returns the target root menu.
@@ -154,7 +154,7 @@ func (t *Target) GetJtagDriver() jtag.Driver {
 
 // GetCpu returns the RISC-V CPU.
 func (t *Target) GetCpu() *riscv.CPU {
-	return t.riscvCpu
+	return t.riscvCPU
 }
 
 // Shutdown shuts down the target application.

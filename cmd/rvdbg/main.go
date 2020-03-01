@@ -46,10 +46,12 @@ func run(info *target.Info) error {
 	c := cli.NewCLI(app)
 	c.HistoryLoad(historyPath)
 	c.SetRoot(app.GetMenuRoot())
-	c.SetPrompt(app.GetPrompt())
 
 	// run the cli
 	for c.Running() {
+		// update the prompt to indicate state
+		c.SetPrompt(app.GetPrompt())
+		// run the cli
 		c.Run()
 	}
 

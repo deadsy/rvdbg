@@ -88,7 +88,8 @@ type Debug interface {
 	RdCSR(reg uint) (uint, error)
 	RdFPR(reg uint) (uint64, error)
 
-	Test() string
+	Test1() string
+	Test2() string
 }
 
 //-----------------------------------------------------------------------------

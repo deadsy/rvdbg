@@ -176,18 +176,27 @@ var cmdDebugInfo = cli.Leaf{
 	},
 }
 
-var cmdRiscvTest = cli.Leaf{
+var cmdRiscvTest1 = cli.Leaf{
 	Descr: "test routine",
 	F: func(c *cli.CLI, args []string) {
 		cpu := c.User.(target).GetCpu()
-		c.User.Put(fmt.Sprintf("%s\n", cpu.dbg.Test()))
+		c.User.Put(fmt.Sprintf("%s\n", cpu.dbg.Test1()))
+	},
+}
+
+var cmdRiscvTest2 = cli.Leaf{
+	Descr: "test routine",
+	F: func(c *cli.CLI, args []string) {
+		cpu := c.User.(target).GetCpu()
+		c.User.Put(fmt.Sprintf("%s\n", cpu.dbg.Test2()))
 	},
 }
 
 // Menu submenu items
 var Menu = cli.Menu{
 	{"dmi", cmdDebugInfo},
-	{"test", cmdRiscvTest},
+	{"test1", cmdRiscvTest1},
+	{"test2", cmdRiscvTest2},
 }
 
 //-----------------------------------------------------------------------------
