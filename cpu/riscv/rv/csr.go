@@ -11,6 +11,7 @@ package rv
 import (
 	"fmt"
 
+	"github.com/deadsy/rvdbg/decode"
 	"github.com/deadsy/rvdbg/util"
 )
 
@@ -36,6 +37,25 @@ const modeHypervisor = (2 << 8)
 const modeMachine = (3 << 8)
 
 //-----------------------------------------------------------------------------
+
+/*
+
+var csrRegs = decode.RegisterSet{
+	{"mstatus", MSTATUS, 0, nil, ""},
+	{"misa", MISA, 0, nil, ""},
+	{"dcsr", DCSR, 0, nil, ""},
+	{"dpc", DPC, 0, nil, ""},
+	{"dcratch0", DCRATCH0, 0, nil, ""},
+	{"dcratch1", DCRATCH1, 0, nil, ""},
+	{"mvendorid", MVENDORID, 0, nil, ""},
+	{"marchid", MARCHID, 0, nil, ""},
+	{"mimpid", MIMPID, 0, nil, ""},
+	{"mhartid", MHARTID, 0, nil, ""},
+}
+
+*/
+
+//-----------------------------------------------------------------------------
 // MISA
 
 func fmtMXL(x uint) string {
@@ -57,7 +77,7 @@ func fmtExtensions(x uint) string {
 }
 
 func DisplayMISA(misa, mxlen uint) string {
-	fs := util.FieldSet{
+	fs := decode.FieldSet{
 		{"mxl", mxlen - 1, mxlen - 2, fmtMXL},
 		{"extensions", 25, 0, fmtExtensions},
 	}

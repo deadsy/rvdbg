@@ -1,17 +1,55 @@
 //-----------------------------------------------------------------------------
 /*
 
-Utilities to decode and display bit fields.
+Bit fields within Registers.
 
 */
 //-----------------------------------------------------------------------------
 
-package util
+package decode
+
+//-----------------------------------------------------------------------------
 
 import (
 	"fmt"
 	"strings"
+
+	"github.com/deadsy/rvdbg/util"
 )
+
+//-----------------------------------------------------------------------------
+
+// fmtFunc is formatting function for a uint.
+type fmtFunc func(x uint) string
+
+// Field is a bit field within a register value.
+type Field struct {
+	Name     string
+	Msb, Lsb uint
+	Fmt      fmtFunc
+}
+
+// FieldSet is a set of field definitions.
+type FieldSet []Field
+
+//-----------------------------------------------------------------------------
+
+// Display returns a display string for a bit field.
+func (f *Field) Display(x uint) string {
+	val := util.Bits(x, f.Msb, f.Lsb)
+	return fmt.Sprintf("%s %s", f.Name, f.Fmt(val))
+}
+
+//-----------------------------------------------------------------------------
+
+// Display returns a display string for the bit fields of a uint value.
+func (fs FieldSet) Display(x uint) string {
+	s := make([]string, len(fs))
+	for i := range fs {
+		s[i] = (&fs[i]).Display(x)
+	}
+	return strings.Join(s, " ")
+}
 
 //-----------------------------------------------------------------------------
 // standard formatting functions
@@ -34,38 +72,6 @@ func FmtHex8(x uint) string {
 // FmtHex16 formats a uint as a 4-nybble hexadecimal string.
 func FmtHex16(x uint) string {
 	return fmt.Sprintf("%04x", x)
-}
-
-//-----------------------------------------------------------------------------
-
-// fmtFunc is formatting function for a uint.
-type fmtFunc func(x uint) string
-
-// Field is a bit field within a uint value.
-type Field struct {
-	Name     string
-	Msb, Lsb uint
-	Fmt      fmtFunc
-}
-
-// Display returns a display string for a bit field.
-func (f *Field) Display(x uint) string {
-	val := Bits(x, f.Msb, f.Lsb)
-	return fmt.Sprintf("%s %s", f.Name, f.Fmt(val))
-}
-
-//-----------------------------------------------------------------------------
-
-// FieldSet is a set of field definitions.
-type FieldSet []Field
-
-// Display returns a display string for the bit fields of a uint value.
-func (fs FieldSet) Display(x uint) string {
-	s := make([]string, len(fs))
-	for i := range fs {
-		s[i] = (&fs[i]).Display(x)
-	}
-	return strings.Join(s, " ")
 }
 
 //-----------------------------------------------------------------------------

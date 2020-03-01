@@ -17,6 +17,7 @@ import (
 
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/bitstr"
+	"github.com/deadsy/rvdbg/decode"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/util"
 )
@@ -158,18 +159,18 @@ func dmiNameLookup(addr uint) string {
 //-----------------------------------------------------------------------------
 // DM control
 
-var dmcontrolFields = util.FieldSet{
-	{"haltreq", 31, 31, util.FmtDec},
-	{"resumereq", 30, 30, util.FmtDec},
-	{"hartreset", 29, 29, util.FmtDec},
-	{"ackhavereset", 28, 28, util.FmtDec},
-	{"hasel", 26, 26, util.FmtDec},
-	{"hartsello", 25, 16, util.FmtDec},
-	{"hartselhi", 15, 6, util.FmtDec},
-	{"setresethaltreq", 3, 3, util.FmtDec},
-	{"clrresethaltreq", 2, 2, util.FmtDec},
-	{"ndmreset", 1, 1, util.FmtDec},
-	{"dmactive", 0, 0, util.FmtDec},
+var dmcontrolFields = decode.FieldSet{
+	{"haltreq", 31, 31, decode.FmtDec},
+	{"resumereq", 30, 30, decode.FmtDec},
+	{"hartreset", 29, 29, decode.FmtDec},
+	{"ackhavereset", 28, 28, decode.FmtDec},
+	{"hasel", 26, 26, decode.FmtDec},
+	{"hartsello", 25, 16, decode.FmtDec},
+	{"hartselhi", 15, 6, decode.FmtDec},
+	{"setresethaltreq", 3, 3, decode.FmtDec},
+	{"clrresethaltreq", 2, 2, decode.FmtDec},
+	{"ndmreset", 1, 1, decode.FmtDec},
+	{"dmactive", 0, 0, decode.FmtDec},
 }
 
 const haltreq = (1 << 31)
@@ -229,25 +230,25 @@ func (dbg *Debug) selectHart(id int) error {
 //-----------------------------------------------------------------------------
 // DM status
 
-var dmstatusFields = util.FieldSet{
-	{"impebreak", 22, 22, util.FmtDec},
-	{"allhavereset", 19, 19, util.FmtDec},
-	{"anyhavereset", 18, 18, util.FmtDec},
-	{"allresumeack", 17, 17, util.FmtDec},
-	{"anyresumeack", 16, 16, util.FmtDec},
-	{"allnonexistent", 15, 15, util.FmtDec},
-	{"anynonexistent", 14, 14, util.FmtDec},
-	{"allunavail", 13, 13, util.FmtDec},
-	{"anyunavail", 12, 12, util.FmtDec},
-	{"allrunning", 11, 11, util.FmtDec},
-	{"anyrunning", 10, 10, util.FmtDec},
-	{"allhalted", 9, 9, util.FmtDec},
-	{"anyhalted", 8, 8, util.FmtDec},
-	{"authenticated", 7, 7, util.FmtDec},
-	{"authbusy", 6, 6, util.FmtDec},
-	{"hasresethaltreq", 5, 5, util.FmtDec},
-	{"confstrptrvalid", 4, 4, util.FmtDec},
-	{"version", 3, 0, util.FmtDec},
+var dmstatusFields = decode.FieldSet{
+	{"impebreak", 22, 22, decode.FmtDec},
+	{"allhavereset", 19, 19, decode.FmtDec},
+	{"anyhavereset", 18, 18, decode.FmtDec},
+	{"allresumeack", 17, 17, decode.FmtDec},
+	{"anyresumeack", 16, 16, decode.FmtDec},
+	{"allnonexistent", 15, 15, decode.FmtDec},
+	{"anynonexistent", 14, 14, decode.FmtDec},
+	{"allunavail", 13, 13, decode.FmtDec},
+	{"anyunavail", 12, 12, decode.FmtDec},
+	{"allrunning", 11, 11, decode.FmtDec},
+	{"anyrunning", 10, 10, decode.FmtDec},
+	{"allhalted", 9, 9, decode.FmtDec},
+	{"anyhalted", 8, 8, decode.FmtDec},
+	{"authenticated", 7, 7, decode.FmtDec},
+	{"authbusy", 6, 6, decode.FmtDec},
+	{"hasresethaltreq", 5, 5, decode.FmtDec},
+	{"confstrptrvalid", 4, 4, decode.FmtDec},
+	{"version", 3, 0, decode.FmtDec},
 }
 
 const anyhavereset = (1 << 18)
@@ -269,11 +270,11 @@ func (dbg *Debug) checkStatus(flag uint32) (bool, error) {
 
 //-----------------------------------------------------------------------------
 
-var hartinfoFields = util.FieldSet{
-	{"nscratch", 23, 20, util.FmtDec},
-	{"dataaccess", 16, 16, util.FmtDec},
-	{"datasize", 15, 12, util.FmtDec},
-	{"dataaddr", 11, 0, util.FmtHex},
+var hartinfoFields = decode.FieldSet{
+	{"nscratch", 23, 20, decode.FmtDec},
+	{"dataaccess", 16, 16, decode.FmtDec},
+	{"datasize", 15, 12, decode.FmtDec},
+	{"dataaddr", 11, 0, decode.FmtHex},
 }
 
 //-----------------------------------------------------------------------------
@@ -359,11 +360,11 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 //-----------------------------------------------------------------------------
 // abstract commands
 
-var abstractcsFields = util.FieldSet{
-	{"progbufsize", 28, 24, util.FmtDec},
-	{"busy", 12, 12, util.FmtDec},
-	{"cmderr", 10, 8, util.FmtDec},
-	{"datacount", 3, 0, util.FmtDec},
+var abstractcsFields = decode.FieldSet{
+	{"progbufsize", 28, 24, decode.FmtDec},
+	{"busy", 12, 12, decode.FmtDec},
+	{"cmderr", 10, 8, decode.FmtDec},
+	{"datacount", 3, 0, decode.FmtDec},
 }
 
 // command error
