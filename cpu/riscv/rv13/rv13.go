@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"strings"
 
+	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/bitstr"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/jtag"
@@ -50,20 +51,15 @@ type Debug struct {
 }
 
 func (dbg *Debug) String() string {
-	s := []string{}
-	s = append(s, fmt.Sprintf("version 0.13"))
-	s = append(s, fmt.Sprintf("idle cycles %d", dbg.idle))
-	s = append(s, fmt.Sprintf("sbasize %d bits", dbg.sbasize))
-	s = append(s, fmt.Sprintf("progbufsize %d words", dbg.progbufsize))
-	s = append(s, fmt.Sprintf("datacount %d words", dbg.datacount))
-	s = append(s, fmt.Sprintf("autoexecprogbuf %t", dbg.autoexecprogbuf))
-	s = append(s, fmt.Sprintf("autoexecdata %t", dbg.autoexecdata))
-	s = append(s, fmt.Sprintf("hartsellen %d bits", dbg.hartsellen))
-	s = append(s, fmt.Sprintf("impebreak %d", dbg.impebreak))
-	for i := range dbg.hart {
-		s = append(s, fmt.Sprintf("\n%s", dbg.hart[i]))
-	}
-	return strings.Join(s, "\n")
+	s := [][]string{}
+	s = append(s, []string{"version", "0.13"})
+	s = append(s, []string{"idle cycles", fmt.Sprintf("%d", dbg.idle)})
+	s = append(s, []string{"sbasize", fmt.Sprintf("%d bits", dbg.sbasize)})
+	s = append(s, []string{"progbufsize", fmt.Sprintf("%d words", dbg.progbufsize)})
+	s = append(s, []string{"datacount", fmt.Sprintf("%d words", dbg.datacount)})
+	s = append(s, []string{"autoexecprogbuf", fmt.Sprintf("%t", dbg.autoexecprogbuf)})
+	s = append(s, []string{"autoexecdata", fmt.Sprintf("%t", dbg.autoexecdata)})
+	return cli.TableString(s, []int{0, 0}, 1)
 }
 
 // New returns a RISC-V 0.13 debugger.
@@ -327,14 +323,17 @@ func (dbg *Debug) ResumeHart() error {
 //-----------------------------------------------------------------------------
 
 // GetInfo returns a string of debugger information.
-func (dbg *Debug) GetInfo() (string, error) {
+func (dbg *Debug) GetInfo() string {
 	s := []string{}
+	s = append(s, dbg.String())
+	s = append(s, "")
 	dump, err := dbg.dmiDump()
 	if err != nil {
-		return "", err
+		s = append(s, fmt.Sprintf("unable to get dmi registers: %v", err))
+	} else {
+		s = append(s, dump)
 	}
-	s = append(s, dump)
-	return strings.Join(s, "\n"), nil
+	return strings.Join(s, "\n")
 }
 
 //-----------------------------------------------------------------------------

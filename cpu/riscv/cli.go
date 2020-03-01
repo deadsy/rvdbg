@@ -172,12 +172,7 @@ var cmdDebugInfo = cli.Leaf{
 	Descr: "debug module information",
 	F: func(c *cli.CLI, args []string) {
 		dbg := c.User.(target).GetCpu().dbg
-		di, err := dbg.GetInfo()
-		if err != nil {
-			c.User.Put(fmt.Sprintf("unable to get debug info: %v\n", err))
-			return
-		}
-		c.User.Put(fmt.Sprintf("%s\n", di))
+		c.User.Put(fmt.Sprintf("%s\n", dbg.GetInfo()))
 	},
 }
 
@@ -191,7 +186,7 @@ var cmdRiscvTest = cli.Leaf{
 
 // Menu submenu items
 var Menu = cli.Menu{
-	{"debug", cmdDebugInfo},
+	{"dmi", cmdDebugInfo},
 	{"test", cmdRiscvTest},
 }
 

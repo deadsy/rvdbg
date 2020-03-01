@@ -77,7 +77,7 @@ func (hi *HartInfo) String() string {
 
 // Debug is the RISC-V debug interface.
 type Debug interface {
-	GetInfo() (string, error)
+	GetInfo() string
 	GetHartCount() int
 	GetHartInfo(id int) (*HartInfo, error)
 	GetCurrentHart() *HartInfo

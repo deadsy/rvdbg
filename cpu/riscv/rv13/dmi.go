@@ -614,6 +614,8 @@ func (dbg *Debug) rdData128() (uint64, uint64, error) {
 const dmiStartAddr = 0x4
 const dmiEndAddr = 0x40
 
+var dmiCache []uint32
+
 func (dbg *Debug) dmiDump() (string, error) {
 	ops := []dmiOp{}
 	for addr := uint(dmiStartAddr); addr <= dmiEndAddr; addr++ {
@@ -624,11 +626,19 @@ func (dbg *Debug) dmiDump() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if dmiCache == nil {
+		dmiCache = data
+	}
 	s := make([][]string, len(data))
 	for i, v := range data {
-		s[i] = []string{dmiNameLookup(uint(i) + dmiStartAddr), fmt.Sprintf("%08x", v)}
+		delta := ""
+		if data[i] != dmiCache[i] {
+			delta = "*"
+		}
+		s[i] = []string{dmiNameLookup(uint(i) + dmiStartAddr), fmt.Sprintf("%08x", v), delta}
 	}
-	return cli.TableString(s, []int{0, 0}, 1), nil
+	dmiCache = data
+	return cli.TableString(s, []int{0, 0, 0}, 1), nil
 }
 
 //-----------------------------------------------------------------------------
