@@ -341,11 +341,19 @@ func (dbg *Debug) GetInfo() string {
 
 // Test is a test routine.
 func (dbg *Debug) Test1() string {
+
 	s := []string{}
-	err := dbg.testBuffers(progbuf0, 2)
-	s = append(s, fmt.Sprintf("progbuf %v", err))
-	err = dbg.testBuffers(data0, 4)
-	s = append(s, fmt.Sprintf("data %v", err))
+
+	acs, err := dbg.rdDmi(abstractcs)
+	s = append(s, fmt.Sprintf("acs %08x %v", acs, err))
+
+	/*
+		err := dbg.testBuffers(progbuf0, 2)
+		s = append(s, fmt.Sprintf("progbuf %v", err))
+		err = dbg.testBuffers(data0, 4)
+		s = append(s, fmt.Sprintf("data %v", err))
+	*/
+
 	return strings.Join(s, "\n")
 }
 
@@ -354,15 +362,14 @@ const testReg = 25
 // Test2 is a test routine.
 func (dbg *Debug) Test2() string {
 	s := []string{}
-	acs, _ := dbg.rdDmi(abstractcs)
-	s = append(s, fmt.Sprintf("acs %08x", acs))
 
-	/*
-		err := dbg.WrGPR(testReg, 0xdeadbeef)
-		s = append(s, fmt.Sprintf("wr %v", err))
-		val, err := dbg.RdGPR(testReg)
-		s = append(s, fmt.Sprintf("rd %x %v", val, err))
-	*/
+	//acs, _ := dbg.rdDmi(abstractcs)
+	//s = append(s, fmt.Sprintf("acs %08x", acs))
+
+	err := dbg.WrGPR(testReg, 0xdeadbeef)
+	s = append(s, fmt.Sprintf("wr %v", err))
+	//val, err := dbg.RdGPR(testReg)
+	//s = append(s, fmt.Sprintf("rd %x %v", val, err))
 
 	return strings.Join(s, "\n")
 }
