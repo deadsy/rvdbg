@@ -68,6 +68,11 @@ func (dbg *Debug) halt() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	// clear any command errors
+	err = dbg.cmdErrorClr()
+	if err != nil {
+		return false, err
+	}
 	return false, nil
 }
 

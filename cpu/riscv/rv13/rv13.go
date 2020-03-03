@@ -363,10 +363,9 @@ const testReg = 25
 func (dbg *Debug) Test2() string {
 	s := []string{}
 
-	//acs, _ := dbg.rdDmi(abstractcs)
-	//s = append(s, fmt.Sprintf("acs %08x", acs))
+	err := dbg.wrDmi(data0, 0xdeadbeef)
 
-	err := dbg.WrGPR(testReg, 0xdeadbeef)
+	//err := dbg.WrGPR(testReg, 0xdeadbeef)
 	s = append(s, fmt.Sprintf("wr %v", err))
 	//val, err := dbg.RdGPR(testReg)
 	//s = append(s, fmt.Sprintf("rd %x %v", val, err))
