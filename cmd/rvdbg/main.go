@@ -17,6 +17,7 @@ import (
 	"github.com/deadsy/rvdbg/target"
 	"github.com/deadsy/rvdbg/target/gd32v"
 	"github.com/deadsy/rvdbg/target/maixgo"
+	"github.com/deadsy/rvdbg/target/redv"
 	"github.com/deadsy/rvdbg/target/wap"
 )
 
@@ -37,7 +38,8 @@ func run(info *target.Info) error {
 
 	//app, err := wap.NewTarget(jtagDriver)
 	//app, err := maixgo.NewTarget(jtagDriver)
-	app, err := gd32v.NewTarget(jtagDriver)
+	//app, err := gd32v.NewTarget(jtagDriver)
+	app, err := redv.NewTarget(jtagDriver)
 	if err != nil {
 		return err
 	}
@@ -67,12 +69,14 @@ func addTargets() {
 	target.Add(&gd32v.Info)
 	target.Add(&wap.Info)
 	target.Add(&maixgo.Info)
+	target.Add(&redv.Info)
 }
 
 //-----------------------------------------------------------------------------
 
 //const targetName = "wap"
-const targetName = "gd32v"
+//const targetName = "gd32v"
+const targetName = "redv"
 
 //const targetName = "maixgo"
 

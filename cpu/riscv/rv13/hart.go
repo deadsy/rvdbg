@@ -343,9 +343,6 @@ func (hi *hartInfo) examine() error {
 		hi.info.State = rv.Running
 	}
 
-	acs, _ := hi.dbg.rdDmi(abstractcs)
-	log.Info.Printf(fmt.Sprintf("acs %08x", acs))
-
 	return nil
 }
 

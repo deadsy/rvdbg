@@ -81,22 +81,24 @@ func NewJtag(dev *jaylink.Device, speed int) (*Jtag, error) {
 	j.version = version
 
 	// check and select the target interface
-	if !caps.HasCap(jaylink.DEV_CAP_SELECT_TIF) {
-		return nil, errors.New("jtag interface can't be selected")
-	}
-	itf, err := hdl.GetAvailableInterfaces()
-	if err != nil {
-		hdl.Close()
-		return nil, err
-	}
-	if itf&(1<<jaylink.TIF_JTAG) == 0 {
-		hdl.Close()
-		return nil, errors.New("jtag interface not available")
-	}
-	_, err = hdl.SelectInterface(jaylink.TIF_JTAG)
-	if err != nil {
-		hdl.Close()
-		return nil, err
+	if caps.HasCap(jaylink.DEV_CAP_SELECT_TIF) {
+		itf, err := hdl.GetAvailableInterfaces()
+		if err != nil {
+			hdl.Close()
+			return nil, err
+		}
+		if itf&(1<<jaylink.TIF_JTAG) == 0 {
+			hdl.Close()
+			return nil, errors.New("jtag interface not available")
+		}
+		_, err = hdl.SelectInterface(jaylink.TIF_JTAG)
+		if err != nil {
+			hdl.Close()
+			return nil, err
+		}
+	} else {
+		// Target interface selection is not supported. Assume JTAG is auto-selected.
+		log.Info.Printf("DEV_CAP_SELECT_TIF not supported, assuming JTAG is auto-selected\n")
 	}
 
 	// check the desired interface speed
