@@ -131,18 +131,13 @@ func (dbg *Debug) resume() (bool, error) {
 
 // getMXLEN returns the GPR length for the current hart.
 func (dbg *Debug) getMXLEN() (int, error) {
-	// try a 128-bit register read
-	_, _, err := dbg.rdReg128(regGPR(rv.RegS0))
-	if err == nil {
-		return 128, nil
-	}
 	// try a 64-bit register read
-	_, err = dbg.rdReg64(regGPR(rv.RegS0))
+	_, err := dbg.rdGPR(rv.RegS0, 64)
 	if err == nil {
 		return 64, nil
 	}
 	// try a 32-bit register read
-	_, err = dbg.rdReg32(regGPR(rv.RegS0))
+	_, err = dbg.rdGPR(rv.RegS0, 32)
 	if err == nil {
 		return 32, nil
 	}
@@ -151,18 +146,13 @@ func (dbg *Debug) getMXLEN() (int, error) {
 
 // getFLEN returns the FPR length for the current hart.
 func (dbg *Debug) getFLEN() (int, error) {
-	// try a 128-bit register read
-	_, _, err := dbg.rdReg128(regFPR(0))
-	if err == nil {
-		return 128, nil
-	}
 	// try a 64-bit register read
-	_, err = dbg.rdReg64(regFPR(0))
+	_, err := dbg.rdFPR(0, 64)
 	if err == nil {
 		return 64, nil
 	}
 	// try a 32-bit register read
-	_, err = dbg.rdReg32(regFPR(0))
+	_, err = dbg.rdFPR(0, 32)
 	if err == nil {
 		return 32, nil
 	}
@@ -171,18 +161,13 @@ func (dbg *Debug) getFLEN() (int, error) {
 
 // getDXLEN returns the debug register length for the current hart.
 func (dbg *Debug) getDXLEN() (int, error) {
-	// try a 128-bit register read
-	_, _, err := dbg.rdReg128(regCSR(rv.DPC))
-	if err == nil {
-		return 128, nil
-	}
 	// try a 64-bit register read
-	_, err = dbg.rdReg64(regCSR(rv.DPC))
+	_, err := dbg.acRd64(regCSR(rv.DPC))
 	if err == nil {
 		return 64, nil
 	}
 	// try a 32-bit register read
-	_, err = dbg.rdReg32(regCSR(rv.DPC))
+	_, err = dbg.acRd32(regCSR(rv.DPC))
 	if err == nil {
 		return 32, nil
 	}

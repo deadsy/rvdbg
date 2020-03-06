@@ -55,6 +55,10 @@ const progbuf13 = 0x2d
 const progbuf14 = 0x2e
 const progbuf15 = 0x2f
 
+func progbuf(n int) uint {
+	return progbuf0 + uint(n)
+}
+
 const dmcontrol = 0x10 // Debug Module Control
 const dmstatus = 0x11  // Debug Module Status
 
