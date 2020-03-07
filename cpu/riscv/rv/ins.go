@@ -54,15 +54,15 @@ const (
 	// 	opcodeFENCE_I     = 0x0000100f // fence.i
 	// 	opcodeECALL       = 0x00000073 // ecall
 	opcodeEBREAK = 0x00100073 // ebreak
-// 	opcodeURET        = 0x00200073 // uret
-// 	opcodeSRET        = 0x10200073 // sret
-// 	opcodeMRET        = 0x30200073 // mret
-// 	opcodeWFI         = 0x10500073 // wfi
-// 	opcodeSFENCE_VMA  = 0x12000073 // sfence.vma
-// 	opcodeHFENCE_BVMA = 0x22000073 // hfence.bvma
-// 	opcodeHFENCE_GVMA = 0xa2000073 // hfence.gvma
-// 	opcodeCSRRW       = 0x00001073 // csrrw
-// 	opcodeCSRRS       = 0x00002073 // csrrs
+	// 	opcodeURET        = 0x00200073 // uret
+	// 	opcodeSRET        = 0x10200073 // sret
+	// 	opcodeMRET        = 0x30200073 // mret
+	// 	opcodeWFI         = 0x10500073 // wfi
+	// 	opcodeSFENCE_VMA  = 0x12000073 // sfence.vma
+	// 	opcodeHFENCE_BVMA = 0x22000073 // hfence.bvma
+	// 	opcodeHFENCE_GVMA = 0xa2000073 // hfence.gvma
+	// 	opcodeCSRRW       = 0x00001073 // csrrw
+	opcodeCSRRS = 0x00002073 // csrrs
 // 	opcodeCSRRC       = 0x00003073 // csrrc
 // 	opcodeCSRRWI      = 0x00005073 // csrrwi
 // 	opcodeCSRRSI      = 0x00006073 // csrrsi
@@ -142,14 +142,14 @@ const (
 
 //-----------------------------------------------------------------------------
 
-// InsLW returns lw rd, ofs(base)
+// InsLW returns "lw rd, ofs(base)"
 func InsLW(rd, base, ofs uint) uint32 {
 	return uint32((util.Bits(ofs, 11, 0) << 20) |
 		(base << 15) |
 		(rd << 7) | opcodeLW)
 }
 
-// InsSW returns sw rs, ofs(base)
+// InsSW returns "sw rs, ofs(base)"
 func InsSW(rs, base, ofs uint) uint32 {
 	return uint32((util.Bits(ofs, 11, 5) << 25) |
 		(rs << 20) |
@@ -157,9 +157,16 @@ func InsSW(rs, base, ofs uint) uint32 {
 		(util.Bits(ofs, 4, 0) << 7) | opcodeSW)
 }
 
-// InsEBREAK returns ebreak
+// InsEBREAK returns "ebreak"
 func InsEBREAK() uint32 {
 	return uint32(opcodeEBREAK)
+}
+
+// InsCSRR returns "csrr rd, csr"
+func InsCSRR(rd, csr uint) uint32 {
+	return uint32((csr << 20) |
+		(RegZero << 15) |
+		(rd << 7) | opcodeCSRRS)
 }
 
 //-----------------------------------------------------------------------------

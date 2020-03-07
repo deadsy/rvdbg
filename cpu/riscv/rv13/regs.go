@@ -9,6 +9,7 @@ RISC-V Debugger 0.13 Register Operations
 package rv13
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
@@ -17,25 +18,60 @@ import (
 //-----------------------------------------------------------------------------
 // control and status registers
 
+// getCSRMode works out the CSR access mode for the current hart (abstract-command OR program-buffer)
+func (dbg *Debug) getCSRMode() error {
+	hi := dbg.hart[dbg.hartid]
+	hi.pbModeForCSR = false
+	_, err := dbg.RdCSR(rv.MISA)
+	if err == nil {
+		// the abstract command worked
+		return nil
+	}
+	hi.pbModeForCSR = true
+	_, err = dbg.RdCSR(rv.MISA)
+	if err == nil {
+		// the program buffer command worked
+		return nil
+	}
+	return errors.New("unable to determine CSR access mode")
+}
+
 // RdCSR reads a control and status register for the current hart.
 func (dbg *Debug) RdCSR(reg uint) (uint, error) {
+	var err error
+	var val uint
+
 	if reg > 0xfff {
 		return 0, fmt.Errorf("csr 0x%x is invalid", reg)
 	}
-	var err error
-	var val uint
-	size := rv.GetCSRLength(reg, dbg.GetCurrentHart())
-	switch size {
-	case 32:
-		var x uint32
-		x, err = dbg.acRd32(regCSR(reg))
-		val = uint(x)
-	case 64:
-		var x uint64
-		x, err = dbg.acRd64(regCSR(reg))
-		val = uint(x)
-	default:
-		return 0, fmt.Errorf("%d-bit csr read not supported", size)
+
+	hi := dbg.hart[dbg.hartid]
+	size := rv.GetCSRLength(reg, &hi.info)
+
+	if hi.pbModeForCSR {
+		// program buffer mode
+		switch size {
+		case 32:
+			val, err = dbg.pbRdCSR(reg, size32)
+		case 64:
+			val, err = dbg.pbRdCSR(reg, size64)
+		default:
+			return 0, fmt.Errorf("%d-bit csr read not supported", size)
+		}
+	} else {
+		// abstract command mode
+		switch size {
+		case 32:
+			var x uint32
+			x, err = dbg.acRd32(regCSR(reg))
+			val = uint(x)
+		case 64:
+			var x uint64
+			x, err = dbg.acRd64(regCSR(reg))
+			val = uint(x)
+		default:
+			return 0, fmt.Errorf("%d-bit csr read not supported", size)
+		}
 	}
 	return val, err
 }

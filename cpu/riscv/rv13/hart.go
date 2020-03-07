@@ -160,17 +160,20 @@ func (dbg *Debug) getFLEN() (int, error) {
 }
 
 // getDXLEN returns the debug register length for the current hart.
-func (dbg *Debug) getDXLEN() (int, error) {
+func (dbg *Debug) getDXLEN(hi *hartInfo) (int, error) {
 	// try a 64-bit register read
-	_, err := dbg.acRd64(regCSR(rv.DPC))
+	hi.info.DXLEN = 64
+	_, err := dbg.RdCSR(rv.DPC)
 	if err == nil {
 		return 64, nil
 	}
 	// try a 32-bit register read
-	_, err = dbg.acRd32(regCSR(rv.DPC))
+	hi.info.DXLEN = 32
+	_, err = dbg.RdCSR(rv.DPC)
 	if err == nil {
 		return 32, nil
 	}
+	hi.info.DXLEN = 0
 	return 0, errors.New("unable to determine DXLEN")
 }
 
@@ -178,12 +181,13 @@ func (dbg *Debug) getDXLEN() (int, error) {
 
 // hartInfo stores per hart information.
 type hartInfo struct {
-	dbg        *Debug      // pointer back to parent debugger
-	info       rv.HartInfo // public information
-	nscratch   uint        // number of dscratch registers
-	datasize   uint        // number of data registers in csr/memory
-	dataaccess uint        // data registers in csr(0)/memory(1)
-	dataaddr   uint        // csr/memory address
+	dbg          *Debug      // pointer back to parent debugger
+	info         rv.HartInfo // public information
+	nscratch     uint        // number of dscratch registers
+	datasize     uint        // number of data registers in csr/memory
+	dataaccess   uint        // data registers in csr(0)/memory(1)
+	dataaddr     uint        // csr/memory address
+	pbModeForCSR bool        // use program buffer operations for CSR access
 }
 
 func (hi *hartInfo) String() string {
@@ -231,12 +235,21 @@ func (hi *hartInfo) examine() error {
 	if err != nil {
 		return err
 	}
+	log.Info.Printf(fmt.Sprintf("hart%d: MXLEN %d", hi.info.ID, hi.info.MXLEN))
+
+	// work out the CSR access mode
+	err = dbg.getCSRMode()
+	if err != nil {
+		return err
+	}
+	log.Info.Printf(fmt.Sprintf("hart%d: pbModeForCSR %t", hi.info.ID, hi.pbModeForCSR))
 
 	// read the MISA value
 	hi.info.MISA, err = dbg.RdCSR(rv.MISA)
 	if err != nil {
 		return err
 	}
+	log.Info.Printf(fmt.Sprintf("hart%d: MISA 0x%x", hi.info.ID, hi.info.MISA))
 
 	// does MISA.mxl match our MXLEN?
 	if rv.GetMxlMISA(hi.info.MISA, uint(hi.info.MXLEN)) != hi.info.MXLEN {
@@ -276,7 +289,7 @@ func (hi *hartInfo) examine() error {
 	}
 
 	// get the DXLEN value
-	hi.info.DXLEN, err = dbg.getDXLEN()
+	hi.info.DXLEN, err = dbg.getDXLEN(hi)
 	if err != nil {
 		return err
 	}
@@ -308,6 +321,7 @@ func (hi *hartInfo) examine() error {
 	if err != nil {
 		return err
 	}
+	log.Info.Printf(fmt.Sprintf("hart%d: MHARTID %d", hi.info.ID, hi.info.MHARTID))
 
 	// get hartinfo parameters
 	x, err = dbg.rdDmi(hartinfo)

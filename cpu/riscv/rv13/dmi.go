@@ -386,6 +386,8 @@ const (
 	errOther        cmdErr = 7
 )
 
+const errClear = (7 << 8 /*cmderr*/)
+
 func (ce cmdErr) String() string {
 	return [8]string{
 		"ok",
@@ -407,7 +409,7 @@ func (cs cmdStatus) getError() cmdErr {
 // cmdErrorClr resets a command error.
 func (dbg *Debug) cmdErrorClr() error {
 	// write all-ones to the cmderr field.
-	return dbg.wrDmi(abstractcs, 7<<8 /*cmderr*/)
+	return dbg.wrDmi(abstractcs, errClear)
 }
 
 // regCSR returns the abstract register number for a control and status register.

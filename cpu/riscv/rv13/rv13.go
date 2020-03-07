@@ -129,6 +129,7 @@ func New(dev *jtag.Device) (rv.Debug, error) {
 		dbg.hartsellen++
 		hartsel >>= 1
 	}
+	log.Info.Printf(fmt.Sprintf("hartsellen %d", dbg.hartsellen))
 
 	// check dmstatus fields
 	x, err = dbg.rdDmi(dmstatus)
@@ -152,6 +153,7 @@ func New(dev *jtag.Device) (rv.Debug, error) {
 		return nil, err
 	}
 	dbg.sbasize = util.Bits(uint(x), 11, 5)
+	log.Info.Printf(fmt.Sprintf("sbasize %d", dbg.sbasize))
 
 	// work out how many program and data words we have
 	x, err = dbg.rdDmi(abstractcs)
@@ -181,6 +183,9 @@ func New(dev *jtag.Device) (rv.Debug, error) {
 	if util.Bits(uint(x), 11, 0) == ((1 << dbg.datacount) - 1) {
 		dbg.autoexecdata = true
 	}
+
+	log.Info.Printf(fmt.Sprintf("progbufsize %d impebreak %d autoexecprogbuf %t", dbg.progbufsize, dbg.impebreak, dbg.autoexecprogbuf))
+	log.Info.Printf(fmt.Sprintf("datacount %d autoexecdata %t", dbg.datacount, dbg.autoexecdata))
 
 	// 1st pass: enumerate the harts
 	maxHarts := 1 << dbg.hartsellen
