@@ -43,17 +43,17 @@ type HartInfo struct {
 	ID      int       // hart identifier
 	State   HartState // hart state
 	Nregs   int       // number of GPRs (normally 32, 16 for rv32e)
-	MXLEN   int       // machine XLEN
-	SXLEN   int       // supervisor XLEN (0 == no S-mode)
-	UXLEN   int       // user XLEN (0 == no U-mode)
-	HXLEN   int       // hypervisor XLEN (0 == no H-mode)
-	DXLEN   int       // debug XLEN
-	FLEN    int       // foating point register width
+	MXLEN   uint      // machine XLEN
+	SXLEN   uint      // supervisor XLEN (0 == no S-mode)
+	UXLEN   uint      // user XLEN (0 == no U-mode)
+	HXLEN   uint      // hypervisor XLEN (0 == no H-mode)
+	DXLEN   uint      // debug XLEN
+	FLEN    uint      // foating point register width
 	MISA    uint      // MISA value
 	MHARTID uint      // MHARTID value
 }
 
-func xlenString(n int, msg string) string {
+func xlenString(n uint, msg string) string {
 	if n != 0 {
 		return fmt.Sprintf("%d", n)
 	}
@@ -75,6 +75,8 @@ func (hi *HartInfo) String() string {
 	return cli.TableString(s, []int{0, 0}, 1)
 }
 
+//-----------------------------------------------------------------------------
+
 // Debug is the RISC-V debug interface.
 type Debug interface {
 	GetInfo() string
@@ -84,9 +86,9 @@ type Debug interface {
 	SetCurrentHart(id int) (*HartInfo, error)
 	HaltHart() error
 	ResumeHart() error
-	RdGPR(reg uint) (uint64, error)
-	RdCSR(reg uint) (uint, error)
-	RdFPR(reg uint) (uint64, error)
+	RdGPR(reg, size uint) (uint64, error)
+	RdCSR(reg, size uint) (uint64, error)
+	RdFPR(reg, size uint) (uint64, error)
 
 	Test1() string
 	Test2() string

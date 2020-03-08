@@ -34,7 +34,7 @@ var abiXName = [32]string{
 	"s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6",
 }
 
-func gprString(reg []uint64, pc uint64, xlen int) string {
+func gprString(reg []uint64, pc uint64, xlen uint) string {
 	fmtx := "%08x"
 	if xlen == 64 {
 		fmtx = "%016x"
@@ -67,14 +67,14 @@ var CmdGpr = cli.Leaf{
 		// read the GPRs
 		for i := range reg {
 			var err error
-			reg[i], err = dbg.RdGPR(uint(i))
+			reg[i], err = dbg.RdGPR(uint(i), 0)
 			if err != nil {
 				c.User.Put(fmt.Sprintf("unable to read gpr%d: %v\n", i, err))
 				return
 			}
 		}
 		// read the PC
-		pc, err := dbg.RdCSR(rv.DPC)
+		pc, err := dbg.RdCSR(rv.DPC, 0)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("unable to read pc: %v\n", err))
 			return

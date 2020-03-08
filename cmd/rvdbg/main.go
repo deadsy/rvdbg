@@ -38,8 +38,8 @@ func run(info *target.Info) error {
 
 	//app, err := wap.NewTarget(jtagDriver)
 	//app, err := maixgo.NewTarget(jtagDriver)
-	//app, err := gd32v.NewTarget(jtagDriver)
-	app, err := redv.NewTarget(jtagDriver)
+	app, err := gd32v.NewTarget(jtagDriver)
+	//app, err := redv.NewTarget(jtagDriver)
 	if err != nil {
 		return err
 	}
@@ -75,8 +75,9 @@ func addTargets() {
 //-----------------------------------------------------------------------------
 
 //const targetName = "wap"
-//const targetName = "gd32v"
-const targetName = "redv"
+const targetName = "gd32v"
+
+//const targetName = "redv"
 
 //const targetName = "maixgo"
 

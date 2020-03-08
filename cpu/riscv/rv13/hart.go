@@ -68,11 +68,6 @@ func (dbg *Debug) halt() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	// clear any command errors
-	err = dbg.cmdErrorClr()
-	if err != nil {
-		return false, err
-	}
 	return false, nil
 }
 
@@ -128,16 +123,48 @@ func (dbg *Debug) resume() (bool, error) {
 }
 
 //-----------------------------------------------------------------------------
+// register probing functions
+
+// probeCSR works out how we can access CSRs
+func (hi *hartInfo) probeCSR() error {
+	_, err := acRdCSR(hi.dbg, rv.MISA, 32)
+	if err == nil {
+		hi.rdCSR = acRdCSR
+		return nil
+	}
+	_, err = pbRdCSR(hi.dbg, rv.MISA, 32)
+	if err == nil {
+		hi.rdCSR = pbRdCSR
+		return nil
+	}
+	return errors.New("unable to determine CSR access mode")
+}
+
+func (dbg *Debug) probeRegisterAccess() error {
+	hi := dbg.hart[dbg.hartid]
+	// GPRs
+	hi.rdGPR = acRdGPR
+	// FPRs
+	hi.rdFPR = acRdFPR
+	// CSRs
+	err := hi.probeCSR()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
 
 // getMXLEN returns the GPR length for the current hart.
-func (dbg *Debug) getMXLEN() (int, error) {
+func (dbg *Debug) getMXLEN() (uint, error) {
 	// try a 64-bit register read
-	_, err := dbg.rdGPR(rv.RegS0, 64)
+	_, err := dbg.RdGPR(rv.RegS0, 64)
 	if err == nil {
 		return 64, nil
 	}
 	// try a 32-bit register read
-	_, err = dbg.rdGPR(rv.RegS0, 32)
+	_, err = dbg.RdGPR(rv.RegS0, 32)
 	if err == nil {
 		return 32, nil
 	}
@@ -145,14 +172,14 @@ func (dbg *Debug) getMXLEN() (int, error) {
 }
 
 // getFLEN returns the FPR length for the current hart.
-func (dbg *Debug) getFLEN() (int, error) {
+func (dbg *Debug) getFLEN() (uint, error) {
 	// try a 64-bit register read
-	_, err := dbg.rdFPR(0, 64)
+	_, err := dbg.RdFPR(0, 64)
 	if err == nil {
 		return 64, nil
 	}
 	// try a 32-bit register read
-	_, err = dbg.rdFPR(0, 32)
+	_, err = dbg.RdFPR(0, 32)
 	if err == nil {
 		return 32, nil
 	}
@@ -160,34 +187,36 @@ func (dbg *Debug) getFLEN() (int, error) {
 }
 
 // getDXLEN returns the debug register length for the current hart.
-func (dbg *Debug) getDXLEN(hi *hartInfo) (int, error) {
+func (dbg *Debug) getDXLEN(hi *hartInfo) (uint, error) {
 	// try a 64-bit register read
-	hi.info.DXLEN = 64
-	_, err := dbg.RdCSR(rv.DPC)
+	_, err := dbg.RdCSR(rv.DPC, 64)
 	if err == nil {
 		return 64, nil
 	}
 	// try a 32-bit register read
-	hi.info.DXLEN = 32
-	_, err = dbg.RdCSR(rv.DPC)
+	_, err = dbg.RdCSR(rv.DPC, 32)
 	if err == nil {
 		return 32, nil
 	}
-	hi.info.DXLEN = 0
 	return 0, errors.New("unable to determine DXLEN")
 }
 
 //-----------------------------------------------------------------------------
 
+type rdRegFunc func(dbg *Debug, reg, size uint) (uint64, error)
+type wrRegFunc func(dbg *Debug, reg, size uint, val uint64) error
+
 // hartInfo stores per hart information.
 type hartInfo struct {
-	dbg          *Debug      // pointer back to parent debugger
-	info         rv.HartInfo // public information
-	nscratch     uint        // number of dscratch registers
-	datasize     uint        // number of data registers in csr/memory
-	dataaccess   uint        // data registers in csr(0)/memory(1)
-	dataaddr     uint        // csr/memory address
-	pbModeForCSR bool        // use program buffer operations for CSR access
+	dbg        *Debug      // pointer back to parent debugger
+	info       rv.HartInfo // public information
+	rdGPR      rdRegFunc   // read GPR function
+	rdFPR      rdRegFunc   // read FPR function
+	rdCSR      rdRegFunc   // read CSR function
+	nscratch   uint        // number of dscratch registers
+	datasize   uint        // number of data registers in csr/memory
+	dataaccess uint        // data registers in csr(0)/memory(1)
+	dataaddr   uint        // csr/memory address
 }
 
 func (hi *hartInfo) String() string {
@@ -230,6 +259,12 @@ func (hi *hartInfo) examine() error {
 	}
 	hi.info.State = rv.Halted
 
+	// probe the register access modes
+	err = dbg.probeRegisterAccess()
+	if err != nil {
+		return err
+	}
+
 	// get the MXLEN value
 	hi.info.MXLEN, err = dbg.getMXLEN()
 	if err != nil {
@@ -237,22 +272,16 @@ func (hi *hartInfo) examine() error {
 	}
 	log.Info.Printf(fmt.Sprintf("hart%d: MXLEN %d", hi.info.ID, hi.info.MXLEN))
 
-	// work out the CSR access mode
-	err = dbg.getCSRMode()
-	if err != nil {
-		return err
-	}
-	log.Info.Printf(fmt.Sprintf("hart%d: pbModeForCSR %t", hi.info.ID, hi.pbModeForCSR))
-
 	// read the MISA value
-	hi.info.MISA, err = dbg.RdCSR(rv.MISA)
+	misa, err := dbg.RdCSR(rv.MISA, 0)
 	if err != nil {
 		return err
 	}
+	hi.info.MISA = uint(misa)
 	log.Info.Printf(fmt.Sprintf("hart%d: MISA 0x%x", hi.info.ID, hi.info.MISA))
 
 	// does MISA.mxl match our MXLEN?
-	if rv.GetMxlMISA(hi.info.MISA, uint(hi.info.MXLEN)) != hi.info.MXLEN {
+	if rv.GetMxlMISA(hi.info.MISA, hi.info.MXLEN) != hi.info.MXLEN {
 		return errors.New("MXLEN != misa.mxl")
 	}
 
@@ -317,10 +346,11 @@ func (hi *hartInfo) examine() error {
 	}
 
 	// get the hart id per the CSR
-	hi.info.MHARTID, err = dbg.RdCSR(rv.MHARTID)
+	mhartid, err := dbg.RdCSR(rv.MHARTID, 0)
 	if err != nil {
 		return err
 	}
+	hi.info.MHARTID = uint(mhartid)
 	log.Info.Printf(fmt.Sprintf("hart%d: MHARTID %d", hi.info.ID, hi.info.MHARTID))
 
 	// get hartinfo parameters

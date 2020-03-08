@@ -346,18 +346,23 @@ func (dbg *Debug) GetInfo() string {
 
 // Test is a test routine.
 func (dbg *Debug) Test1() string {
-
 	s := []string{}
 
-	acs, err := dbg.rdDmi(abstractcs)
-	s = append(s, fmt.Sprintf("acs %08x %v", acs, err))
+	// test progbuf buffers
+	err := dbg.testBuffers(progbuf0, dbg.progbufsize)
+	if err != nil {
+		s = append(s, fmt.Sprintf("progbuf: %v", err))
+	} else {
+		s = append(s, "progbuf: passed")
+	}
 
-	/*
-		err := dbg.testBuffers(progbuf0, 2)
-		s = append(s, fmt.Sprintf("progbuf %v", err))
-		err = dbg.testBuffers(data0, 4)
-		s = append(s, fmt.Sprintf("data %v", err))
-	*/
+	// test data buffers
+	err = dbg.testBuffers(data0, dbg.datacount)
+	if err != nil {
+		s = append(s, fmt.Sprintf("data: %v", err))
+	} else {
+		s = append(s, "data: passed")
+	}
 
 	return strings.Join(s, "\n")
 }

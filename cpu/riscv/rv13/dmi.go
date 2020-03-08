@@ -435,6 +435,14 @@ const (
 	size128 = 4 // lower 128 bits
 )
 
+var sizeMap = map[uint]uint{
+	8:   size8,
+	16:  size16,
+	32:  size32,
+	64:  size64,
+	128: size128,
+}
+
 func cmdRegister(reg, size uint, postinc, postexec, transfer, write bool) uint32 {
 	return uint32((0 << 24) |
 		(size << 20) |
@@ -674,7 +682,7 @@ func (dbg *Debug) testBuffers(addr, n uint) error {
 			return err
 		}
 		if x != wr[i] {
-			return fmt.Errorf("dmi buffer r/w mismatch at addr 0x%x", addr+uint(i))
+			return fmt.Errorf("w/r mismatch at 0x%x", addr+uint(i))
 		}
 	}
 

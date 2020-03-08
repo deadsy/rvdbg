@@ -9,7 +9,7 @@ RISC-V Debugger 0.13 Program Buffer Command Operations
 package rv13
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 )
@@ -47,7 +47,7 @@ func (dbg *Debug) pbRead(size uint, pb []uint32) (uint64, error) {
 	// postexec
 	ops[n+1] = dmiWr(command, cmdRegister(0, 0, false, true, false, false))
 	// transfer GPR s0 to data0
-	ops[n+2] = dmiWr(command, cmdRegister(regGPR(rv.RegS0), size, false, false, true, false))
+	ops[n+2] = dmiWr(command, cmdRegister(regGPR(rv.RegS0), sizeMap[size], false, false, true, false))
 	// read the command status
 	ops[n+3] = dmiRd(abstractcs)
 	// done
@@ -66,27 +66,14 @@ func (dbg *Debug) pbRead(size uint, pb []uint32) (uint64, error) {
 	}
 
 	// read the data
-	var val uint64
 	switch size {
-	case size8, size16, size32:
-		var x uint32
-		x, err = dbg.rdData32()
-		val = uint64(x)
-	case size64:
-		val, err = dbg.rdData64()
-	default:
-		return 0, errors.New("read size not supported")
+	case 32:
+		val, err := dbg.rdData32()
+		return uint64(val), err
+	case 64:
+		return dbg.rdData64()
 	}
-	return val, err
-}
-
-//-----------------------------------------------------------------------------
-
-func (dbg *Debug) pbRdCSR(reg, size uint) (uint, error) {
-	pb := dbg.newProgramBuffer(2)
-	pb[0] = rv.InsCSRR(rv.RegS0, reg)
-	x, err := dbg.pbRead(size, pb)
-	return uint(x), err
+	return 0, fmt.Errorf("%-bit read size not supported", size)
 }
 
 //-----------------------------------------------------------------------------
@@ -95,6 +82,14 @@ func (dbg *Debug) pbRdCSR(reg, size uint) (uint, error) {
 // pbWr32 writes a 32-bit value using an program buffer operation.
 func (dbg *Debug) pbWrite(reg, size uint, val uint32, pb []uint32) error {
 	return nil
+}
+
+//-----------------------------------------------------------------------------
+
+func pbRdCSR(dbg *Debug, reg, size uint) (uint64, error) {
+	pb := dbg.newProgramBuffer(2)
+	pb[0] = rv.InsCSRR(rv.RegS0, reg)
+	return dbg.pbRead(size, pb)
 }
 
 //-----------------------------------------------------------------------------

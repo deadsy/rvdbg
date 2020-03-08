@@ -85,9 +85,9 @@ func DisplayMISA(misa, mxlen uint) string {
 }
 
 // GetMxlMISA returns the bit length in the MISA.mxl field.
-func GetMxlMISA(misa, mxlen uint) int {
+func GetMxlMISA(misa, mxlen uint) uint {
 	mxl := util.Bits(misa, mxlen-1, mxlen-2)
-	return []int{0, 32, 64, 128}[mxl]
+	return []uint{0, 32, 64, 128}[mxl]
 }
 
 // CheckExtMISA returns is the extension is present in MISA.
@@ -102,7 +102,7 @@ func CheckExtMISA(misa uint, ext rune) bool {
 //-----------------------------------------------------------------------------
 
 // GetCSRLength returns the bit length of a CSR register.
-func GetCSRLength(reg uint, hi *HartInfo) int {
+func GetCSRLength(reg uint, hi *HartInfo) uint {
 	// exceptions
 	switch reg {
 	case MVENDORID, DCSR:
