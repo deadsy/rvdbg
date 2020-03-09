@@ -9,6 +9,7 @@ RISC-V Debugger 0.13 Program Buffer Command Operations
 package rv13
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
@@ -68,10 +69,17 @@ func (dbg *Debug) pbRead(size uint, pb []uint32) (uint64, error) {
 	return 0, fmt.Errorf("%-bit read size not supported", size)
 }
 
+// pbRdCSR reads a CSR using program buffer operations.
+func pbRdCSR(dbg *Debug, reg, size uint) (uint64, error) {
+	pb := dbg.newProgramBuffer(2)
+	pb[0] = rv.InsCSRR(rv.RegS0, reg)
+	return dbg.pbRead(size, pb)
+}
+
 //-----------------------------------------------------------------------------
 // program buffer write operations
 
-// pbWr32 writes a 32-bit value using an program buffer operation.
+// pbWrite writes a size-bit value using an program buffer operation.
 func (dbg *Debug) pbWrite(size uint, val uint64, pb []uint32) error {
 	// build the operations buffer
 	ops := []dmiOp{}
@@ -104,18 +112,57 @@ func (dbg *Debug) pbWrite(size uint, val uint64, pb []uint32) error {
 	return dbg.cmdWait(cmdStatus(data[0]), cmdTimeout)
 }
 
-//-----------------------------------------------------------------------------
-
-func pbRdCSR(dbg *Debug, reg, size uint) (uint64, error) {
-	pb := dbg.newProgramBuffer(2)
-	pb[0] = rv.InsCSRR(rv.RegS0, reg)
-	return dbg.pbRead(size, pb)
-}
-
+// pbWrCSR writes a CSR using program buffer operations.
 func pbWrCSR(dbg *Debug, reg, size uint, val uint64) error {
 	pb := dbg.newProgramBuffer(2)
 	pb[0] = rv.InsCSRW(reg, rv.RegS0)
 	return dbg.pbWrite(size, val, pb)
+}
+
+//-----------------------------------------------------------------------------
+// read memory
+
+// pbRdMem8 reads n x 8-bit values from memory using program buffer operations.
+func pbRdMem8(dbg *Debug, addr, n uint) ([]uint8, error) {
+	return nil, errors.New("TODO")
+}
+
+// pbRdMem16 reads n x 16-bit values from memory using program buffer operations.
+func pbRdMem16(dbg *Debug, addr, n uint) ([]uint16, error) {
+	return nil, errors.New("TODO")
+}
+
+// pbRdMem32 reads n x 32-bit values from memory using program buffer operations.
+func pbRdMem32(dbg *Debug, addr, n uint) ([]uint32, error) {
+	return nil, errors.New("TODO")
+}
+
+// pbRdMem64 reads n x 64-bit values from memory using program buffer operations.
+func pbRdMem64(dbg *Debug, addr, n uint) ([]uint64, error) {
+	return nil, errors.New("TODO")
+}
+
+//-----------------------------------------------------------------------------
+// write memory
+
+// pbWrMem8 writes n x 8-bit values to memory using program buffer operations.
+func pbWrMem8(dbg *Debug, addr uint, val []uint8) error {
+	return errors.New("TODO")
+}
+
+// pbWrMem16 writes n x 16-bit values to memory using program buffer operations.
+func pbWrMem16(dbg *Debug, addr uint, val []uint16) error {
+	return errors.New("TODO")
+}
+
+// pbWrMem32 writes n x 32-bit values to memory using program buffer operations.
+func pbWrMem32(dbg *Debug, addr uint, val []uint32) error {
+	return errors.New("TODO")
+}
+
+// pbWrMem64 writes n x 64-bit values to memory using program buffer operations.
+func pbWrMem64(dbg *Debug, addr uint, val []uint64) error {
+	return errors.New("TODO")
 }
 
 //-----------------------------------------------------------------------------

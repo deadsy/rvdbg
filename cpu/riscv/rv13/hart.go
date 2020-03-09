@@ -158,14 +158,14 @@ func (hi *hartInfo) probeCSR() error {
 
 // probeMemory works out how we can access memory.
 func (hi *hartInfo) probeMemory() error {
-	hi.rdMem8 = nil  // TODO
-	hi.rdMem16 = nil // TODO
-	hi.rdMem32 = nil // TODO
-	hi.rdMem64 = nil // TODO
-	hi.wrMem8 = nil  // TODO
-	hi.wrMem16 = nil // TODO
-	hi.wrMem32 = nil // TODO
-	hi.wrMem64 = nil // TODO
+	hi.rdMem8 = pbRdMem8
+	hi.rdMem16 = pbRdMem16
+	hi.rdMem32 = pbRdMem32
+	hi.rdMem64 = pbRdMem64
+	hi.wrMem8 = pbWrMem8
+	hi.wrMem16 = pbWrMem16
+	hi.wrMem32 = pbWrMem32
+	hi.wrMem64 = pbWrMem64
 	return nil
 }
 
@@ -245,29 +245,37 @@ func (dbg *Debug) getDXLEN(hi *hartInfo) (uint, error) {
 
 type rdRegFunc func(dbg *Debug, reg, size uint) (uint64, error)
 type wrRegFunc func(dbg *Debug, reg, size uint, val uint64) error
+type rdMem8Func func(dbg *Debug, addr, n uint) ([]uint8, error)
+type rdMem16Func func(dbg *Debug, addr, n uint) ([]uint16, error)
+type rdMem32Func func(dbg *Debug, addr, n uint) ([]uint32, error)
+type rdMem64Func func(dbg *Debug, addr, n uint) ([]uint64, error)
+type wrMem8Func func(dbg *Debug, addr uint, val []uint8) error
+type wrMem16Func func(dbg *Debug, addr uint, val []uint16) error
+type wrMem32Func func(dbg *Debug, addr uint, val []uint32) error
+type wrMem64Func func(dbg *Debug, addr uint, val []uint64) error
 
 // hartInfo stores per hart information.
 type hartInfo struct {
-	dbg        *Debug                               // pointer back to parent debugger
-	info       rv.HartInfo                          // public information
-	nscratch   uint                                 // number of dscratch registers
-	datasize   uint                                 // number of data registers in csr/memory
-	dataaccess uint                                 // data registers in csr(0)/memory(1)
-	dataaddr   uint                                 // csr/memory address
-	rdGPR      rdRegFunc                            // read GPR function
-	rdFPR      rdRegFunc                            // read FPR function
-	rdCSR      rdRegFunc                            // read CSR function
-	wrGPR      wrRegFunc                            // write GPR function
-	wrFPR      wrRegFunc                            // write FPR function
-	wrCSR      wrRegFunc                            // write CSR function
-	rdMem8     func(addr, n uint) ([]uint8, error)  // read 8-bit memory buffer
-	rdMem16    func(addr, n uint) ([]uint16, error) // read 16-bit memory buffer
-	rdMem32    func(addr, n uint) ([]uint32, error) // read 32-bit memory buffer
-	rdMem64    func(addr, n uint) ([]uint64, error) // read 64-bit memory buffer
-	wrMem8     func(addr uint, val []uint8) error   // write 8-bit memory buffer
-	wrMem16    func(addr uint, val []uint16) error  // write 16-bit memory buffer
-	wrMem32    func(addr uint, val []uint32) error  // write 32-bit memory buffer
-	wrMem64    func(addr uint, val []uint64) error  // write 64-bit memory buffer
+	dbg        *Debug      // pointer back to parent debugger
+	info       rv.HartInfo // public information
+	nscratch   uint        // number of dscratch registers
+	datasize   uint        // number of data registers in csr/memory
+	dataaccess uint        // data registers in csr(0)/memory(1)
+	dataaddr   uint        // csr/memory address
+	rdGPR      rdRegFunc   // read GPR function
+	rdFPR      rdRegFunc   // read FPR function
+	rdCSR      rdRegFunc   // read CSR function
+	wrGPR      wrRegFunc   // write GPR function
+	wrFPR      wrRegFunc   // write FPR function
+	wrCSR      wrRegFunc   // write CSR function
+	rdMem8     rdMem8Func  // read 8-bit memory buffer
+	rdMem16    rdMem16Func // read 16-bit memory buffer
+	rdMem32    rdMem32Func // read 32-bit memory buffer
+	rdMem64    rdMem64Func // read 64-bit memory buffer
+	wrMem8     wrMem8Func  // write 8-bit memory buffer
+	wrMem16    wrMem16Func // write 16-bit memory buffer
+	wrMem32    wrMem32Func // write 32-bit memory buffer
+	wrMem64    wrMem64Func // write 64-bit memory buffer
 }
 
 func (hi *hartInfo) String() string {
