@@ -183,9 +183,20 @@ func New(dev *jtag.Device) (rv.Debug, error) {
 	if util.Bits(uint(x), 11, 0) == ((1 << dbg.datacount) - 1) {
 		dbg.autoexecdata = true
 	}
+	// turn off autoexec
+	err = dbg.wrDmi(abstractauto, 0)
+	if err != nil {
+		return nil, err
+	}
 
 	log.Info.Printf(fmt.Sprintf("progbufsize %d impebreak %d autoexecprogbuf %t", dbg.progbufsize, dbg.impebreak, dbg.autoexecprogbuf))
 	log.Info.Printf(fmt.Sprintf("datacount %d autoexecdata %t", dbg.datacount, dbg.autoexecdata))
+
+	// clear any pending command errors
+	err = dbg.cmdErrorClr()
+	if err != nil {
+		return nil, err
+	}
 
 	// 1st pass: enumerate the harts
 	maxHarts := 1 << dbg.hartsellen
@@ -373,12 +384,11 @@ const testReg = 25
 func (dbg *Debug) Test2() string {
 	s := []string{}
 
-	err := dbg.wrDmi(data0, 0xdeadbeef)
-
-	//err := dbg.WrGPR(testReg, 0xdeadbeef)
+	err := dbg.WrGPR(testReg, 0, 0xdeadbeef)
 	s = append(s, fmt.Sprintf("wr %v", err))
-	//val, err := dbg.RdGPR(testReg)
-	//s = append(s, fmt.Sprintf("rd %x %v", val, err))
+
+	val, err := dbg.RdGPR(testReg, 0)
+	s = append(s, fmt.Sprintf("rd %x %v", val, err))
 
 	return strings.Join(s, "\n")
 }

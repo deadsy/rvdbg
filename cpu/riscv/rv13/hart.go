@@ -130,11 +130,13 @@ func (hi *hartInfo) probeCSR() error {
 	_, err := acRdCSR(hi.dbg, rv.MISA, 32)
 	if err == nil {
 		hi.rdCSR = acRdCSR
+		hi.wrCSR = acWrCSR
 		return nil
 	}
 	_, err = pbRdCSR(hi.dbg, rv.MISA, 32)
 	if err == nil {
 		hi.rdCSR = pbRdCSR
+		hi.wrCSR = pbWrCSR
 		return nil
 	}
 	return errors.New("unable to determine CSR access mode")
@@ -144,8 +146,10 @@ func (dbg *Debug) probeRegisterAccess() error {
 	hi := dbg.hart[dbg.hartid]
 	// GPRs
 	hi.rdGPR = acRdGPR
+	hi.wrGPR = acWrGPR
 	// FPRs
 	hi.rdFPR = acRdFPR
+	hi.wrFPR = acWrFPR
 	// CSRs
 	err := hi.probeCSR()
 	if err != nil {
@@ -213,6 +217,9 @@ type hartInfo struct {
 	rdGPR      rdRegFunc   // read GPR function
 	rdFPR      rdRegFunc   // read FPR function
 	rdCSR      rdRegFunc   // read CSR function
+	wrGPR      wrRegFunc   // write GPR function
+	wrFPR      wrRegFunc   // write FPR function
+	wrCSR      wrRegFunc   // write CSR function
 	nscratch   uint        // number of dscratch registers
 	datasize   uint        // number of data registers in csr/memory
 	dataaccess uint        // data registers in csr(0)/memory(1)
