@@ -378,16 +378,16 @@ func (dbg *Debug) Test1() string {
 	return strings.Join(s, "\n")
 }
 
-const testReg = 25
+const testReg = rv.DSCRATCH0
 
 // Test2 is a test routine.
 func (dbg *Debug) Test2() string {
 	s := []string{}
 
-	err := dbg.WrGPR(testReg, 0, 0xdeadbeef)
+	err := dbg.WrCSR(testReg, 0, 0xdeadbeef)
 	s = append(s, fmt.Sprintf("wr %v", err))
 
-	val, err := dbg.RdGPR(testReg, 0)
+	val, err := dbg.RdCSR(testReg, 0)
 	s = append(s, fmt.Sprintf("rd %x %v", val, err))
 
 	return strings.Join(s, "\n")

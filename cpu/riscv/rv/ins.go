@@ -61,7 +61,7 @@ const (
 	// 	opcodeSFENCE_VMA  = 0x12000073 // sfence.vma
 	// 	opcodeHFENCE_BVMA = 0x22000073 // hfence.bvma
 	// 	opcodeHFENCE_GVMA = 0xa2000073 // hfence.gvma
-	// 	opcodeCSRRW       = 0x00001073 // csrrw
+	opcodeCSRRW = 0x00001073 // csrrw
 	opcodeCSRRS = 0x00002073 // csrrs
 // 	opcodeCSRRC       = 0x00003073 // csrrc
 // 	opcodeCSRRWI      = 0x00005073 // csrrwi
@@ -144,17 +144,12 @@ const (
 
 // InsLW returns "lw rd, ofs(base)"
 func InsLW(rd, base, ofs uint) uint32 {
-	return uint32((util.Bits(ofs, 11, 0) << 20) |
-		(base << 15) |
-		(rd << 7) | opcodeLW)
+	return uint32((util.Bits(ofs, 11, 0) << 20) | (base << 15) | (rd << 7) | opcodeLW)
 }
 
 // InsSW returns "sw rs, ofs(base)"
 func InsSW(rs, base, ofs uint) uint32 {
-	return uint32((util.Bits(ofs, 11, 5) << 25) |
-		(rs << 20) |
-		(base << 15) |
-		(util.Bits(ofs, 4, 0) << 7) | opcodeSW)
+	return uint32((util.Bits(ofs, 11, 5) << 25) | (rs << 20) | (base << 15) | (util.Bits(ofs, 4, 0) << 7) | opcodeSW)
 }
 
 // InsEBREAK returns "ebreak"
@@ -164,9 +159,14 @@ func InsEBREAK() uint32 {
 
 // InsCSRR returns "csrr rd, csr"
 func InsCSRR(rd, csr uint) uint32 {
-	return uint32((csr << 20) |
-		(RegZero << 15) |
-		(rd << 7) | opcodeCSRRS)
+	// csrrs rd, csr, x0
+	return uint32((csr << 20) | (RegZero << 15) | (rd << 7) | opcodeCSRRS)
+}
+
+// InsCSRW returns "csrw csr, rs1"
+func InsCSRW(csr, rs1 uint) uint32 {
+	// csrrw x0, csr, rs1
+	return uint32((csr << 20) | (rs1 << 15) | (RegZero << 7) | opcodeCSRRW)
 }
 
 //-----------------------------------------------------------------------------

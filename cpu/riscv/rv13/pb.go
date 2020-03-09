@@ -9,7 +9,6 @@ RISC-V Debugger 0.13 Program Buffer Command Operations
 package rv13
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
@@ -34,21 +33,20 @@ func (dbg *Debug) newProgramBuffer(n uint) []uint32 {
 
 // pbRead reads a size-bit value using an program buffer operation.
 func (dbg *Debug) pbRead(size uint, pb []uint32) (uint64, error) {
-	n := len(pb)
 	// build the operations buffer
-	ops := make([]dmiOp, n+4)
+	ops := []dmiOp{}
 	// write the program buffer
 	for i, v := range pb {
-		ops[i] = dmiWr(progbuf(i), v)
+		ops = append(ops, dmiWr(progbuf(i), v))
 	}
 	// postexec
-	ops[n+0] = dmiWr(command, cmdRegister(0, 0, false, true, false, false))
+	ops = append(ops, dmiWr(command, cmdRegister(0, 0, false, true, false, false)))
 	// transfer GPR s0 to data0
-	ops[n+1] = dmiWr(command, cmdRegister(regGPR(rv.RegS0), sizeMap[size], false, false, true, false))
+	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), sizeMap[size], false, false, true, false)))
 	// read the command status
-	ops[n+2] = dmiRd(abstractcs)
+	ops = append(ops, dmiRd(abstractcs))
 	// done
-	ops[n+3] = dmiEnd()
+	ops = append(ops, dmiEnd())
 	// run the operations
 	data, err := dbg.dmiOps(ops)
 	if err != nil {
@@ -74,8 +72,36 @@ func (dbg *Debug) pbRead(size uint, pb []uint32) (uint64, error) {
 // program buffer write operations
 
 // pbWr32 writes a 32-bit value using an program buffer operation.
-func (dbg *Debug) pbWrite(reg, size uint, val uint32, pb []uint32) error {
-	return nil
+func (dbg *Debug) pbWrite(size uint, val uint64, pb []uint32) error {
+	// build the operations buffer
+	ops := []dmiOp{}
+	// write the program buffer
+	for i, v := range pb {
+		ops = append(ops, dmiWr(progbuf(i), v))
+	}
+	// setup dataX with the value to write
+	switch size {
+	case 32:
+		ops = append(ops, dmiWr(data0, uint32(val)))
+	case 64:
+		ops = append(ops, dmiWr(data0, uint32(val)))
+		ops = append(ops, dmiWr(data1, uint32(val>>32)))
+	default:
+		return fmt.Errorf("%-bit write size not supported", size)
+	}
+	// transfer dataX to GPR s0 and then postexec
+	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), sizeMap[size], false, true, true, true)))
+	// read the command status
+	ops = append(ops, dmiRd(abstractcs))
+	// done
+	ops = append(ops, dmiEnd())
+	// run the operations
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return err
+	}
+	// wait for command completion
+	return dbg.cmdWait(cmdStatus(data[0]), cmdTimeout)
 }
 
 //-----------------------------------------------------------------------------
@@ -87,10 +113,9 @@ func pbRdCSR(dbg *Debug, reg, size uint) (uint64, error) {
 }
 
 func pbWrCSR(dbg *Debug, reg, size uint, val uint64) error {
-	//pb := dbg.newProgramBuffer(2)
-	//pb[0] = rv.InsCSRR(rv.RegS0, reg)
-	//return dbg.pbRead(size, pb)
-	return errors.New("TODO")
+	pb := dbg.newProgramBuffer(2)
+	pb[0] = rv.InsCSRW(reg, rv.RegS0)
+	return dbg.pbWrite(size, val, pb)
 }
 
 //-----------------------------------------------------------------------------

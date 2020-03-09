@@ -370,6 +370,11 @@ func (hi *hartInfo) examine() error {
 	hi.dataaccess = util.Bit(uint(x), 16)
 	hi.dataaddr = util.Bits(uint(x), 11, 0)
 
+	log.Info.Printf(fmt.Sprintf("hart%d: nscratch %d words", hi.info.ID, hi.nscratch))
+	log.Info.Printf(fmt.Sprintf("hart%d: datasize %d %s", hi.info.ID, hi.datasize, []string{"csr", "words"}[hi.dataaccess]))
+	log.Info.Printf(fmt.Sprintf("hart%d: dataaccess %s(%d)", hi.info.ID, []string{"csr", "memory"}[hi.dataaccess], hi.dataaccess))
+	log.Info.Printf(fmt.Sprintf("hart%d: dataaddr 0x%x", hi.info.ID, hi.dataaddr))
+
 	if !wasHalted {
 		// resume the hart
 		_, err := dbg.resume()

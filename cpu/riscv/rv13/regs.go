@@ -29,6 +29,18 @@ func (dbg *Debug) RdCSR(reg, size uint) (uint64, error) {
 	return hi.rdCSR(dbg, reg, size)
 }
 
+// WrCSR writes a control and status register for the current hart.
+func (dbg *Debug) WrCSR(reg, size uint, val uint64) error {
+	hi := dbg.hart[dbg.hartid]
+	if reg > 0xfff {
+		return fmt.Errorf("csr 0x%x is invalid", reg)
+	}
+	if size == 0 {
+		size = rv.GetCSRLength(reg, &hi.info)
+	}
+	return hi.wrCSR(dbg, reg, size, val)
+}
+
 //-----------------------------------------------------------------------------
 // general purpose registers
 

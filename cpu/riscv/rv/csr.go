@@ -22,8 +22,8 @@ const (
 	MISA      = 0x301
 	DCSR      = 0x7b0
 	DPC       = 0x7b1
-	DCRATCH0  = 0x7b2
-	DCRATCH1  = 0x7b3
+	DSCRATCH0 = 0x7b2
+	DSCRATCH1 = 0x7b3
 	MVENDORID = 0xf11
 	MARCHID   = 0xf12
 	MIMPID    = 0xf13
