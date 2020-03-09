@@ -123,7 +123,21 @@ func (dbg *Debug) resume() (bool, error) {
 }
 
 //-----------------------------------------------------------------------------
-// register probing functions
+// access probing- setup pointers to access functions
+
+// probeGPR works out how we can access GPRs
+func (hi *hartInfo) probeGPR() error {
+	hi.rdGPR = acRdGPR
+	hi.wrGPR = acWrGPR
+	return nil
+}
+
+// probeFPR works out how we can access FPRs
+func (hi *hartInfo) probeFPR() error {
+	hi.rdFPR = acRdFPR
+	hi.wrFPR = acWrFPR
+	return nil
+}
 
 // probeCSR works out how we can access CSRs
 func (hi *hartInfo) probeCSR() error {
@@ -142,16 +156,38 @@ func (hi *hartInfo) probeCSR() error {
 	return errors.New("unable to determine CSR access mode")
 }
 
-func (dbg *Debug) probeRegisterAccess() error {
+// probeMemory works out how we can access memory.
+func (hi *hartInfo) probeMemory() error {
+	hi.rdMem8 = nil  // TODO
+	hi.rdMem16 = nil // TODO
+	hi.rdMem32 = nil // TODO
+	hi.rdMem64 = nil // TODO
+	hi.wrMem8 = nil  // TODO
+	hi.wrMem16 = nil // TODO
+	hi.wrMem32 = nil // TODO
+	hi.wrMem64 = nil // TODO
+	return nil
+}
+
+func (dbg *Debug) probeAccess() error {
 	hi := dbg.hart[dbg.hartid]
 	// GPRs
-	hi.rdGPR = acRdGPR
-	hi.wrGPR = acWrGPR
+	err := hi.probeGPR()
+	if err != nil {
+		return err
+	}
 	// FPRs
-	hi.rdFPR = acRdFPR
-	hi.wrFPR = acWrFPR
+	err = hi.probeFPR()
+	if err != nil {
+		return err
+	}
 	// CSRs
-	err := hi.probeCSR()
+	err = hi.probeCSR()
+	if err != nil {
+		return err
+	}
+	// Memory
+	err = hi.probeMemory()
 	if err != nil {
 		return err
 	}
@@ -212,18 +248,26 @@ type wrRegFunc func(dbg *Debug, reg, size uint, val uint64) error
 
 // hartInfo stores per hart information.
 type hartInfo struct {
-	dbg        *Debug      // pointer back to parent debugger
-	info       rv.HartInfo // public information
-	rdGPR      rdRegFunc   // read GPR function
-	rdFPR      rdRegFunc   // read FPR function
-	rdCSR      rdRegFunc   // read CSR function
-	wrGPR      wrRegFunc   // write GPR function
-	wrFPR      wrRegFunc   // write FPR function
-	wrCSR      wrRegFunc   // write CSR function
-	nscratch   uint        // number of dscratch registers
-	datasize   uint        // number of data registers in csr/memory
-	dataaccess uint        // data registers in csr(0)/memory(1)
-	dataaddr   uint        // csr/memory address
+	dbg        *Debug                               // pointer back to parent debugger
+	info       rv.HartInfo                          // public information
+	nscratch   uint                                 // number of dscratch registers
+	datasize   uint                                 // number of data registers in csr/memory
+	dataaccess uint                                 // data registers in csr(0)/memory(1)
+	dataaddr   uint                                 // csr/memory address
+	rdGPR      rdRegFunc                            // read GPR function
+	rdFPR      rdRegFunc                            // read FPR function
+	rdCSR      rdRegFunc                            // read CSR function
+	wrGPR      wrRegFunc                            // write GPR function
+	wrFPR      wrRegFunc                            // write FPR function
+	wrCSR      wrRegFunc                            // write CSR function
+	rdMem8     func(addr, n uint) ([]uint8, error)  // read 8-bit memory buffer
+	rdMem16    func(addr, n uint) ([]uint16, error) // read 16-bit memory buffer
+	rdMem32    func(addr, n uint) ([]uint32, error) // read 32-bit memory buffer
+	rdMem64    func(addr, n uint) ([]uint64, error) // read 64-bit memory buffer
+	wrMem8     func(addr uint, val []uint8) error   // write 8-bit memory buffer
+	wrMem16    func(addr uint, val []uint16) error  // write 16-bit memory buffer
+	wrMem32    func(addr uint, val []uint32) error  // write 32-bit memory buffer
+	wrMem64    func(addr uint, val []uint64) error  // write 64-bit memory buffer
 }
 
 func (hi *hartInfo) String() string {
@@ -266,8 +310,8 @@ func (hi *hartInfo) examine() error {
 	}
 	hi.info.State = rv.Halted
 
-	// probe the register access modes
-	err = dbg.probeRegisterAccess()
+	// probe the access modes
+	err = dbg.probeAccess()
 	if err != nil {
 		return err
 	}

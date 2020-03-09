@@ -8,53 +8,66 @@ RISC-V Debugger 0.13 Memory Operations
 
 package rv13
 
-import "github.com/deadsy/rvdbg/cpu/riscv/rv"
-
 //-----------------------------------------------------------------------------
+// read memory
 
-// Rd32 reads a 32-bit value from a 32-bit address.
-func (dbg *Debug) Rd32(addr uint32) (uint32, error) {
-
-	ops := []dmiOp{
-		// setup the program buffer
-		dmiWr(progbuf0, rv.InsLW(rv.RegS0, rv.RegS0, 0)), // lw s0, 0(s0)
-		dmiWr(progbuf0+1, rv.InsEBREAK()),                // ebreak
-		// s0 = addr, execute program buffer
-		dmiWr(data0, addr),
-		dmiWr(command, cmdRegister(regGPR(rv.RegS0), size32, false, true, true, true)),
-		// read s0
-		dmiWr(command, cmdRegister(regGPR(rv.RegS0), size32, false, false, true, false)),
-		dmiRd(data0),
-		// done
-		dmiEnd(),
+func (dbg *Debug) RdMem8(addr, n uint) ([]uint8, error) {
+	if n == 0 {
+		return nil, nil
 	}
-
-	data, err := dbg.dmiOps(ops)
-	if err != nil {
-		return 0, err
-	}
-	return data[0], nil
+	return dbg.hart[dbg.hartid].rdMem8(addr, n)
 }
 
-// Wr32 writes a 32-bit value to a 32-bit address.
-func (dbg *Debug) Wr32(addr, val uint32) error {
-
-	ops := []dmiOp{
-		// setup the program buffer
-		dmiWr(progbuf0, rv.InsSW(rv.RegS1, rv.RegS0, 0)), // sw s1, 0(s0)
-		dmiWr(progbuf0+1, rv.InsEBREAK()),                // ebreak
-		// s0 = addr
-		dmiWr(data0, addr),
-		dmiWr(command, cmdRegister(regGPR(rv.RegS0), size32, false, false, true, true)),
-		// s1 = val, execute program buffer
-		dmiWr(data0, val),
-		dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, false, true, true, true)),
-		// done
-		dmiEnd(),
+func (dbg *Debug) RdMem16(addr, n uint) ([]uint16, error) {
+	if n == 0 {
+		return nil, nil
 	}
+	return dbg.hart[dbg.hartid].rdMem16(addr, n)
+}
 
-	_, err := dbg.dmiOps(ops)
-	return err
+func (dbg *Debug) RdMem32(addr, n uint) ([]uint32, error) {
+	if n == 0 {
+		return nil, nil
+	}
+	return dbg.hart[dbg.hartid].rdMem32(addr, n)
+}
+
+func (dbg *Debug) RdMem64(addr, n uint) ([]uint64, error) {
+	if n == 0 {
+		return nil, nil
+	}
+	return dbg.hart[dbg.hartid].rdMem64(addr, n)
+}
+
+//-----------------------------------------------------------------------------
+// write memory
+
+func (dbg *Debug) WrMem8(addr uint, val []uint8) error {
+	if len(val) == 0 {
+		return nil
+	}
+	return dbg.hart[dbg.hartid].wrMem8(addr, val)
+}
+
+func (dbg *Debug) WrMem16(addr uint, val []uint16) error {
+	if len(val) == 0 {
+		return nil
+	}
+	return dbg.hart[dbg.hartid].wrMem16(addr, val)
+}
+
+func (dbg *Debug) WrMem32(addr uint, val []uint32) error {
+	if len(val) == 0 {
+		return nil
+	}
+	return dbg.hart[dbg.hartid].wrMem32(addr, val)
+}
+
+func (dbg *Debug) WrMem64(addr uint, val []uint64) error {
+	if len(val) == 0 {
+		return nil
+	}
+	return dbg.hart[dbg.hartid].wrMem64(addr, val)
 }
 
 //-----------------------------------------------------------------------------
