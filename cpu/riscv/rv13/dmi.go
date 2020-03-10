@@ -472,6 +472,21 @@ func (cs cmdStatus) isDone() bool {
 	return cs&(1<<12 /*busy*/) == 0
 }
 
+// checkError checks a command status and clears and reports any error.
+func (dbg *Debug) checkError(cs cmdStatus) error {
+	ce := cs.getError()
+	// are we done with no errors?
+	if cs.isDone() && ce == errOk {
+		return nil
+	}
+	// clear the error
+	err := dbg.cmdErrorClr()
+	if err != nil {
+		return err
+	}
+	return fmt.Errorf("command error %s(%d)", ce, ce)
+}
+
 const cmdTimeout = 500 * time.Millisecond
 
 // cmdWait waits for command completion.
@@ -489,7 +504,7 @@ func (dbg *Debug) cmdWait(cs cmdStatus, to time.Duration) error {
 				if err != nil {
 					return err
 				}
-				return fmt.Errorf("command error %s (%d)", ce, ce)
+				return fmt.Errorf("command error %s(%d)", ce, ce)
 			}
 			return nil
 		}
