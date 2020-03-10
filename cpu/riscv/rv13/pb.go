@@ -16,6 +16,7 @@ import (
 )
 
 //-----------------------------------------------------------------------------
+// slice conversion
 
 // convert32to16 converts a 32-bit slice to a 16-bit slice.
 func convert32to16(x []uint32) []uint16 {
@@ -26,11 +27,29 @@ func convert32to16(x []uint32) []uint16 {
 	return y
 }
 
+// convert16to32 converts a 16-bit slice to a 32-bit slice.
+func convert16to32(x []uint16) []uint32 {
+	y := make([]uint32, len(x))
+	for i := range x {
+		y[i] = uint32(x[i])
+	}
+	return y
+}
+
 // convert32to8 converts a 32-bit slice to an 8-bit slice.
 func convert32to8(x []uint32) []uint8 {
 	y := make([]uint8, len(x))
 	for i := range x {
 		y[i] = uint8(x[i])
+	}
+	return y
+}
+
+// convert8to32 converts an 8-bit slice to a 32-bit slice.
+func convert8to32(x []uint8) []uint32 {
+	y := make([]uint32, len(x))
+	for i := range x {
+		y[i] = uint32(x[i])
 	}
 	return y
 }
@@ -141,11 +160,10 @@ func pbWrCSR(dbg *Debug, reg, size uint, val uint64) error {
 }
 
 //-----------------------------------------------------------------------------
-// read memory
+// read memory 8/16/32-bits
 
-// pbRdMem performs 8/16/32-bit memory reads.
-func (dbg *Debug) pbRdMem(addr, n uint, pb []uint32) ([]uint32, error) {
-
+// pbRdMem_RV32 performs 8/16/32-bit memory reads using RV32 instructions.
+func (dbg *Debug) pbRdMem_RV32(addr, n uint, pb []uint32) ([]uint32, error) {
 	// build the operations buffer
 	ops := pbOps(pb)
 	// setup the address in dataX
@@ -181,20 +199,17 @@ func (dbg *Debug) pbRdMem(addr, n uint, pb []uint32) ([]uint32, error) {
 	ops = append(ops, dmiRd(abstractcs))
 	// done
 	ops = append(ops, dmiEnd())
-
 	// run the operations
 	data, err := dbg.dmiOps(ops)
 	if err != nil {
 		return nil, err
 	}
-
 	// check the command status
 	cs := cmdStatus(data[len(data)-1])
 	err = dbg.checkError(cs)
 	if err != nil {
 		return nil, err
 	}
-
 	// return the data
 	return data[:len(data)-1], nil
 }
@@ -206,7 +221,7 @@ func pbRdMem8(dbg *Debug, addr, n uint) ([]uint8, error) {
 	pb[0] = rv.InsLB(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 1)
 	// read the memory
-	data, err := dbg.pbRdMem(addr, n, pb)
+	data, err := dbg.pbRdMem_RV32(addr, n, pb)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +235,7 @@ func pbRdMem16(dbg *Debug, addr, n uint) ([]uint16, error) {
 	pb[0] = rv.InsLH(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 2)
 	// read the memory
-	data, err := dbg.pbRdMem(addr, n, pb)
+	data, err := dbg.pbRdMem_RV32(addr, n, pb)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +249,15 @@ func pbRdMem32(dbg *Debug, addr, n uint) ([]uint32, error) {
 	pb[0] = rv.InsLW(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 4)
 	// read the memory
-	return dbg.pbRdMem(addr, n, pb)
+	return dbg.pbRdMem_RV32(addr, n, pb)
+}
+
+//-----------------------------------------------------------------------------
+// read memory 64-bits
+
+// pbRdMem_RV64 performs 64-bit memory reads using RV64 instructions.
+func (dbg *Debug) pbRdMem_RV64(addr, n uint, pb []uint32) ([]uint64, error) {
+	return nil, errors.New("TODO")
 }
 
 // pbRdMem64 reads n x 64-bit values from memory using program buffer operations.
@@ -242,12 +265,17 @@ func pbRdMem64(dbg *Debug, addr, n uint) ([]uint64, error) {
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsLD(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 8)
-
-	return nil, errors.New("TODO")
+	// read the memory
+	return dbg.pbRdMem_RV64(addr, n, pb)
 }
 
 //-----------------------------------------------------------------------------
-// write memory
+// write memory 8/16/32-bits
+
+// pbWrMem_RV32 performs 8/16/32-bit memory writes using RV32 instructions.
+func (dbg *Debug) pbWrMem_RV32(addr uint, val, pb []uint32) error {
+	return errors.New("TODO")
+}
 
 // pbWrMem8 writes n x 8-bit values to memory using program buffer operations.
 func pbWrMem8(dbg *Debug, addr uint, val []uint8) error {
@@ -261,6 +289,14 @@ func pbWrMem16(dbg *Debug, addr uint, val []uint16) error {
 
 // pbWrMem32 writes n x 32-bit values to memory using program buffer operations.
 func pbWrMem32(dbg *Debug, addr uint, val []uint32) error {
+	return errors.New("TODO")
+}
+
+//-----------------------------------------------------------------------------
+// write memory 64-bits
+
+// pbWrMem_RV64 performs 64-bit memory writes using RV64 instructions.
+func (dbg *Debug) pbWrMem_RV64(addr uint, val []uint64, pb []uint32) error {
 	return errors.New("TODO")
 }
 

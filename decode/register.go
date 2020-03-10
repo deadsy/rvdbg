@@ -19,6 +19,7 @@ type Register struct {
 	Descr  string
 }
 
+// RegisterSet is a set of registers.
 type RegisterSet []Register
 
 //-----------------------------------------------------------------------------

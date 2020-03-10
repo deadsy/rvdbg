@@ -295,7 +295,7 @@ func (dbg *Debug) GetHartCount() int {
 	return len(dbg.hart)
 }
 
-// GetHartInfo returns the hart info. id < 0 gives the current hart info.
+// GetHartInfo returns hart info.
 func (dbg *Debug) GetHartInfo(id int) (*rv.HartInfo, error) {
 	if id < 0 || id >= len(dbg.hart) {
 		return nil, errors.New("hart id is out of range")
@@ -303,6 +303,7 @@ func (dbg *Debug) GetHartInfo(id int) (*rv.HartInfo, error) {
 	return &dbg.hart[id].info, nil
 }
 
+// GetCurrentHart returns the current hart info.
 func (dbg *Debug) GetCurrentHart() *rv.HartInfo {
 	return &dbg.hart[dbg.hartid].info
 }
@@ -355,7 +356,7 @@ func (dbg *Debug) GetInfo() string {
 
 //-----------------------------------------------------------------------------
 
-// Test is a test routine.
+// Test1 is a test routine.
 func (dbg *Debug) Test1() string {
 	s := []string{}
 

@@ -17,6 +17,7 @@ import (
 
 //-----------------------------------------------------------------------------
 
+// CSR register addresses.
 const (
 	MSTATUS   = 0x300
 	MISA      = 0x301
@@ -76,6 +77,7 @@ func fmtExtensions(x uint) string {
 	return "none"
 }
 
+// DisplayMISA returns a string decoding a MISA value.
 func DisplayMISA(misa, mxlen uint) string {
 	fs := decode.FieldSet{
 		{"mxl", mxlen - 1, mxlen - 2, fmtMXL},

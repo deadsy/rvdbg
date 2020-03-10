@@ -19,6 +19,7 @@ type Peripheral struct {
 	rset  RegisterSet
 }
 
+// PeripheralSet is a set of peripherals.
 type PeripheralSet []Peripheral
 
 //-----------------------------------------------------------------------------
