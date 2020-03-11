@@ -38,10 +38,10 @@ func run(dbgType itf.Type, info *target.Info) error {
 	}
 	defer jtagDriver.Close()
 
-	//app, err = wap.NewTarget(jtagDriver)
-	//app, err = maixgo.NewTarget(jtagDriver)
-	//app, err = gd32v.NewTarget(jtagDriver)
-	app, err := redv.NewTarget(jtagDriver)
+	app, err := wap.NewTarget(jtagDriver)
+	//app, err := maixgo.NewTarget(jtagDriver)
+	//app, err := gd32v.NewTarget(jtagDriver)
+	//app, err := redv.NewTarget(jtagDriver)
 
 	// create the cli
 	c := cli.NewCLI(app)
@@ -90,7 +90,7 @@ func main() {
 	flag.Parse()
 
 	if *targetName == "" {
-		fmt.Fprintf(os.Stderr, "no target, use -t to specify a target name\n")
+		fmt.Fprintf(os.Stderr, "use -t to specify a target name\n")
 		fmt.Fprintf(os.Stderr, "\ntargets:\n%s\n", target.List())
 		os.Exit(1)
 	}

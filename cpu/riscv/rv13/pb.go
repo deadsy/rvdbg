@@ -9,7 +9,6 @@ RISC-V Debugger 0.13 Program Buffer Command Operations
 package rv13
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
@@ -54,6 +53,20 @@ func convert8to32(x []uint8) []uint32 {
 	return y
 }
 
+// convert32to64 converts an 32-bit slice to a 64-bit slice.
+func convert32to64(x []uint32) []uint64 {
+	if len(x)&1 != 0 {
+		panic("len(x) must be a multiple of 2")
+	}
+	y := make([]uint64, len(x)>>1)
+	i := 0
+	for j := range y {
+		y[j] = uint64(x[i+0]) | uint64(x[i+1]<<32)
+		i += 2
+	}
+	return y
+}
+
 //-----------------------------------------------------------------------------
 
 // newProgramBuffer returns a n word program buffer filled with EBREAKs.
@@ -69,8 +82,8 @@ func (dbg *Debug) newProgramBuffer(n uint) []uint32 {
 }
 
 // pbOps converts program buffer words into dmi operations.
-func pbOps(pb []uint32) []dmiOp {
-	ops := make([]dmiOp, len(pb))
+func pbOps(pb []uint32, n int) []dmiOp {
+	ops := make([]dmiOp, len(pb), len(pb)+n)
 	for i, v := range pb {
 		ops[i] = dmiWr(progbuf(i), v)
 	}
@@ -83,7 +96,7 @@ func pbOps(pb []uint32) []dmiOp {
 // pbRead reads a size-bit value using an program buffer operation.
 func (dbg *Debug) pbRead(size uint, pb []uint32) (uint64, error) {
 	// build the operations buffer
-	ops := pbOps(pb)
+	ops := pbOps(pb, 4)
 	// postexec
 	ops = append(ops, dmiWr(command, cmdRegister(0, 0, false, true, false, false)))
 	// transfer GPR s0 to data0
@@ -126,7 +139,7 @@ func pbRdCSR(dbg *Debug, reg, size uint) (uint64, error) {
 // pbWrite writes a size-bit value using an program buffer operation.
 func (dbg *Debug) pbWrite(size uint, val uint64, pb []uint32) error {
 	// build the operations buffer
-	ops := pbOps(pb)
+	ops := pbOps(pb, 5)
 	// setup dataX with the value to write
 	switch size {
 	case 32:
@@ -165,9 +178,10 @@ func pbWrCSR(dbg *Debug, reg, size uint, val uint64) error {
 // pbRdMem_RV32 performs 8/16/32-bit memory reads using RV32 instructions.
 func (dbg *Debug) pbRdMem_RV32(addr, n uint, pb []uint32) ([]uint32, error) {
 	// build the operations buffer
-	ops := pbOps(pb)
+	ops := pbOps(pb, int(n)+10)
 	// setup the address in dataX
-	switch dbg.GetCurrentHart().MXLEN {
+	mxlen := dbg.GetCurrentHart().MXLEN
+	switch mxlen {
 	case 32:
 		// setup the 32-bit address in data0
 		ops = append(ops, dmiWr(data0, uint32(addr)))
@@ -180,19 +194,24 @@ func (dbg *Debug) pbRdMem_RV32(addr, n uint, pb []uint32) ([]uint32, error) {
 		// transfer the address to s0 and postexec to read the first value
 		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, false, true, true, true)))
 	default:
-		return nil, fmt.Errorf("memory reads from a %d-bit address are not supported")
+		return nil, fmt.Errorf("memory reads from a %d-bit address are not supported", mxlen)
 	}
 	// the value read from memory is in s1
-	// transfer s1 to data0 and then postexec to get the next value in s1
-	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, false, true, true, false)))
-	// turn on autoexec for data0
-	ops = append(ops, dmiWr(abstractauto, 1<<0))
-	// do n-1 data reads
-	for i := 0; i < int(n)-1; i++ {
-		ops = append(ops, dmiRd(data0))
+	if n == 1 {
+		// transfer s1 to data0
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, false, false, true, false)))
+	} else {
+		// transfer s1 to data0 and then postexec to get the next value in s1
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, false, true, true, false)))
+		// turn on autoexec for data0
+		ops = append(ops, dmiWr(abstractauto, 1<<0))
+		// do n-1 data reads
+		for i := 0; i < int(n)-1; i++ {
+			ops = append(ops, dmiRd(data0))
+		}
+		// turn off autoexec
+		ops = append(ops, dmiWr(abstractauto, 0))
 	}
-	// turn off autoexec
-	ops = append(ops, dmiWr(abstractauto, 0))
 	// read the final data0 value
 	ops = append(ops, dmiRd(data0))
 	// read the command status
@@ -257,7 +276,57 @@ func pbRdMem32(dbg *Debug, addr, n uint) ([]uint32, error) {
 
 // pbRdMem_RV64 performs 64-bit memory reads using RV64 instructions.
 func (dbg *Debug) pbRdMem_RV64(addr, n uint, pb []uint32) ([]uint64, error) {
-	return nil, errors.New("TODO")
+	// build the operations buffer
+	ops := pbOps(pb, (int(n)<<1)+10)
+	// setup the address in dataX
+	mxlen := dbg.GetCurrentHart().MXLEN
+	switch mxlen {
+	case 64:
+		// setup the 64-bit address in data0/1
+		ops = append(ops, dmiWr(data0, uint32(addr)))
+		ops = append(ops, dmiWr(data1, uint32(addr>>32)))
+		// transfer the address to s0 and postexec to read the first value
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, false, true, true, true)))
+	default:
+		return nil, fmt.Errorf("memory reads from a %d-bit address are not supported", mxlen)
+	}
+	// the value read from memory is in s1
+	if n == 1 {
+		// transfer s1 to data0/1
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size64, false, false, true, false)))
+	} else {
+		// transfer s1 to data0/1 and then postexec to get the next value in s1
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size64, false, true, true, false)))
+		// turn on autoexec for data1
+		ops = append(ops, dmiWr(abstractauto, 1<<1))
+		// do n-1 data reads
+		for i := 0; i < int(n)-1; i++ {
+			ops = append(ops, dmiRd(data0))
+			ops = append(ops, dmiRd(data1))
+		}
+		// turn off autoexec
+		ops = append(ops, dmiWr(abstractauto, 0))
+	}
+	// read the final data0/1 value
+	ops = append(ops, dmiRd(data0))
+	ops = append(ops, dmiRd(data1))
+	// read the command status
+	ops = append(ops, dmiRd(abstractcs))
+	// done
+	ops = append(ops, dmiEnd())
+	// run the operations
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	// check the command status
+	cs := cmdStatus(data[len(data)-1])
+	err = dbg.checkError(cs)
+	if err != nil {
+		return nil, err
+	}
+	// return the data
+	return convert32to64(data[:len(data)-1]), nil
 }
 
 // pbRdMem64 reads n x 64-bit values from memory using program buffer operations.
@@ -274,22 +343,77 @@ func pbRdMem64(dbg *Debug, addr, n uint) ([]uint64, error) {
 
 // pbWrMem_RV32 performs 8/16/32-bit memory writes using RV32 instructions.
 func (dbg *Debug) pbWrMem_RV32(addr uint, val, pb []uint32) error {
-	return errors.New("TODO")
+	// build the operations buffer
+	ops := pbOps(pb, len(val)+10)
+	// setup the address in dataX
+	mxlen := dbg.GetCurrentHart().MXLEN
+	switch mxlen {
+	case 32:
+		// setup the 32-bit address in data0
+		ops = append(ops, dmiWr(data0, uint32(addr)))
+		// transfer data0 to s0
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size32, false, false, true, true)))
+	case 64:
+		// setup the 64-bit address in data0/1
+		ops = append(ops, dmiWr(data0, uint32(addr)))
+		ops = append(ops, dmiWr(data1, uint32(addr>>32)))
+		// transfer data0/1 to s0
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, false, false, true, true)))
+	default:
+		return fmt.Errorf("memory writes to a %d-bit address are not supported", mxlen)
+	}
+	// setup val[0] in data0
+	ops = append(ops, dmiWr(data0, val[0]))
+	// transfer data0 to s1 and then postexec to write the value to memory.
+	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, false, true, true, true)))
+	if len(val) > 1 {
+		// turn on autoexec for data0
+		ops = append(ops, dmiWr(abstractauto, 1<<0))
+		// write the rest of the buffer
+		for i := 1; i < len(val); i++ {
+			ops = append(ops, dmiWr(data0, val[i]))
+		}
+		// turn off autoexec
+		ops = append(ops, dmiWr(abstractauto, 0))
+	}
+	// read the command status
+	ops = append(ops, dmiRd(abstractcs))
+	// done
+	ops = append(ops, dmiEnd())
+	// run the operations
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return err
+	}
+	// check the command status
+	return dbg.checkError(cmdStatus(data[0]))
 }
 
 // pbWrMem8 writes n x 8-bit values to memory using program buffer operations.
 func pbWrMem8(dbg *Debug, addr uint, val []uint8) error {
-	return errors.New("TODO")
+	// 8-bit writes
+	pb := dbg.newProgramBuffer(3)
+	pb[0] = rv.InsSB(rv.RegS1, 0, rv.RegS0)
+	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 1)
+	return dbg.pbWrMem_RV32(addr, convert8to32(val), pb)
 }
 
 // pbWrMem16 writes n x 16-bit values to memory using program buffer operations.
 func pbWrMem16(dbg *Debug, addr uint, val []uint16) error {
-	return errors.New("TODO")
+	// 16-bit writes
+	pb := dbg.newProgramBuffer(3)
+	pb[0] = rv.InsSH(rv.RegS1, 0, rv.RegS0)
+	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 2)
+	return dbg.pbWrMem_RV32(addr, convert16to32(val), pb)
 }
 
 // pbWrMem32 writes n x 32-bit values to memory using program buffer operations.
 func pbWrMem32(dbg *Debug, addr uint, val []uint32) error {
-	return errors.New("TODO")
+	// 32-bit writes
+	pb := dbg.newProgramBuffer(3)
+	pb[0] = rv.InsSW(rv.RegS1, 0, rv.RegS0)
+	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 4)
+	return dbg.pbWrMem_RV32(addr, val, pb)
 }
 
 //-----------------------------------------------------------------------------
@@ -297,12 +421,56 @@ func pbWrMem32(dbg *Debug, addr uint, val []uint32) error {
 
 // pbWrMem_RV64 performs 64-bit memory writes using RV64 instructions.
 func (dbg *Debug) pbWrMem_RV64(addr uint, val []uint64, pb []uint32) error {
-	return errors.New("TODO")
+	// build the operations buffer
+	ops := pbOps(pb, (len(val)<<1)+10)
+	// setup the address in dataX
+	mxlen := dbg.GetCurrentHart().MXLEN
+	switch mxlen {
+	case 64:
+		// setup the 64-bit address in data0/1
+		ops = append(ops, dmiWr(data0, uint32(addr)))
+		ops = append(ops, dmiWr(data1, uint32(addr>>32)))
+		// transfer data0/1 to s0
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, false, false, true, true)))
+	default:
+		return fmt.Errorf("memory writes to a %d-bit address are not supported", mxlen)
+	}
+	// setup val[0] in data0/1
+	ops = append(ops, dmiWr(data0, uint32(val[0])))
+	ops = append(ops, dmiWr(data1, uint32(val[0]>>32)))
+	// transfer data0/1 to s1 and then postexec to write the value to memory.
+	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size64, false, true, true, true)))
+	if len(val) > 1 {
+		// turn on autoexec for data1
+		ops = append(ops, dmiWr(abstractauto, 1<<1))
+		// write the rest of the buffer
+		for i := 1; i < len(val); i++ {
+			ops = append(ops, dmiWr(data0, uint32(val[i])))
+			ops = append(ops, dmiWr(data1, uint32(val[i]>>32)))
+		}
+		// turn off autoexec
+		ops = append(ops, dmiWr(abstractauto, 0))
+	}
+	// read the command status
+	ops = append(ops, dmiRd(abstractcs))
+	// done
+	ops = append(ops, dmiEnd())
+	// run the operations
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return err
+	}
+	// check the command status
+	return dbg.checkError(cmdStatus(data[0]))
 }
 
 // pbWrMem64 writes n x 64-bit values to memory using program buffer operations.
 func pbWrMem64(dbg *Debug, addr uint, val []uint64) error {
-	return errors.New("TODO")
+	// 64-bit writes
+	pb := dbg.newProgramBuffer(3)
+	pb[0] = rv.InsSD(rv.RegS1, 0, rv.RegS0)
+	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 8)
+	return dbg.pbWrMem_RV64(addr, val, pb)
 }
 
 //-----------------------------------------------------------------------------
