@@ -30,9 +30,9 @@ const MHz = 1000
 
 //-----------------------------------------------------------------------------
 
-func run(dbgType itf.Type, info *target.Info) error {
+func run(info *target.Info) error {
 
-	jtagDriver, err := itf.NewJtagDriver(dbgType, info.DbgSpeed)
+	jtagDriver, err := itf.NewJtagDriver(info.DbgType, info.DbgSpeed)
 	if err != nil {
 		return err
 	}
@@ -95,17 +95,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	info := target.Lookup(*targetName)
-	if info == nil {
+	infoPtr := target.Lookup(*targetName)
+	if infoPtr == nil {
 		fmt.Fprintf(os.Stderr, "target \"%s\" not found\n", *targetName)
 		fmt.Fprintf(os.Stderr, "\ntargets:\n%s\n", target.List())
 		os.Exit(1)
 	}
 
 	// work out the debugger interface type
-	dbgType := info.DbgType
+	info := *infoPtr
 	if *interfaceName == "" {
-		log.Info.Printf(fmt.Sprintf("using default debug interface for \"%s\": %s", *targetName, dbgType))
+		log.Info.Printf(fmt.Sprintf("using default debug interface: %s", info.DbgType))
 	} else {
 		x := itf.Lookup(*interfaceName)
 		if x == nil {
@@ -114,10 +114,10 @@ func main() {
 			os.Exit(1)
 		}
 		log.Info.Printf(fmt.Sprintf("using debug interface: %s", x.Type))
-		dbgType = x.Type
+		info.DbgType = x.Type
 	}
 
-	err := run(dbgType, info)
+	err := run(&info)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
