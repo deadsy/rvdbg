@@ -9,6 +9,7 @@ RISC-V Debugger
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/deadsy/rvdbg/target/maixgo"
 	"github.com/deadsy/rvdbg/target/redv"
 	"github.com/deadsy/rvdbg/target/wap"
+	"github.com/deadsy/rvdbg/util/log"
 )
 
 //-----------------------------------------------------------------------------
@@ -28,21 +30,18 @@ const MHz = 1000
 
 //-----------------------------------------------------------------------------
 
-func run(info *target.Info) error {
+func run(dbgType itf.Type, info *target.Info) error {
 
-	jtagDriver, err := itf.NewJtagDriver(info.DbgType, info.DbgSpeed)
+	jtagDriver, err := itf.NewJtagDriver(dbgType, info.DbgSpeed)
 	if err != nil {
 		return err
 	}
 	defer jtagDriver.Close()
 
-	//app, err := wap.NewTarget(jtagDriver)
-	//app, err := maixgo.NewTarget(jtagDriver)
-	//app, err := gd32v.NewTarget(jtagDriver)
+	//app, err = wap.NewTarget(jtagDriver)
+	//app, err = maixgo.NewTarget(jtagDriver)
+	//app, err = gd32v.NewTarget(jtagDriver)
 	app, err := redv.NewTarget(jtagDriver)
-	if err != nil {
-		return err
-	}
 
 	// create the cli
 	c := cli.NewCLI(app)
@@ -74,23 +73,51 @@ func addTargets() {
 
 //-----------------------------------------------------------------------------
 
-//const targetName = "wap"
-//const targetName = "gd32v"
-const targetName = "redv"
-
-//const targetName = "maixgo"
-
 func main() {
 
 	addTargets()
 
-	info := target.Lookup(targetName)
-	if info == nil {
-		fmt.Fprintf(os.Stderr, "target %s not found\n", targetName)
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\ntargets:\n%s\n", target.List())
+		fmt.Fprintf(os.Stderr, "\ndebug interfaces:\n%s\n", itf.List())
+	}
+
+	targetName := flag.String("t", "", "target name")
+	interfaceName := flag.String("i", "", "debug interface name")
+
+	flag.Parse()
+
+	if *targetName == "" {
+		fmt.Fprintf(os.Stderr, "no target, use -t to specify a target name\n")
+		fmt.Fprintf(os.Stderr, "\ntargets:\n%s\n", target.List())
 		os.Exit(1)
 	}
 
-	err := run(info)
+	info := target.Lookup(*targetName)
+	if info == nil {
+		fmt.Fprintf(os.Stderr, "target \"%s\" not found\n", *targetName)
+		fmt.Fprintf(os.Stderr, "\ntargets:\n%s\n", target.List())
+		os.Exit(1)
+	}
+
+	// work out the debugger interface type
+	dbgType := info.DbgType
+	if *interfaceName == "" {
+		log.Info.Printf(fmt.Sprintf("using default debug interface for \"%s\": %s", *targetName, dbgType))
+	} else {
+		x := itf.Lookup(*interfaceName)
+		if x == nil {
+			fmt.Fprintf(os.Stderr, "debug interface \"%s\" not found\n", *interfaceName)
+			fmt.Fprintf(os.Stderr, "debug interfaces:\n%s\n", itf.List())
+			os.Exit(1)
+		}
+		log.Info.Printf(fmt.Sprintf("using debug interface: %s", x.Type))
+		dbgType = x.Type
+	}
+
+	err := run(dbgType, info)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)

@@ -3,6 +3,8 @@
 
 SiPeed MaixGo Board using Kendryte K210 RISC-V
 
+Version 0.11 of the debugger spec is implemented.
+
 */
 //-----------------------------------------------------------------------------
 

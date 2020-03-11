@@ -39,6 +39,15 @@ func Lookup(name string) *Info {
 	return targetDb[name]
 }
 
+// List all the supported targets
+func List() string {
+	s := make([][]string, 0, len(targetDb))
+	for k, v := range targetDb {
+		s = append(s, []string{"", k, v.Descr})
+	}
+	return cli.TableString(s, []int{8, 12, 0}, 1)
+}
+
 //-----------------------------------------------------------------------------
 // cli related leaf functions
 

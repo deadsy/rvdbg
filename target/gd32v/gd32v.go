@@ -5,27 +5,7 @@ GD32V is a development platform using a GD32VF103VBT6 RISC-V RV32.
 
 See: https://www.seeedstudio.com/SeeedStudio-GD32-RISC-V-Dev-Board-p-4302.html
 
-Notes:
-
 Version 0.13 of the debugger spec is implemented.
-
-Live DMI Registers:
-
-04: data0
-05: data1
-06: data2
-07: data3
-10: dmcontrol
-11: dmstatus
-12: hartinfo
-16: abstractcs
-17: command
-18: abstractauto
-20: progbuf0
-21: progbuf1
-
-1) progbuf2-15 are read-only and == "ebreak"
-2) There's no system bus access support.
 
 */
 //-----------------------------------------------------------------------------
@@ -49,8 +29,9 @@ import (
 
 // Info is target information.
 var Info = target.Info{
-	Name:     "gd32v",
-	Descr:    "GD32V Board (GigaDevice GD32VF103VBT6 RISC-V RV32)",
+	Name:  "gd32v",
+	Descr: "GD32V Board (GigaDevice GD32VF103VBT6 RISC-V RV32)",
+	//DbgType: itf.TypeCmsisDap,
 	DbgType:  itf.TypeJlink,
 	DbgMode:  itf.ModeJtag,
 	DbgSpeed: 4000,

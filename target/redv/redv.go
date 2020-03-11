@@ -5,6 +5,8 @@ SparkFun RED-V RedBoard - SiFive RISC-V FE310 SoC
 
 See: https://www.sparkfun.com/products/15594
 
+Version 0.13 of the debugger spec is implemented.
+
 */
 //-----------------------------------------------------------------------------
 

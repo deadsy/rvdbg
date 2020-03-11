@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 
+	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/itf/dap"
 	"github.com/deadsy/rvdbg/itf/jlink"
 	"github.com/deadsy/rvdbg/jtag"
@@ -29,16 +30,44 @@ const (
 )
 
 func (t Type) String() string {
-	x := map[Type]string{
-		TypeCmsisDap: "cmsis-dap",
-		TypeJlink:    "jlink",
-		TypeStLink:   "stlink",
-	}
-	if s, ok := x[t]; ok {
-		return s
+	for k, v := range interfaceDb {
+		if t == v.Type {
+			return k
+		}
 	}
 	return fmt.Sprintf("unknown (%d)", int(t))
 }
+
+//-----------------------------------------------------------------------------
+
+type Info struct {
+	Name  string // short name for interface (command line)
+	Descr string // description of interface
+	Type  Type   // enumerated type for interface
+}
+
+var interfaceDb = map[string]*Info{}
+
+// List the supported debugger interface types.
+func List() string {
+	s := make([][]string, 0, len(interfaceDb))
+	for k, v := range interfaceDb {
+		s = append(s, []string{"", k, v.Descr})
+	}
+	return cli.TableString(s, []int{8, 12, 0}, 1)
+}
+
+// Add an interface to the database.
+func add(info *Info) {
+	interfaceDb[info.Name] = info
+}
+
+// Lookup an interface by name.
+func Lookup(name string) *Info {
+	return interfaceDb[name]
+}
+
+//-----------------------------------------------------------------------------
 
 // Mode is the debugger interface mode.
 type Mode int
@@ -57,6 +86,14 @@ func (m Mode) String() string {
 		return s
 	}
 	return fmt.Sprintf("unknown (%d)", int(m))
+}
+
+//-----------------------------------------------------------------------------
+
+func init() {
+	add(&Info{"dap", "CMSIS DAPLink Adapter", TypeCmsisDap})
+	add(&Info{"jlink", "Segger J-Link Adapter", TypeJlink})
+	add(&Info{"stlink", "ST-LinkV2 Adapter", TypeStLink})
 }
 
 //-----------------------------------------------------------------------------
@@ -106,6 +143,8 @@ func NewJtagDriver(typ Type, speed int) (jtag.Driver, error) {
 			return nil, err
 		}
 
+	default:
+		return nil, fmt.Errorf("%s does not support JTAG operations", typ)
 	}
 
 	return jtagDriver, nil
