@@ -15,6 +15,13 @@ import (
 
 //-----------------------------------------------------------------------------
 
+type Target interface {
+	GetPrompt() string
+	GetMenuRoot() []cli.MenuItem
+	Shutdown()
+	Put(s string)
+}
+
 // Info provides general target information.
 type Info struct {
 	Name     string   // short name for target (command line)

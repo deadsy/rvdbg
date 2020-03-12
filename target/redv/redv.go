@@ -62,8 +62,8 @@ type Target struct {
 	riscvCPU   *riscv.CPU
 }
 
-// NewTarget returns a new target.
-func NewTarget(jtagDriver jtag.Driver) (*Target, error) {
+// New returns a new redv target.
+func New(jtagDriver jtag.Driver) (target.Target, error) {
 
 	// get the JTAG state
 	state, err := jtagDriver.GetState()

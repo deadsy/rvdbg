@@ -52,8 +52,8 @@ type Target struct {
 	jtagDevice *jtag.Device
 }
 
-// NewMaixGo returns a new target.
-func NewTarget(jtagDriver jtag.Driver) (*Target, error) {
+// New returns a new maixgo target.
+func New(jtagDriver jtag.Driver) (target.Target, error) {
 
 	// make the jtag chain
 	jtagChain, err := jtag.NewChain(jtagDriver, k210.Chain)

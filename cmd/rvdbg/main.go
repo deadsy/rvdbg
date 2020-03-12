@@ -38,10 +38,17 @@ func run(info *target.Info) error {
 	}
 	defer jtagDriver.Close()
 
-	app, err := wap.NewTarget(jtagDriver)
-	//app, err := maixgo.NewTarget(jtagDriver)
-	//app, err := gd32v.NewTarget(jtagDriver)
-	//app, err := redv.NewTarget(jtagDriver)
+	var app target.Target
+	switch info.Name {
+	case "wap":
+		app, err = wap.New(jtagDriver)
+	case "maixgo":
+		app, err = maixgo.New(jtagDriver)
+	case "gd32v":
+		app, err = gd32v.New(jtagDriver)
+	case "redv":
+		app, err = redv.New(jtagDriver)
+	}
 
 	// create the cli
 	c := cli.NewCLI(app)
