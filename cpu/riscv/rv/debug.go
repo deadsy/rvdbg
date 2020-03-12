@@ -79,27 +79,28 @@ func (hi *HartInfo) String() string {
 
 // Debug is the RISC-V debug interface.
 type Debug interface {
-	GetInfo() string                          // get debug module information
-	GetHartCount() int                        // how many harts for this chip?
-	GetHartInfo(id int) (*HartInfo, error)    // return the info structure for hart id
-	GetCurrentHart() *HartInfo                // get the info structure for the current hart
-	SetCurrentHart(id int) (*HartInfo, error) // set the current hart
-	HaltHart() error                          // halt the current hart
-	ResumeHart() error                        // resume the current hart
-	RdGPR(reg, size uint) (uint64, error)     // read general purpose register
-	RdFPR(reg, size uint) (uint64, error)     // read floating point register
-	RdCSR(reg, size uint) (uint64, error)     // read control and status register
-	WrGPR(reg, size uint, val uint64) error   // write general purpose register
-	WrFPR(reg, size uint, val uint64) error   // write floating point register
-	WrCSR(reg, size uint, val uint64) error   // write control and status register
-	RdMem8(addr, n uint) ([]uint8, error)     // read 8-bit memory buffer
-	RdMem16(addr, n uint) ([]uint16, error)   // read 16-bit memory buffer
-	RdMem32(addr, n uint) ([]uint32, error)   // read 32-bit memory buffer
-	RdMem64(addr, n uint) ([]uint64, error)   // read 64-bit memory buffer
-	WrMem8(addr uint, val []uint8) error      // write 8-bit memory buffer
-	WrMem16(addr uint, val []uint16) error    // write 16-bit memory buffer
-	WrMem32(addr uint, val []uint32) error    // write 32-bit memory buffer
-	WrMem64(addr uint, val []uint64) error    // write 64-bit memory buffer
+	GetInfo() string                           // get debug module information
+	GetHartCount() int                         // how many harts for this chip?
+	GetHartInfo(id int) (*HartInfo, error)     // return the info structure for hart id
+	GetCurrentHart() *HartInfo                 // get the info structure for the current hart
+	SetCurrentHart(id int) (*HartInfo, error)  // set the current hart
+	HaltHart() error                           // halt the current hart
+	ResumeHart() error                         // resume the current hart
+	RdGPR(reg, size uint) (uint64, error)      // read general purpose register
+	RdFPR(reg, size uint) (uint64, error)      // read floating point register
+	RdCSR(reg, size uint) (uint64, error)      // read control and status register
+	WrGPR(reg, size uint, val uint64) error    // write general purpose register
+	WrFPR(reg, size uint, val uint64) error    // write floating point register
+	WrCSR(reg, size uint, val uint64) error    // write control and status register
+	RdMem8(addr, n uint) ([]uint8, error)      // read 8-bit memory buffer
+	RdMem16(addr, n uint) ([]uint16, error)    // read 16-bit memory buffer
+	RdMem32(addr, n uint) ([]uint32, error)    // read 32-bit memory buffer
+	RdMem64(addr, n uint) ([]uint64, error)    // read 64-bit memory buffer
+	RdBuf(addr, n, width uint) ([]uint, error) // read a width-bit memory buffer
+	WrMem8(addr uint, val []uint8) error       // write 8-bit memory buffer
+	WrMem16(addr uint, val []uint16) error     // write 16-bit memory buffer
+	WrMem32(addr uint, val []uint32) error     // write 32-bit memory buffer
+	WrMem64(addr uint, val []uint64) error     // write 64-bit memory buffer
 	Test1() string
 	Test2() string
 }

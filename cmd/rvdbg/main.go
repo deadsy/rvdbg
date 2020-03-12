@@ -32,40 +32,45 @@ const MHz = 1000
 
 func run(info *target.Info) error {
 
+	// create the debug interface
 	jtagDriver, err := itf.NewJtagDriver(info.DbgType, info.DbgSpeed)
 	if err != nil {
 		return err
 	}
 	defer jtagDriver.Close()
 
-	var app target.Target
+	// create the target
+	var tgt target.Target
 	switch info.Name {
 	case "wap":
-		app, err = wap.New(jtagDriver)
+		tgt, err = wap.New(jtagDriver)
 	case "maixgo":
-		app, err = maixgo.New(jtagDriver)
+		tgt, err = maixgo.New(jtagDriver)
 	case "gd32v":
-		app, err = gd32v.New(jtagDriver)
+		tgt, err = gd32v.New(jtagDriver)
 	case "redv":
-		app, err = redv.New(jtagDriver)
+		tgt, err = redv.New(jtagDriver)
+	}
+	if err != nil {
+		return err
 	}
 
 	// create the cli
-	c := cli.NewCLI(app)
+	c := cli.NewCLI(tgt)
 	c.HistoryLoad(historyPath)
-	c.SetRoot(app.GetMenuRoot())
+	c.SetRoot(tgt.GetMenuRoot())
 
 	// run the cli
 	for c.Running() {
 		// update the prompt to indicate state
-		c.SetPrompt(app.GetPrompt())
+		c.SetPrompt(tgt.GetPrompt())
 		// run the cli
 		c.Run()
 	}
 
 	// exit
 	c.HistorySave(historyPath)
-	app.Shutdown()
+	tgt.Shutdown()
 	return nil
 }
 

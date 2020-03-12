@@ -67,13 +67,42 @@ func convert32to64(x []uint32) []uint64 {
 	return y
 }
 
+func convert8toUint(x []uint8) []uint {
+	y := make([]uint, len(x))
+	for i := range x {
+		y[i] = uint(x[i])
+	}
+	return y
+}
+
+func convert16toUint(x []uint16) []uint {
+	y := make([]uint, len(x))
+	for i := range x {
+		y[i] = uint(x[i])
+	}
+	return y
+}
+
+func convert32toUint(x []uint32) []uint {
+	y := make([]uint, len(x))
+	for i := range x {
+		y[i] = uint(x[i])
+	}
+	return y
+}
+
+func convert64toUint(x []uint64) []uint {
+	y := make([]uint, len(x))
+	for i := range x {
+		y[i] = uint(x[i])
+	}
+	return y
+}
+
 //-----------------------------------------------------------------------------
 
 // newProgramBuffer returns a n word program buffer filled with EBREAKs.
 func (dbg *Debug) newProgramBuffer(n uint) []uint32 {
-	if n > dbg.progbufsize {
-		return nil
-	}
 	pb := make([]uint32, n)
 	for i := range pb {
 		pb[i] = rv.InsEBREAK()

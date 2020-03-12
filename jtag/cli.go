@@ -16,8 +16,8 @@ import (
 
 //-----------------------------------------------------------------------------
 
-// target is the interface for a target using JTAG.
-type target interface {
+// targetJtag is the interface for a target using JTAG.
+type targetJtag interface {
 	GetJtagDevice() *Device
 	GetJtagChain() *Chain
 	GetJtagDriver() Driver
@@ -28,7 +28,7 @@ type target interface {
 var cmdJtagChain = cli.Leaf{
 	Descr: "display jtag chain state",
 	F: func(c *cli.CLI, args []string) {
-		jtagChain := c.User.(target).GetJtagChain()
+		jtagChain := c.User.(targetJtag).GetJtagChain()
 		c.User.Put(fmt.Sprintf("%s\n", jtagChain))
 	},
 }
@@ -36,7 +36,7 @@ var cmdJtagChain = cli.Leaf{
 var cmdJtagDriver = cli.Leaf{
 	Descr: "display jtag driver state",
 	F: func(c *cli.CLI, args []string) {
-		jtagDriver := c.User.(target).GetJtagDriver()
+		jtagDriver := c.User.(targetJtag).GetJtagDriver()
 		c.User.Put(fmt.Sprintf("%s\n", jtagDriver))
 	},
 }
@@ -44,7 +44,7 @@ var cmdJtagDriver = cli.Leaf{
 var cmdJtagSurvey = cli.Leaf{
 	Descr: "display jtag device survey",
 	F: func(c *cli.CLI, args []string) {
-		jtagDevice := c.User.(target).GetJtagDevice()
+		jtagDevice := c.User.(targetJtag).GetJtagDevice()
 		c.User.Put(fmt.Sprintf("%s\n", jtagDevice.Survey()))
 	},
 }

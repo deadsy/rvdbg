@@ -32,7 +32,7 @@ const drDtmLength = 32
 
 // CPU is a RISC-V cpu.
 type CPU struct {
-	dbg rv.Debug
+	Dbg rv.Debug
 }
 
 //-----------------------------------------------------------------------------
@@ -65,12 +65,12 @@ func NewCPU(dev *jtag.Device) (*CPU, error) {
 
 	switch version {
 	case 0:
-		cpu.dbg, err = rv11.New(dev)
+		cpu.Dbg, err = rv11.New(dev)
 		if err != nil {
 			return nil, err
 		}
 	case 1:
-		cpu.dbg, err = rv13.New(dev)
+		cpu.Dbg, err = rv13.New(dev)
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +85,7 @@ func NewCPU(dev *jtag.Device) (*CPU, error) {
 
 // PromptState returns a short cpu state string for the prompt.
 func (cpu *CPU) PromptState() string {
-	hi := cpu.dbg.GetCurrentHart()
+	hi := cpu.Dbg.GetCurrentHart()
 	state := []string{"h", "r"}[util.BoolToInt(hi.State == rv.Running)]
 	return fmt.Sprintf("%d%s", hi.ID, state)
 }

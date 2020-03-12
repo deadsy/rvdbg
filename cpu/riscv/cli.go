@@ -20,8 +20,8 @@ import (
 //-----------------------------------------------------------------------------
 
 // target is the interface for a target using a RISC-V CPU.
-type target interface {
-	GetCpu() *CPU
+type targetRiscv interface {
+	GetCPU() *CPU
 }
 
 //-----------------------------------------------------------------------------
@@ -56,7 +56,7 @@ func gprString(reg []uint64, pc uint64, xlen uint) string {
 var CmdGpr = cli.Leaf{
 	Descr: "display general purpose registers",
 	F: func(c *cli.CLI, args []string) {
-		dbg := c.User.(target).GetCpu().dbg
+		dbg := c.User.(targetRiscv).GetCPU().Dbg
 		hi := dbg.GetCurrentHart()
 		err := dbg.HaltHart()
 		if err != nil {
@@ -113,13 +113,13 @@ func fprString(reg []uint64, flen int) string {
 var CmdHalt = cli.Leaf{
 	Descr: "halt the current hart",
 	F: func(c *cli.CLI, args []string) {
-		cpu := c.User.(target).GetCpu()
-		hi := cpu.dbg.GetCurrentHart()
+		cpu := c.User.(targetRiscv).GetCPU()
+		hi := cpu.Dbg.GetCurrentHart()
 		if hi.State == rv.Halted {
 			c.User.Put(fmt.Sprintf("hart%d already halted\n", hi.ID))
 			return
 		}
-		err := cpu.dbg.HaltHart()
+		err := cpu.Dbg.HaltHart()
 		if err != nil {
 			c.User.Put(fmt.Sprintf("unable to halt hart%d: %v\n", hi.ID, err))
 			return
@@ -131,13 +131,13 @@ var CmdHalt = cli.Leaf{
 var CmdResume = cli.Leaf{
 	Descr: "resume the current hart",
 	F: func(c *cli.CLI, args []string) {
-		cpu := c.User.(target).GetCpu()
-		hi := cpu.dbg.GetCurrentHart()
+		cpu := c.User.(targetRiscv).GetCPU()
+		hi := cpu.Dbg.GetCurrentHart()
 		if hi.State == rv.Running {
 			c.User.Put(fmt.Sprintf("hart%d already running\n", hi.ID))
 			return
 		}
-		err := cpu.dbg.ResumeHart()
+		err := cpu.Dbg.ResumeHart()
 		if err != nil {
 			c.User.Put(fmt.Sprintf("unable to resume hart%d: %v\n", hi.ID, err))
 			return
@@ -156,8 +156,8 @@ var HartHelp = []cli.Help{
 var CmdHart = cli.Leaf{
 	Descr: "hart info/select",
 	F: func(c *cli.CLI, args []string) {
-		cpu := c.User.(target).GetCpu()
-		hi := cpu.dbg.GetCurrentHart()
+		cpu := c.User.(targetRiscv).GetCPU()
+		hi := cpu.Dbg.GetCurrentHart()
 
 		if len(args) == 0 {
 			c.User.Put(fmt.Sprintf("%s\n", hi))
@@ -171,7 +171,7 @@ var CmdHart = cli.Leaf{
 var cmdDebugInfo = cli.Leaf{
 	Descr: "debug module information",
 	F: func(c *cli.CLI, args []string) {
-		dbg := c.User.(target).GetCpu().dbg
+		dbg := c.User.(targetRiscv).GetCPU().Dbg
 		c.User.Put(fmt.Sprintf("%s\n", dbg.GetInfo()))
 	},
 }
@@ -179,16 +179,16 @@ var cmdDebugInfo = cli.Leaf{
 var cmdRiscvTest1 = cli.Leaf{
 	Descr: "test routine",
 	F: func(c *cli.CLI, args []string) {
-		cpu := c.User.(target).GetCpu()
-		c.User.Put(fmt.Sprintf("%s\n", cpu.dbg.Test1()))
+		cpu := c.User.(targetRiscv).GetCPU()
+		c.User.Put(fmt.Sprintf("%s\n", cpu.Dbg.Test1()))
 	},
 }
 
 var cmdRiscvTest2 = cli.Leaf{
 	Descr: "test routine",
 	F: func(c *cli.CLI, args []string) {
-		cpu := c.User.(target).GetCpu()
-		c.User.Put(fmt.Sprintf("%s\n", cpu.dbg.Test2()))
+		cpu := c.User.(targetRiscv).GetCPU()
+		c.User.Put(fmt.Sprintf("%s\n", cpu.Dbg.Test2()))
 	},
 }
 

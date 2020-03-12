@@ -158,14 +158,29 @@ func (hi *hartInfo) probeCSR() error {
 
 // probeMemory works out how we can access memory.
 func (hi *hartInfo) probeMemory() error {
+	// We need 2 instructions + ebreak to r/w memory buffers.
+	supported := false
+	if hi.dbg.progbufsize >= 3 {
+		supported = true
+	}
+	if hi.dbg.progbufsize == 2 && hi.dbg.impebreak != 0 {
+		supported = true
+	}
+	if !supported {
+		return errors.New("unable to support memory access")
+	}
+	// rv32/64/128
 	hi.rdMem8 = pbRdMem8
 	hi.rdMem16 = pbRdMem16
 	hi.rdMem32 = pbRdMem32
-	hi.rdMem64 = pbRdMem64
 	hi.wrMem8 = pbWrMem8
 	hi.wrMem16 = pbWrMem16
 	hi.wrMem32 = pbWrMem32
-	hi.wrMem64 = pbWrMem64
+	// rv64/128
+	if hi.info.MXLEN >= 64 {
+		hi.rdMem64 = pbRdMem64
+		hi.wrMem64 = pbWrMem64
+	}
 	return nil
 }
 

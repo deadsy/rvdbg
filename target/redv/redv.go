@@ -22,6 +22,7 @@ import (
 	"github.com/deadsy/rvdbg/cpu/riscv"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
+	"github.com/deadsy/rvdbg/mem"
 	"github.com/deadsy/rvdbg/target"
 )
 
@@ -49,6 +50,7 @@ var menuRoot = cli.Menu{
 	{"help", target.CmdHelp},
 	{"history", target.CmdHistory, cli.HistoryHelp},
 	{"jtag", jtag.Menu, "jtag functions"},
+	{"md", mem.DisplayMenu, "memory display functions"},
 	{"resume", riscv.CmdResume},
 }
 
@@ -132,8 +134,8 @@ func (t *Target) GetJtagDriver() jtag.Driver {
 	return t.jtagDriver
 }
 
-// GetCpu returns the RISC-V CPU.
-func (t *Target) GetCpu() *riscv.CPU {
+// GetCPU returns the RISC-V CPU.
+func (t *Target) GetCPU() *riscv.CPU {
 	return t.riscvCPU
 }
 
