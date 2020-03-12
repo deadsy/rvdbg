@@ -2,13 +2,19 @@
 /*
 
 RISC-V Debugger 0.13 Memory Operations
+Implements the mem.Driver interface methods.
 
 */
 //-----------------------------------------------------------------------------
 
 package rv13
 
-import "fmt"
+//-----------------------------------------------------------------------------
+
+// GetAddressSize returns the current hart's address size in bits.
+func (dbg *Debug) GetAddressSize() uint {
+	return dbg.hart[dbg.hartid].info.MXLEN
+}
 
 //-----------------------------------------------------------------------------
 // read memory
@@ -43,25 +49,6 @@ func (dbg *Debug) RdMem64(addr, n uint) ([]uint64, error) {
 		return nil, nil
 	}
 	return dbg.hart[dbg.hartid].rdMem64(dbg, addr, n)
-}
-
-// RdBuf reads a n x width-bit values from memory.
-func (dbg *Debug) RdBuf(addr, n, width uint) ([]uint, error) {
-	switch width {
-	case 8:
-		x, err := dbg.RdMem8(addr, n)
-		return convert8toUint(x), err
-	case 16:
-		x, err := dbg.RdMem16(addr, n)
-		return convert16toUint(x), err
-	case 32:
-		x, err := dbg.RdMem32(addr, n)
-		return convert32toUint(x), err
-	case 64:
-		x, err := dbg.RdMem64(addr, n)
-		return convert64toUint(x), err
-	}
-	return nil, fmt.Errorf("%d-bit memory reads are not supported", width)
 }
 
 //-----------------------------------------------------------------------------

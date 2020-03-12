@@ -12,92 +12,8 @@ import (
 	"fmt"
 
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
+	"github.com/deadsy/rvdbg/util"
 )
-
-//-----------------------------------------------------------------------------
-// slice conversion
-
-// convert32to16 converts a 32-bit slice to a 16-bit slice.
-func convert32to16(x []uint32) []uint16 {
-	y := make([]uint16, len(x))
-	for i := range x {
-		y[i] = uint16(x[i])
-	}
-	return y
-}
-
-// convert16to32 converts a 16-bit slice to a 32-bit slice.
-func convert16to32(x []uint16) []uint32 {
-	y := make([]uint32, len(x))
-	for i := range x {
-		y[i] = uint32(x[i])
-	}
-	return y
-}
-
-// convert32to8 converts a 32-bit slice to an 8-bit slice.
-func convert32to8(x []uint32) []uint8 {
-	y := make([]uint8, len(x))
-	for i := range x {
-		y[i] = uint8(x[i])
-	}
-	return y
-}
-
-// convert8to32 converts an 8-bit slice to a 32-bit slice.
-func convert8to32(x []uint8) []uint32 {
-	y := make([]uint32, len(x))
-	for i := range x {
-		y[i] = uint32(x[i])
-	}
-	return y
-}
-
-// convert32to64 converts an 32-bit slice to a 64-bit slice.
-func convert32to64(x []uint32) []uint64 {
-	if len(x)&1 != 0 {
-		panic("len(x) must be a multiple of 2")
-	}
-	y := make([]uint64, len(x)>>1)
-	i := 0
-	for j := range y {
-		y[j] = uint64(x[i+0]) | uint64(x[i+1]<<32)
-		i += 2
-	}
-	return y
-}
-
-func convert8toUint(x []uint8) []uint {
-	y := make([]uint, len(x))
-	for i := range x {
-		y[i] = uint(x[i])
-	}
-	return y
-}
-
-func convert16toUint(x []uint16) []uint {
-	y := make([]uint, len(x))
-	for i := range x {
-		y[i] = uint(x[i])
-	}
-	return y
-}
-
-func convert32toUint(x []uint32) []uint {
-	y := make([]uint, len(x))
-	for i := range x {
-		y[i] = uint(x[i])
-	}
-	return y
-}
-
-func convert64toUint(x []uint64) []uint {
-	y := make([]uint, len(x))
-	for i := range x {
-		y[i] = uint(x[i])
-	}
-	return y
-}
 
 //-----------------------------------------------------------------------------
 
@@ -273,7 +189,7 @@ func pbRdMem8(dbg *Debug, addr, n uint) ([]uint8, error) {
 	if err != nil {
 		return nil, err
 	}
-	return convert32to8(data), nil
+	return util.Convert32to8(data), nil
 }
 
 // pbRdMem16 reads n x 16-bit values from memory using program buffer operations.
@@ -287,7 +203,7 @@ func pbRdMem16(dbg *Debug, addr, n uint) ([]uint16, error) {
 	if err != nil {
 		return nil, err
 	}
-	return convert32to16(data), nil
+	return util.Convert32to16(data), nil
 }
 
 // pbRdMem32 reads n x 32-bit values from memory using program buffer operations.
@@ -355,7 +271,7 @@ func (dbg *Debug) pbRdMem_RV64(addr, n uint, pb []uint32) ([]uint64, error) {
 		return nil, err
 	}
 	// return the data
-	return convert32to64(data[:len(data)-1]), nil
+	return util.Convert32to64(data[:len(data)-1]), nil
 }
 
 // pbRdMem64 reads n x 64-bit values from memory using program buffer operations.
@@ -424,7 +340,7 @@ func pbWrMem8(dbg *Debug, addr uint, val []uint8) error {
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSB(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 1)
-	return dbg.pbWrMem_RV32(addr, convert8to32(val), pb)
+	return dbg.pbWrMem_RV32(addr, util.Convert8to32(val), pb)
 }
 
 // pbWrMem16 writes n x 16-bit values to memory using program buffer operations.
@@ -433,7 +349,7 @@ func pbWrMem16(dbg *Debug, addr uint, val []uint16) error {
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSH(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 2)
-	return dbg.pbWrMem_RV32(addr, convert16to32(val), pb)
+	return dbg.pbWrMem_RV32(addr, util.Convert16to32(val), pb)
 }
 
 // pbWrMem32 writes n x 32-bit values to memory using program buffer operations.

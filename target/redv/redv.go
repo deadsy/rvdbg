@@ -119,6 +119,22 @@ func (t *Target) GetMenuRoot() []cli.MenuItem {
 	return menuRoot
 }
 
+// Shutdown shuts down the target application.
+func (t *Target) Shutdown() {
+}
+
+// Put outputs a string to the user application.
+func (t *Target) Put(s string) {
+	os.Stdout.WriteString(s)
+}
+
+// GetMemoryDriver returns a memory driver for this target.
+func (t *Target) GetMemoryDriver() mem.Driver {
+	return t.riscvCPU.Dbg
+}
+
+//-----------------------------------------------------------------------------
+
 // GetJtagDevice returns the JTAG device.
 func (t *Target) GetJtagDevice() *jtag.Device {
 	return t.jtagDevice
@@ -137,15 +153,6 @@ func (t *Target) GetJtagDriver() jtag.Driver {
 // GetCPU returns the RISC-V CPU.
 func (t *Target) GetCPU() *riscv.CPU {
 	return t.riscvCPU
-}
-
-// Shutdown shuts down the target application.
-func (t *Target) Shutdown() {
-}
-
-// Put outputs a string to the user application.
-func (t *Target) Put(s string) {
-	os.Stdout.WriteString(s)
 }
 
 //-----------------------------------------------------------------------------
