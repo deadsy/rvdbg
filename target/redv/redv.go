@@ -5,8 +5,6 @@ SparkFun RED-V RedBoard - SiFive RISC-V FE310 SoC
 
 See: https://www.sparkfun.com/products/15594
 
-Version 0.13 of the debugger spec is implemented.
-
 */
 //-----------------------------------------------------------------------------
 
@@ -130,6 +128,11 @@ func (t *Target) Put(s string) {
 
 // GetMemoryDriver returns a memory driver for this target.
 func (t *Target) GetMemoryDriver() mem.Driver {
+	return t.riscvCPU.Dbg
+}
+
+// GetRiscvDebug returns a RISC-V debug driver for this target.
+func (t *Target) GetRiscvDebug() riscv.Driver {
 	return t.riscvCPU.Dbg
 }
 

@@ -5,8 +5,6 @@ GD32V is a development platform using a GD32VF103VBT6 RISC-V RV32.
 
 See: https://www.seeedstudio.com/SeeedStudio-GD32-RISC-V-Dev-Board-p-4302.html
 
-Version 0.13 of the debugger spec is implemented.
-
 */
 //-----------------------------------------------------------------------------
 
@@ -30,9 +28,8 @@ import (
 
 // Info is target information.
 var Info = target.Info{
-	Name:  "gd32v",
-	Descr: "GD32V Board (GigaDevice GD32VF103VBT6 RISC-V RV32)",
-	//DbgType: itf.TypeCmsisDap,
+	Name:     "gd32v",
+	Descr:    "GD32V Board (GigaDevice GD32VF103VBT6 RISC-V RV32)",
 	DbgType:  itf.TypeJlink,
 	DbgMode:  itf.ModeJtag,
 	DbgSpeed: 4000,
@@ -131,6 +128,11 @@ func (t *Target) Put(s string) {
 
 // GetMemoryDriver returns a memory driver for this target.
 func (t *Target) GetMemoryDriver() mem.Driver {
+	return t.riscvCPU.Dbg
+}
+
+// GetRiscvDebug returns a RISC-V debug driver for this target.
+func (t *Target) GetRiscvDebug() riscv.Driver {
 	return t.riscvCPU.Dbg
 }
 
