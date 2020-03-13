@@ -9,6 +9,7 @@ RISC-V Debugger 0.13 Program Buffer Command Operations
 package rv13
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
@@ -283,6 +284,11 @@ func pbRdMem64(dbg *Debug, addr, n uint) ([]uint64, error) {
 	return dbg.pbRdMem_RV64(addr, n, pb)
 }
 
+// pbRdMem64Unsupported
+func pbRdMem64Unsupported(dbg *Debug, addr, n uint) ([]uint64, error) {
+	return nil, errors.New("64-bit memory reads are not supported")
+}
+
 //-----------------------------------------------------------------------------
 // write memory 8/16/32-bits
 
@@ -416,6 +422,11 @@ func pbWrMem64(dbg *Debug, addr uint, val []uint64) error {
 	pb[0] = rv.InsSD(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 8)
 	return dbg.pbWrMem_RV64(addr, val, pb)
+}
+
+// pbWrMem64Unsupported
+func pbWrMem64Unsupported(dbg *Debug, addr uint, val []uint64) error {
+	return errors.New("64-bit memory writes are not supported")
 }
 
 //-----------------------------------------------------------------------------

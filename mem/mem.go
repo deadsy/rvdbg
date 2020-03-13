@@ -37,8 +37,8 @@ type target interface {
 
 //-----------------------------------------------------------------------------
 
-// RdBuf reads a n x width-bit values from memory.
-func RdBuf(tgt Driver, addr, n, width uint) ([]uint, error) {
+// rdBuf reads a n x width-bit values from memory.
+func rdBuf(tgt Driver, addr, n, width uint) ([]uint, error) {
 	switch width {
 	case 8:
 		x, err := tgt.RdMem8(addr, n)
@@ -60,14 +60,14 @@ func RdBuf(tgt Driver, addr, n, width uint) ([]uint, error) {
 
 const bytesPerLine = 16 // must be a power of 2
 
-func Display(tgt Driver, addr, n, width uint) string {
+func displayMem(tgt Driver, addr, n, width uint) string {
 
 	s := []string{}
 
 	addrLength := tgt.GetAddressSize()
 	addrMask := uint((1 << addrLength) - 1)
 
-	fmtLine := fmt.Sprintf("%%0%dx %%s %%s", [2]int{16, 8}[util.BoolToInt(addrLength == 32)])
+	fmtLine := fmt.Sprintf("%%0%dx  %%s  %%s", [2]int{16, 8}[util.BoolToInt(addrLength == 32)])
 	fmtData := fmt.Sprintf("%%0%dx", width>>2)
 
 	// round down address to width alignment
@@ -79,7 +79,7 @@ func Display(tgt Driver, addr, n, width uint) string {
 	for i := 0; i < int(n/bytesPerLine); i++ {
 
 		// read bytesPerLine bytes
-		buf, err := RdBuf(tgt, addr, bytesPerLine/(width>>3), width)
+		buf, err := rdBuf(tgt, addr, bytesPerLine/(width>>3), width)
 		if err != nil {
 			return fmt.Sprintf("%s", err)
 		}
@@ -89,22 +89,22 @@ func Display(tgt Driver, addr, n, width uint) string {
 		for j := range xStr {
 			xStr[j] = fmt.Sprintf(fmtData, buf[j])
 		}
-		dataStr := strings.Join(xStr[:], " ")
+		dataStr := strings.Join(xStr, " ")
 
 		// create the ascii string
 		data, err := tgt.RdMem8(addr, bytesPerLine)
 		if err != nil {
 			return fmt.Sprintf("%s", err)
 		}
-		var ascii [bytesPerLine]string
-		for j := range data {
-			if data[j] >= 32 && data[j] <= 126 {
-				ascii[j] = fmt.Sprintf("%c", data[j])
+		var ascii [bytesPerLine]rune
+		for j, val := range data {
+			if val >= 32 && val <= 126 {
+				ascii[j] = rune(val)
 			} else {
-				ascii[j] = "."
+				ascii[j] = '.'
 			}
 		}
-		asciiStr := strings.Join(ascii[:], "")
+		asciiStr := string(ascii[:])
 
 		s = append(s, fmt.Sprintf(fmtLine, addr, dataStr, asciiStr))
 		addr += bytesPerLine

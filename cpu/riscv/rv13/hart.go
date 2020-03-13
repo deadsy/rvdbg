@@ -180,6 +180,9 @@ func (hi *hartInfo) probeMemory() error {
 	if hi.info.MXLEN >= 64 {
 		hi.rdMem64 = pbRdMem64
 		hi.wrMem64 = pbWrMem64
+	} else {
+		hi.rdMem64 = pbRdMem64Unsupported
+		hi.wrMem64 = pbWrMem64Unsupported
 	}
 	return nil
 }
