@@ -21,6 +21,7 @@ import (
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/mem"
+	"github.com/deadsy/rvdbg/soc"
 	"github.com/deadsy/rvdbg/target"
 )
 
@@ -48,6 +49,7 @@ var menuRoot = cli.Menu{
 	{"help", target.CmdHelp},
 	{"history", target.CmdHistory, cli.HistoryHelp},
 	{"jtag", jtag.Menu, "jtag functions"},
+	{"map", soc.CmdMap},
 	{"md", mem.DisplayMenu, "memory display functions"},
 	{"resume", riscv.CmdResume},
 }
@@ -60,6 +62,7 @@ type Target struct {
 	jtagChain  *jtag.Chain
 	jtagDevice *jtag.Device
 	riscvCPU   *riscv.CPU
+	socDevice  *soc.Device
 }
 
 // New returns a new redv target.
@@ -98,11 +101,15 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 		return nil, err
 	}
 
+	// create the SoC device
+	socDevice := fe310.NewSoC()
+
 	return &Target{
 		jtagDriver: jtagDriver,
 		jtagChain:  jtagChain,
 		jtagDevice: jtagDevice,
 		riscvCPU:   riscvCPU,
+		socDevice:  socDevice,
 	}, nil
 
 }
@@ -134,6 +141,11 @@ func (t *Target) GetMemoryDriver() mem.Driver {
 // GetRiscvDebug returns a RISC-V debug driver for this target.
 func (t *Target) GetRiscvDebug() riscv.Driver {
 	return t.riscvCPU.Dbg
+}
+
+// GetSoC returns the SoC device and driver.
+func (t *Target) GetSoC() (*soc.Device, soc.Driver) {
+	return t.socDevice, t.riscvCPU.Dbg
 }
 
 //-----------------------------------------------------------------------------

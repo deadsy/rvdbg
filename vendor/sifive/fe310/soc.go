@@ -179,7 +179,7 @@ func NewSoC() *soc.Device {
 			{
 				Name:  "PLIC",
 				Addr:  0x0c000000,
-				Size:  0x200008,
+				Size:  32,
 				Descr: "Platform-Level Interrupt Controller",
 				Registers: []soc.Register{
 					{

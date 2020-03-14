@@ -11298,9 +11298,9 @@ func NewSoC() *soc.Device {
 			},
 			{
 				Name:  "DMA1",
-				Addr:  0x40020000,
+				Addr:  0x40020400,
 				Size:  0x400,
-				Descr: "Direct memory access controller",
+				Descr: "DMA controller",
 				Registers: []soc.Register{
 					{
 						Name:   "INTF",
@@ -11854,7 +11854,7 @@ func NewSoC() *soc.Device {
 				Name:  "FMC",
 				Addr:  0x40022000,
 				Size:  0x400,
-				Descr: "FMC",
+				Descr: "Flash Memory Controller",
 				Registers: []soc.Register{
 					{
 						Name:   "WS",
@@ -13451,7 +13451,7 @@ func NewSoC() *soc.Device {
 			{
 				Name:  "ECLIC",
 				Addr:  0xd2000000,
-				Size:  0xffff,
+				Size:  0x10000,
 				Descr: "Enhanced Core Local Interrupt Controller",
 				Registers: []soc.Register{
 					{

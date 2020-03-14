@@ -8,6 +8,8 @@ SoC Device
 
 package soc
 
+import "sort"
+
 //-----------------------------------------------------------------------------
 
 // CPU provides high-level CPU information.
@@ -23,6 +25,16 @@ type Device struct {
 	CPU         *CPU
 	Interrupts  []Interrupt
 	Peripherals []Peripheral
+}
+
+//-----------------------------------------------------------------------------
+
+// SortedPeripherals returns a sorted list of device peripherals.
+func (dev *Device) SortedPeripherals() []Peripheral {
+	// Build a list of peripherals in base address order.
+	ps := dev.Peripherals
+	sort.Sort(PeripheralByAddr(ps))
+	return ps
 }
 
 //-----------------------------------------------------------------------------
