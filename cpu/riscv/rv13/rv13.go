@@ -16,8 +16,8 @@ import (
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/bitstr"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
-	"github.com/deadsy/rvdbg/decode"
 	"github.com/deadsy/rvdbg/jtag"
+	"github.com/deadsy/rvdbg/soc"
 	"github.com/deadsy/rvdbg/util"
 	"github.com/deadsy/rvdbg/util/log"
 )
@@ -253,13 +253,13 @@ func (dbg *Debug) wrIR(ir uint) error {
 //-----------------------------------------------------------------------------
 // dtmcs
 
-var dtmcsFields = decode.FieldSet{
-	{"dmihardreset", 17, 17, decode.FmtDec},
-	{"dmireset", 16, 16, decode.FmtDec},
-	{"idle", 14, 12, decode.FmtDec},
-	{"dmistat", 11, 10, decode.FmtDec},
-	{"abits", 9, 4, decode.FmtDec},
-	{"version", 3, 0, decode.FmtDec},
+var dtmcsFields = soc.FieldSet{
+	{"dmihardreset", 17, 17, "", soc.FmtDec, nil},
+	{"dmireset", 16, 16, "", soc.FmtDec, nil},
+	{"idle", 14, 12, "", soc.FmtDec, nil},
+	{"dmistat", 11, 10, "", soc.FmtDec, nil},
+	{"abits", 9, 4, "", soc.FmtDec, nil},
+	{"version", 3, 0, "", soc.FmtDec, nil},
 }
 
 const dmireset = (1 << 16)

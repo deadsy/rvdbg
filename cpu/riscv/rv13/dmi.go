@@ -17,8 +17,8 @@ import (
 
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/bitstr"
-	"github.com/deadsy/rvdbg/decode"
 	"github.com/deadsy/rvdbg/jtag"
+	"github.com/deadsy/rvdbg/soc"
 	"github.com/deadsy/rvdbg/util"
 )
 
@@ -163,18 +163,18 @@ func dmiNameLookup(addr uint) string {
 //-----------------------------------------------------------------------------
 // DM control
 
-var dmcontrolFields = decode.FieldSet{
-	{"haltreq", 31, 31, decode.FmtDec},
-	{"resumereq", 30, 30, decode.FmtDec},
-	{"hartreset", 29, 29, decode.FmtDec},
-	{"ackhavereset", 28, 28, decode.FmtDec},
-	{"hasel", 26, 26, decode.FmtDec},
-	{"hartsello", 25, 16, decode.FmtDec},
-	{"hartselhi", 15, 6, decode.FmtDec},
-	{"setresethaltreq", 3, 3, decode.FmtDec},
-	{"clrresethaltreq", 2, 2, decode.FmtDec},
-	{"ndmreset", 1, 1, decode.FmtDec},
-	{"dmactive", 0, 0, decode.FmtDec},
+var dmcontrolFields = soc.FieldSet{
+	{"haltreq", 31, 31, "", soc.FmtDec, nil},
+	{"resumereq", 30, 30, "", soc.FmtDec, nil},
+	{"hartreset", 29, 29, "", soc.FmtDec, nil},
+	{"ackhavereset", 28, 28, "", soc.FmtDec, nil},
+	{"hasel", 26, 26, "", soc.FmtDec, nil},
+	{"hartsello", 25, 16, "", soc.FmtDec, nil},
+	{"hartselhi", 15, 6, "", soc.FmtDec, nil},
+	{"setresethaltreq", 3, 3, "", soc.FmtDec, nil},
+	{"clrresethaltreq", 2, 2, "", soc.FmtDec, nil},
+	{"ndmreset", 1, 1, "", soc.FmtDec, nil},
+	{"dmactive", 0, 0, "", soc.FmtDec, nil},
 }
 
 const haltreq = (1 << 31)
@@ -234,25 +234,25 @@ func (dbg *Debug) selectHart(id int) error {
 //-----------------------------------------------------------------------------
 // DM status
 
-var dmstatusFields = decode.FieldSet{
-	{"impebreak", 22, 22, decode.FmtDec},
-	{"allhavereset", 19, 19, decode.FmtDec},
-	{"anyhavereset", 18, 18, decode.FmtDec},
-	{"allresumeack", 17, 17, decode.FmtDec},
-	{"anyresumeack", 16, 16, decode.FmtDec},
-	{"allnonexistent", 15, 15, decode.FmtDec},
-	{"anynonexistent", 14, 14, decode.FmtDec},
-	{"allunavail", 13, 13, decode.FmtDec},
-	{"anyunavail", 12, 12, decode.FmtDec},
-	{"allrunning", 11, 11, decode.FmtDec},
-	{"anyrunning", 10, 10, decode.FmtDec},
-	{"allhalted", 9, 9, decode.FmtDec},
-	{"anyhalted", 8, 8, decode.FmtDec},
-	{"authenticated", 7, 7, decode.FmtDec},
-	{"authbusy", 6, 6, decode.FmtDec},
-	{"hasresethaltreq", 5, 5, decode.FmtDec},
-	{"confstrptrvalid", 4, 4, decode.FmtDec},
-	{"version", 3, 0, decode.FmtDec},
+var dmstatusFields = soc.FieldSet{
+	{"impebreak", 22, 22, "", soc.FmtDec, nil},
+	{"allhavereset", 19, 19, "", soc.FmtDec, nil},
+	{"anyhavereset", 18, 18, "", soc.FmtDec, nil},
+	{"allresumeack", 17, 17, "", soc.FmtDec, nil},
+	{"anyresumeack", 16, 16, "", soc.FmtDec, nil},
+	{"allnonexistent", 15, 15, "", soc.FmtDec, nil},
+	{"anynonexistent", 14, 14, "", soc.FmtDec, nil},
+	{"allunavail", 13, 13, "", soc.FmtDec, nil},
+	{"anyunavail", 12, 12, "", soc.FmtDec, nil},
+	{"allrunning", 11, 11, "", soc.FmtDec, nil},
+	{"anyrunning", 10, 10, "", soc.FmtDec, nil},
+	{"allhalted", 9, 9, "", soc.FmtDec, nil},
+	{"anyhalted", 8, 8, "", soc.FmtDec, nil},
+	{"authenticated", 7, 7, "", soc.FmtDec, nil},
+	{"authbusy", 6, 6, "", soc.FmtDec, nil},
+	{"hasresethaltreq", 5, 5, "", soc.FmtDec, nil},
+	{"confstrptrvalid", 4, 4, "", soc.FmtDec, nil},
+	{"version", 3, 0, "", soc.FmtDec, nil},
 }
 
 const anyhavereset = (1 << 18)
@@ -274,11 +274,11 @@ func (dbg *Debug) checkStatus(flag uint32) (bool, error) {
 
 //-----------------------------------------------------------------------------
 
-var hartinfoFields = decode.FieldSet{
-	{"nscratch", 23, 20, decode.FmtDec},
-	{"dataaccess", 16, 16, decode.FmtDec},
-	{"datasize", 15, 12, decode.FmtDec},
-	{"dataaddr", 11, 0, decode.FmtHex},
+var hartinfoFields = soc.FieldSet{
+	{"nscratch", 23, 20, "", soc.FmtDec, nil},
+	{"dataaccess", 16, 16, "", soc.FmtDec, nil},
+	{"datasize", 15, 12, "", soc.FmtDec, nil},
+	{"dataaddr", 11, 0, "", soc.FmtHex, nil},
 }
 
 //-----------------------------------------------------------------------------
@@ -364,11 +364,11 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 //-----------------------------------------------------------------------------
 // abstract commands
 
-var abstractcsFields = decode.FieldSet{
-	{"progbufsize", 28, 24, decode.FmtDec},
-	{"busy", 12, 12, decode.FmtDec},
-	{"cmderr", 10, 8, decode.FmtDec},
-	{"datacount", 3, 0, decode.FmtDec},
+var abstractcsFields = soc.FieldSet{
+	{"progbufsize", 28, 24, "", soc.FmtDec, nil},
+	{"busy", 12, 12, "", soc.FmtDec, nil},
+	{"cmderr", 10, 8, "", soc.FmtDec, nil},
+	{"datacount", 3, 0, "", soc.FmtDec, nil},
 }
 
 // command error

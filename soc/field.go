@@ -6,7 +6,7 @@ Bit fields within Registers.
 */
 //-----------------------------------------------------------------------------
 
-package decode
+package soc
 
 //-----------------------------------------------------------------------------
 
@@ -19,14 +19,22 @@ import (
 
 //-----------------------------------------------------------------------------
 
+// Enum provides descriptive strings for the enumeration of a bit field.
+type Enum map[uint]string
+
+//-----------------------------------------------------------------------------
+
 // fmtFunc is formatting function for a uint.
 type fmtFunc func(x uint) string
 
 // Field is a bit field within a register value.
 type Field struct {
-	Name     string
-	Msb, Lsb uint
-	Fmt      fmtFunc
+	Name  string  // name
+	Msb   uint    // most significant bit
+	Lsb   uint    // least significant bit
+	Descr string  // description
+	Fmt   fmtFunc // formatting function
+	Enums Enum    // enumeration values
 }
 
 // FieldSet is a set of field definitions.

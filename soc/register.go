@@ -1,19 +1,22 @@
 //-----------------------------------------------------------------------------
 /*
 
-SoC Device
+Peripheral Registers
 
 */
 //-----------------------------------------------------------------------------
 
-package decode
+package soc
 
 //-----------------------------------------------------------------------------
 
-// Device is grouped set of peripherals.
-type Device struct {
-	name, descr string
-	pset        PeripheralSet
+// Register is peripheral register.
+type Register struct {
+	Name   string
+	Offset uint
+	Size   uint
+	Descr  string
+	Fields []Field
 }
 
 //-----------------------------------------------------------------------------

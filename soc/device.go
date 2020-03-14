@@ -1,25 +1,28 @@
 //-----------------------------------------------------------------------------
 /*
 
-Peripheral Registers
+SoC Device
 
 */
 //-----------------------------------------------------------------------------
 
-package decode
+package soc
 
 //-----------------------------------------------------------------------------
 
-// Register is peripheral register.
-type Register struct {
-	Name   string
-	Offset uint
-	Size   uint
-	Fset   FieldSet
-	Descr  string
+// CPU provides high-level CPU information.
+type CPU struct {
 }
 
-// RegisterSet is a set of registers.
-type RegisterSet []Register
+// Device is the top-level device description.
+type Device struct {
+	Vendor      string
+	Name        string
+	Descr       string
+	Version     string
+	CPU         *CPU
+	Interrupts  []Interrupt
+	Peripherals []Peripheral
+}
 
 //-----------------------------------------------------------------------------

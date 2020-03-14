@@ -1,25 +1,24 @@
 //-----------------------------------------------------------------------------
 /*
 
-Peripherals
+SiFive FE310 JTAG Layout
 
 */
 //-----------------------------------------------------------------------------
 
-package decode
+package fe310
+
+import "github.com/deadsy/rvdbg/jtag"
 
 //-----------------------------------------------------------------------------
 
-// Peripheral is functionally grouped set of registers.
-type Peripheral struct {
-	Name  string
-	Descr string
-	Addr  uint
-	Size  uint
-	rset  RegisterSet
-}
+// CoreIndex is the index of the RISC-V core within the JTAG chain.
+const CoreIndex = 0
 
-// PeripheralSet is a set of peripherals.
-type PeripheralSet []Peripheral
+// Chain is the the JTAG chain description.
+var Chain = []jtag.DeviceInfo{
+	// irlen, idcode, name
+	jtag.DeviceInfo{5, jtag.IDCode(0x20000913), "fe310.rv32"},
+}
 
 //-----------------------------------------------------------------------------

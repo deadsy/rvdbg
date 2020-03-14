@@ -11,7 +11,7 @@ package rv
 import (
 	"fmt"
 
-	"github.com/deadsy/rvdbg/decode"
+	"github.com/deadsy/rvdbg/soc"
 	"github.com/deadsy/rvdbg/util"
 )
 
@@ -79,9 +79,9 @@ func fmtExtensions(x uint) string {
 
 // DisplayMISA returns a string decoding a MISA value.
 func DisplayMISA(misa, mxlen uint) string {
-	fs := decode.FieldSet{
-		{"mxl", mxlen - 1, mxlen - 2, fmtMXL},
-		{"extensions", 25, 0, fmtExtensions},
+	fs := soc.FieldSet{
+		{"mxl", mxlen - 1, mxlen - 2, "", fmtMXL, nil},
+		{"extensions", 25, 0, "", fmtExtensions, nil},
 	}
 	return fs.Display(misa)
 }

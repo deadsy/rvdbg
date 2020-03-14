@@ -1,23 +1,20 @@
 //-----------------------------------------------------------------------------
 /*
 
-SiFive FE310
+SoC Interrupts
 
 */
 //-----------------------------------------------------------------------------
 
-package fe310
-
-import "github.com/deadsy/rvdbg/jtag"
+package soc
 
 //-----------------------------------------------------------------------------
-// FE310 JTAG Layout
 
-const CoreIndex = 0
-
-var Chain = []jtag.DeviceInfo{
-	// irlen, idcode, name
-	jtag.DeviceInfo{5, jtag.IDCode(0x20000913), "fe310.rv32"},
+// Interrupt describes an SoC interrupt.
+type Interrupt struct {
+	Name  string // name
+	IRQ   uint   // interrupt request number
+	Descr string // description
 }
 
 //-----------------------------------------------------------------------------
