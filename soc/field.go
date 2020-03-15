@@ -19,13 +19,11 @@ import (
 
 //-----------------------------------------------------------------------------
 
-// Enum provides descriptive strings for the enumeration of a bit field.
-type Enum map[uint]string
-
-//-----------------------------------------------------------------------------
-
 // fmtFunc is formatting function for a uint.
 type fmtFunc func(x uint) string
+
+// Enum maps a field value to a display string.
+type Enum map[uint]string
 
 // Field is a bit field within a register value.
 type Field struct {
@@ -52,24 +50,55 @@ func (a FieldSet) Less(i, j int) bool {
 	if a[i].Msb == a[j].Msb {
 		return strings.Compare(a[i].Name, a[j].Name) < 0
 	}
-	return a[i].Msb < a[j].Msb
+	return a[i].Msb > a[j].Msb
 }
 
 //-----------------------------------------------------------------------------
 
-// Display returns a display string for a bit field.
-func (f *Field) Display(x uint) string {
-	val := util.Bits(x, f.Msb, f.Lsb)
-	return fmt.Sprintf("%s %s", f.Name, f.Fmt(val))
+// Display returns display strings for a bit field.
+func (f *Field) Display(val uint) []string {
+
+	x := util.Bits(val, f.Msb, f.Lsb)
+
+	// has the value changed?
+	changed := ""
+
+	// name string
+	var nameStr string
+	if f.Msb == f.Lsb {
+		nameStr = fmt.Sprintf("  %s[%d]", f.Name, f.Lsb)
+	} else {
+		nameStr = fmt.Sprintf("  %s[%d:%d]", f.Name, f.Msb, f.Lsb)
+	}
+
+	// value string
+
+	var valName string
+
+	if f.Fmt != nil {
+		valName = f.Fmt(x)
+	} else if f.Enums != nil {
+
+	}
+
+	var valStr string
+	if x < 10 {
+		valStr = fmt.Sprintf(": %d %s%s", x, valName, changed)
+	} else {
+		valStr = fmt.Sprintf(": 0x%x %s%s", x, valName, changed)
+	}
+
+	return []string{nameStr, valStr, "", f.Descr}
 }
 
 //-----------------------------------------------------------------------------
 
-// Display returns a display string for the bit fields of a uint value.
-func (fs FieldSet) Display(x uint) string {
-	s := make([]string, len(fs))
-	for i := range fs {
-		s[i] = (&fs[i]).Display(x)
+// DisplayH returns the horizontal display string for the bit fields of a uint value.
+func DisplayH(fs []Field, val uint) string {
+	s := []string{}
+	for _, f := range fs {
+		x := util.Bits(val, f.Msb, f.Lsb)
+		s = append(s, fmt.Sprintf("%s %s", f.Name, f.Fmt(x)))
 	}
 	return strings.Join(s, " ")
 }

@@ -29,12 +29,25 @@ type Device struct {
 
 //-----------------------------------------------------------------------------
 
+// GetPeripheral returns the named peripheral if it exists.
+func (dev *Device) GetPeripheral(name string) *Peripheral {
+	for i := range dev.Peripherals {
+		p := &dev.Peripherals[i]
+		if p.Name == name {
+			return p
+		}
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+
 // AddPeripheral adds periphals to the device.
 func (dev *Device) AddPeripheral(p []Peripheral) {
 	dev.Peripherals = append(dev.Peripherals, p...)
 }
 
-// RenamePeripheral renames a periphal in the device.
+// RenamePeripheral renames a peripheral in the device.
 func (dev *Device) RenamePeripheral(oldname, newname string) {
 	for i := range dev.Peripherals {
 		p := &dev.Peripherals[i]
@@ -46,20 +59,31 @@ func (dev *Device) RenamePeripheral(oldname, newname string) {
 
 //-----------------------------------------------------------------------------
 
-// Sort the device peripherals, registers and fields.
-func (dev *Device) Sort() *Device {
-	// interrupts
+// Setup performs port-creation setup work on the device structure.
+func (dev *Device) Setup() *Device {
+
+	// sort interrupts
 	sort.Sort(InterruptSet(dev.Interrupts))
-	// peripherals
+	// sort peripherals
 	sort.Sort(PeripheralSet(dev.Peripherals))
-	// registers
+	// sort registers
 	for _, p := range dev.Peripherals {
 		sort.Sort(RegisterSet(p.Registers))
-		// fields
+		// sort fields
 		for _, r := range p.Registers {
 			sort.Sort(FieldSet(r.Fields))
 		}
 	}
+
+	// setup register parents
+	for i := range dev.Peripherals {
+		p := &dev.Peripherals[i]
+		for j := range p.Registers {
+			r := &p.Registers[j]
+			r.parent = p
+		}
+	}
+
 	return dev
 }
 

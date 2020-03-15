@@ -79,11 +79,11 @@ func fmtExtensions(x uint) string {
 
 // DisplayMISA returns a string decoding a MISA value.
 func DisplayMISA(misa, mxlen uint) string {
-	fs := soc.FieldSet{
+	fs := []soc.Field{
 		{"mxl", mxlen - 1, mxlen - 2, "", fmtMXL, nil},
 		{"extensions", 25, 0, "", fmtExtensions, nil},
 	}
-	return fs.Display(misa)
+	return soc.DisplayH(fs, misa)
 }
 
 // GetMxlMISA returns the bit length in the MISA.mxl field.

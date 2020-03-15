@@ -30,7 +30,7 @@ func NewSoC() *soc.Device {
 	}
 	// TODO some peripherals need to add/removed as a function of the device variant.
 	dev.AddPeripheral(p)
-	return dev.Sort()
+	return dev
 }
 
 //-----------------------------------------------------------------------------

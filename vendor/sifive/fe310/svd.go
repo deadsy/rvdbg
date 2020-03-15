@@ -66,7 +66,7 @@ func baseSoC() *soc.Device {
 		},
 		Peripherals: []soc.Peripheral{
 			{
-				Name:  "otp",
+				Name:  "OTP",
 				Addr:  0x00020000,
 				Size:  0x2000,
 				Descr: "One-Time Programmable ROM",

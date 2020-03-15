@@ -51,6 +51,7 @@ var menuRoot = cli.Menu{
 	{"jtag", jtag.Menu, "jtag functions"},
 	{"map", soc.CmdMap},
 	{"md", mem.DisplayMenu, "memory display functions"},
+	{"regs", soc.CmdRegs, soc.RegsHelp},
 	{"resume", riscv.CmdResume},
 }
 
@@ -103,6 +104,7 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 
 	// create the SoC device
 	socDevice := gd32vf103.NewSoC(gd32vf103.VB)
+	socDevice = socDevice.Setup()
 
 	return &Target{
 		jtagDriver: jtagDriver,

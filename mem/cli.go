@@ -12,7 +12,6 @@ import (
 	"fmt"
 
 	cli "github.com/deadsy/go-cli"
-	"github.com/deadsy/rvemu/util"
 )
 
 //-----------------------------------------------------------------------------
@@ -32,7 +31,7 @@ func MemArg(defAddr, maxAddr uint, args []string) (uint, uint, error) {
 		}
 	}
 	// number of bytes
-	n := uint(0x80) // default size
+	n := uint(0x100) // default size
 	if len(args) >= 2 {
 		n, err = cli.UintArg(args[1], [2]uint{1, 0x100000000}, 16)
 		if err != nil {
@@ -47,7 +46,7 @@ func MemArg(defAddr, maxAddr uint, args []string) (uint, uint, error) {
 func display(c *cli.CLI, args []string, width uint) {
 	tgt := c.User.(target).GetMemoryDriver()
 	maxAddr := uint((1 << tgt.GetAddressSize()) - 1)
-	addr, n, err := util.MemArg(0, maxAddr, args)
+	addr, n, err := MemArg(0, maxAddr, args)
 	if err != nil {
 		c.User.Put(fmt.Sprintf("%s\n", err))
 		return

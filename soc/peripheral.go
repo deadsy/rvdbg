@@ -8,7 +8,11 @@ Peripherals
 
 package soc
 
-import "strings"
+import (
+	"strings"
+
+	cli "github.com/deadsy/go-cli"
+)
 
 //-----------------------------------------------------------------------------
 
@@ -37,6 +41,34 @@ func (a PeripheralSet) Less(i, j int) bool {
 		return strings.Compare(a[i].Name, a[j].Name) < 0
 	}
 	return a[i].Addr < a[j].Addr
+}
+
+//-----------------------------------------------------------------------------
+
+// GetRegister returns the named register if it exists.
+func (p *Peripheral) GetRegister(name string) *Register {
+	for i := range p.Registers {
+		r := &p.Registers[i]
+		if r.Name == name {
+			return r
+		}
+	}
+	return nil
+}
+
+// Display returns a string for the decoded registers of the peripheral.
+func (p *Peripheral) Display(drv Driver, r *Register, fields bool) string {
+	s := [][]string{}
+	if r != nil {
+		// decode a single register
+		s = append(s, r.Display(drv, fields)...)
+	} else {
+		// decode all registers
+		for i := range p.Registers {
+			s = append(s, p.Registers[i].Display(drv, fields)...)
+		}
+	}
+	return cli.TableString(s, []int{0, 0, 0, 0}, 1)
 }
 
 //-----------------------------------------------------------------------------
