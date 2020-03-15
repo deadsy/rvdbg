@@ -34,7 +34,7 @@ var CmdMap = cli.Leaf{
 		dev, drv := c.User.(target).GetSoC()
 		_ = drv // TODO address format based on MXLEN
 		s := make([][]string, len(dev.Peripherals))
-		for i, p := range dev.SortedPeripherals() {
+		for i, p := range dev.Peripherals {
 			var region string
 			if p.Size == 0 {
 				region = fmt.Sprintf(": %08x", p.Addr)

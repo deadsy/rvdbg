@@ -21,16 +21,16 @@ type Peripheral struct {
 	Registers []Register
 }
 
+// PeripheralSet is a set of peripherals.
+type PeripheralSet []Peripheral
+
 //-----------------------------------------------------------------------------
-// Sort by Address for a Peripheral Set
+// Sort peripherals set by address.
 
-// PeripheralByAddr is used to sort peripherals by address.
-type PeripheralByAddr []Peripheral
+func (a PeripheralSet) Len() int      { return len(a) }
+func (a PeripheralSet) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
-func (a PeripheralByAddr) Len() int      { return len(a) }
-func (a PeripheralByAddr) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-
-func (a PeripheralByAddr) Less(i, j int) bool {
+func (a PeripheralSet) Less(i, j int) bool {
 	// Base addresses for peripherals are not always unique. e.g. Nordic chips.
 	// So: tie break with the name to give a well-defined sort order.
 	if a[i].Addr == a[j].Addr {

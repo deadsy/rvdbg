@@ -564,8 +564,8 @@ class device(object):
     s = []
     s.append("// Package %s created by svd2go %s" % (self.name.lower(), self.svdpath))
     s.append("package %s" % self.name.lower())
-    s.append("// NewSoC returns an SoC device for the %s chip." % self.name)
-    s.append("func NewSoC() *soc.Device {")
+    s.append("// baseSoC returns the base SoC device for the %s chip." % self.name)
+    s.append("func baseSoC() *soc.Device {")
     s.append("return &soc.Device{")
     s.append("Vendor: %s," % attribute_string(self.vendor))
     s.append("Name: %s," % attribute_string(self.name))

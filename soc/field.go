@@ -37,8 +37,23 @@ type Field struct {
 	Enums Enum    // enumeration values
 }
 
-// FieldSet is a set of field definitions.
+// FieldSet is a set of fields.
 type FieldSet []Field
+
+//-----------------------------------------------------------------------------
+// Sort fields by Msb.
+
+func (a FieldSet) Len() int      { return len(a) }
+func (a FieldSet) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+func (a FieldSet) Less(i, j int) bool {
+	// MSBs for registers may not be unique.
+	// Tie break with the name to give a well-defined sort order.
+	if a[i].Msb == a[j].Msb {
+		return strings.Compare(a[i].Name, a[j].Name) < 0
+	}
+	return a[i].Msb < a[j].Msb
+}
 
 //-----------------------------------------------------------------------------
 

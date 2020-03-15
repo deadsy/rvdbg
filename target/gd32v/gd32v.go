@@ -102,7 +102,7 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 	}
 
 	// create the SoC device
-	socDevice := gd32vf103.NewSoC()
+	socDevice := gd32vf103.NewSoC(gd32vf103.VB)
 
 	return &Target{
 		jtagDriver: jtagDriver,
