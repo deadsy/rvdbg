@@ -16,8 +16,8 @@ import (
 
 //-----------------------------------------------------------------------------
 
-// MemArg converts memory arguments to an (address, n) tuple.
-func MemArg(defAddr, maxAddr uint, args []string) (uint, uint, error) {
+// memArg converts memory arguments to an (address, n) tuple.
+func memArg(defAddr, maxAddr uint, args []string) (uint, uint, error) {
 	err := cli.CheckArgc(args, []int{0, 1, 2})
 	if err != nil {
 		return 0, 0, err
@@ -46,7 +46,7 @@ func MemArg(defAddr, maxAddr uint, args []string) (uint, uint, error) {
 func display(c *cli.CLI, args []string, width uint) {
 	tgt := c.User.(target).GetMemoryDriver()
 	maxAddr := uint((1 << tgt.GetAddressSize()) - 1)
-	addr, n, err := MemArg(0, maxAddr, args)
+	addr, n, err := memArg(0, maxAddr, args)
 	if err != nil {
 		c.User.Put(fmt.Sprintf("%s\n", err))
 		return

@@ -19,7 +19,8 @@ import (
 
 // Driver is the SoC driver api.
 type Driver interface {
-	GetAddressSize() uint
+	GetAddressSize() uint                      // get address size in bits
+	RdMem(width, addr, n uint) ([]uint, error) // read width-bit memory buffer
 }
 
 // target provides a method for getting the SoC device and driver.
@@ -35,6 +36,7 @@ func getAddressFormat(drv Driver) string {
 
 //-----------------------------------------------------------------------------
 
+// CmdMap displays the memory map of the target.
 var CmdMap = cli.Leaf{
 	Descr: "display memory map",
 	F: func(c *cli.CLI, args []string) {
@@ -57,11 +59,13 @@ var CmdMap = cli.Leaf{
 
 //-----------------------------------------------------------------------------
 
+// RegsHelp is help information for the "regs" command.
 var RegsHelp = []cli.Help{
 	{"<peripheral> [register]", "peripheral (string) - peripheral name"},
 	{"", "register (string) - register name (or *)"},
 }
 
+// CmdRegs displays a register decode for an SoC periperhal.
 var CmdRegs = cli.Leaf{
 	Descr: "display peripheral registers",
 	F: func(c *cli.CLI, args []string) {

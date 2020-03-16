@@ -121,8 +121,8 @@ func pbWrCSR(dbg *Debug, reg, size uint, val uint64) error {
 //-----------------------------------------------------------------------------
 // read memory 8/16/32-bits
 
-// pbRdMem_RV32 performs 8/16/32-bit memory reads using RV32 instructions.
-func (dbg *Debug) pbRdMem_RV32(addr, n uint, pb []uint32) ([]uint32, error) {
+// pbRdMemRV32 performs 8/16/32-bit memory reads using RV32 instructions.
+func (dbg *Debug) pbRdMemRV32(addr, n uint, pb []uint32) ([]uint32, error) {
 	// build the operations buffer
 	ops := pbOps(pb, int(n)+10)
 	// setup the address in dataX
@@ -186,7 +186,7 @@ func pbRdMem8(dbg *Debug, addr, n uint) ([]uint8, error) {
 	pb[0] = rv.InsLB(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 1)
 	// read the memory
-	data, err := dbg.pbRdMem_RV32(addr, n, pb)
+	data, err := dbg.pbRdMemRV32(addr, n, pb)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +200,7 @@ func pbRdMem16(dbg *Debug, addr, n uint) ([]uint16, error) {
 	pb[0] = rv.InsLH(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 2)
 	// read the memory
-	data, err := dbg.pbRdMem_RV32(addr, n, pb)
+	data, err := dbg.pbRdMemRV32(addr, n, pb)
 	if err != nil {
 		return nil, err
 	}
@@ -214,14 +214,14 @@ func pbRdMem32(dbg *Debug, addr, n uint) ([]uint32, error) {
 	pb[0] = rv.InsLW(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 4)
 	// read the memory
-	return dbg.pbRdMem_RV32(addr, n, pb)
+	return dbg.pbRdMemRV32(addr, n, pb)
 }
 
 //-----------------------------------------------------------------------------
 // read memory 64-bits
 
 // pbRdMem_RV64 performs 64-bit memory reads using RV64 instructions.
-func (dbg *Debug) pbRdMem_RV64(addr, n uint, pb []uint32) ([]uint64, error) {
+func (dbg *Debug) pbRdMemRV64(addr, n uint, pb []uint32) ([]uint64, error) {
 	// build the operations buffer
 	ops := pbOps(pb, (int(n)<<1)+10)
 	// setup the address in dataX
@@ -281,7 +281,7 @@ func pbRdMem64(dbg *Debug, addr, n uint) ([]uint64, error) {
 	pb[0] = rv.InsLD(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 8)
 	// read the memory
-	return dbg.pbRdMem_RV64(addr, n, pb)
+	return dbg.pbRdMemRV64(addr, n, pb)
 }
 
 // pbRdMem64Unsupported
@@ -292,8 +292,8 @@ func pbRdMem64Unsupported(dbg *Debug, addr, n uint) ([]uint64, error) {
 //-----------------------------------------------------------------------------
 // write memory 8/16/32-bits
 
-// pbWrMem_RV32 performs 8/16/32-bit memory writes using RV32 instructions.
-func (dbg *Debug) pbWrMem_RV32(addr uint, val, pb []uint32) error {
+// pbWrMemRV32 performs 8/16/32-bit memory writes using RV32 instructions.
+func (dbg *Debug) pbWrMemRV32(addr uint, val, pb []uint32) error {
 	// build the operations buffer
 	ops := pbOps(pb, len(val)+10)
 	// setup the address in dataX
@@ -346,7 +346,7 @@ func pbWrMem8(dbg *Debug, addr uint, val []uint8) error {
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSB(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 1)
-	return dbg.pbWrMem_RV32(addr, util.Convert8to32(val), pb)
+	return dbg.pbWrMemRV32(addr, util.Convert8to32(val), pb)
 }
 
 // pbWrMem16 writes n x 16-bit values to memory using program buffer operations.
@@ -355,7 +355,7 @@ func pbWrMem16(dbg *Debug, addr uint, val []uint16) error {
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSH(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 2)
-	return dbg.pbWrMem_RV32(addr, util.Convert16to32(val), pb)
+	return dbg.pbWrMemRV32(addr, util.Convert16to32(val), pb)
 }
 
 // pbWrMem32 writes n x 32-bit values to memory using program buffer operations.
@@ -364,14 +364,14 @@ func pbWrMem32(dbg *Debug, addr uint, val []uint32) error {
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSW(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 4)
-	return dbg.pbWrMem_RV32(addr, val, pb)
+	return dbg.pbWrMemRV32(addr, val, pb)
 }
 
 //-----------------------------------------------------------------------------
 // write memory 64-bits
 
-// pbWrMem_RV64 performs 64-bit memory writes using RV64 instructions.
-func (dbg *Debug) pbWrMem_RV64(addr uint, val []uint64, pb []uint32) error {
+// pbWrMemRV64 performs 64-bit memory writes using RV64 instructions.
+func (dbg *Debug) pbWrMemRV64(addr uint, val []uint64, pb []uint32) error {
 	// build the operations buffer
 	ops := pbOps(pb, (len(val)<<1)+10)
 	// setup the address in dataX
@@ -421,7 +421,7 @@ func pbWrMem64(dbg *Debug, addr uint, val []uint64) error {
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSD(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 8)
-	return dbg.pbWrMem_RV64(addr, val, pb)
+	return dbg.pbWrMemRV64(addr, val, pb)
 }
 
 // pbWrMem64Unsupported

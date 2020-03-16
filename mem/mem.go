@@ -19,41 +19,13 @@ import (
 
 // Driver is the memory driver api.
 type Driver interface {
-	GetAddressSize() uint                   // get address size in bits
-	RdMem8(addr, n uint) ([]uint8, error)   // read 8-bit memory buffer
-	RdMem16(addr, n uint) ([]uint16, error) // read 16-bit memory buffer
-	RdMem32(addr, n uint) ([]uint32, error) // read 32-bit memory buffer
-	RdMem64(addr, n uint) ([]uint64, error) // read 64-bit memory buffer
-	WrMem8(addr uint, val []uint8) error    // write 8-bit memory buffer
-	WrMem16(addr uint, val []uint16) error  // write 16-bit memory buffer
-	WrMem32(addr uint, val []uint32) error  // write 32-bit memory buffer
-	WrMem64(addr uint, val []uint64) error  // write 64-bit memory buffer
+	GetAddressSize() uint                      // get address size in bits
+	RdMem(width, addr, n uint) ([]uint, error) // read width-bit memory buffer
 }
 
 // target provides a method for getting the memory driver.
 type target interface {
 	GetMemoryDriver() Driver
-}
-
-//-----------------------------------------------------------------------------
-
-// rdBuf reads a n x width-bit values from memory.
-func rdBuf(tgt Driver, addr, n, width uint) ([]uint, error) {
-	switch width {
-	case 8:
-		x, err := tgt.RdMem8(addr, n)
-		return util.Convert8toUint(x), err
-	case 16:
-		x, err := tgt.RdMem16(addr, n)
-		return util.Convert16toUint(x), err
-	case 32:
-		x, err := tgt.RdMem32(addr, n)
-		return util.Convert32toUint(x), err
-	case 64:
-		x, err := tgt.RdMem64(addr, n)
-		return util.Convert64toUint(x), err
-	}
-	return nil, fmt.Errorf("%d-bit memory reads are not supported", width)
 }
 
 //-----------------------------------------------------------------------------
@@ -79,7 +51,7 @@ func displayMem(tgt Driver, addr, n, width uint) string {
 	for i := 0; i < int(n/bytesPerLine); i++ {
 
 		// read bytesPerLine bytes
-		buf, err := rdBuf(tgt, addr, bytesPerLine/(width>>3), width)
+		buf, err := tgt.RdMem(width, addr, bytesPerLine/(width>>3))
 		if err != nil {
 			return fmt.Sprintf("%s", err)
 		}
@@ -92,7 +64,7 @@ func displayMem(tgt Driver, addr, n, width uint) string {
 		dataStr := strings.Join(xStr, " ")
 
 		// create the ascii string
-		data, err := tgt.RdMem8(addr, bytesPerLine)
+		data, err := tgt.RdMem(8, addr, bytesPerLine)
 		if err != nil {
 			return fmt.Sprintf("%s", err)
 		}

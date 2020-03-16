@@ -96,4 +96,40 @@ func Convert64toUint(x []uint64) []uint {
 	return y
 }
 
+// ConvertUintto8 converts an uint slice to an 8-bit slice.
+func ConvertUintto8(x []uint) []uint8 {
+	y := make([]uint8, len(x))
+	for i := range x {
+		y[i] = uint8(x[i])
+	}
+	return y
+}
+
+// ConvertUintto16 converts an uint slice to a 16-bit slice.
+func ConvertUintto16(x []uint) []uint16 {
+	y := make([]uint16, len(x))
+	for i := range x {
+		y[i] = uint16(x[i])
+	}
+	return y
+}
+
+// ConvertUintto32 converts an uint slice to a 32-bit slice.
+func ConvertUintto32(x []uint) []uint32 {
+	y := make([]uint32, len(x))
+	for i := range x {
+		y[i] = uint32(x[i])
+	}
+	return y
+}
+
+// ConvertUintto64 converts an uint slice to a 64-bit slice.
+func ConvertUintto64(x []uint) []uint64 {
+	y := make([]uint64, len(x))
+	for i := range x {
+		y[i] = uint64(x[i])
+	}
+	return y
+}
+
 //-----------------------------------------------------------------------------

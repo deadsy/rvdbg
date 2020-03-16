@@ -9,6 +9,12 @@ Implements the mem.Driver interface methods.
 
 package rv13
 
+import (
+	"fmt"
+
+	"github.com/deadsy/rvdbg/util"
+)
+
 //-----------------------------------------------------------------------------
 
 // GetAddressSize returns the current hart's address size in bits.
@@ -51,6 +57,25 @@ func (dbg *Debug) RdMem64(addr, n uint) ([]uint64, error) {
 	return dbg.hart[dbg.hartid].rdMem64(dbg, addr, n)
 }
 
+// RdMem reads n x width-bit values from memory.
+func (dbg *Debug) RdMem(width, addr, n uint) ([]uint, error) {
+	switch width {
+	case 8:
+		x, err := dbg.RdMem8(addr, n)
+		return util.Convert8toUint(x), err
+	case 16:
+		x, err := dbg.RdMem16(addr, n)
+		return util.Convert16toUint(x), err
+	case 32:
+		x, err := dbg.RdMem32(addr, n)
+		return util.Convert32toUint(x), err
+	case 64:
+		x, err := dbg.RdMem64(addr, n)
+		return util.Convert64toUint(x), err
+	}
+	return nil, fmt.Errorf("%d-bit memory reads are not supported", width)
+}
+
 //-----------------------------------------------------------------------------
 // write memory
 
@@ -84,6 +109,21 @@ func (dbg *Debug) WrMem64(addr uint, val []uint64) error {
 		return nil
 	}
 	return dbg.hart[dbg.hartid].wrMem64(dbg, addr, val)
+}
+
+// WrMem writes n x width-bit values to memory.
+func (dbg *Debug) WrMem(width, addr uint, val []uint) error {
+	switch width {
+	case 8:
+		return dbg.WrMem8(addr, util.ConvertUintto8(val))
+	case 16:
+		return dbg.WrMem16(addr, util.ConvertUintto16(val))
+	case 32:
+		return dbg.WrMem32(addr, util.ConvertUintto32(val))
+	case 64:
+		return dbg.WrMem64(addr, util.ConvertUintto64(val))
+	}
+	return fmt.Errorf("%d-bit memory writes are not supported", width)
 }
 
 //-----------------------------------------------------------------------------

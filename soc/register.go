@@ -52,15 +52,20 @@ func (r *Register) address(base, idx uint) uint {
 	return base + r.Offset + (idx * (r.Size >> 3))
 }
 
-// Register returns strings for the decode of a register.
+// Display returns strings for the decode of a register.
 func (r *Register) Display(drv Driver, fields bool) [][]string {
 
-	addr := r.address(r.parent.Addr, 0)
-	val := uint(0) // TODO
-
 	// address string
+	addr := r.address(r.parent.Addr, 0)
 	fmtStr := fmt.Sprintf(": %s[%%d:0]", getAddressFormat(drv))
 	addrStr := fmt.Sprintf(fmtStr, addr, r.Size-1)
+
+	// read the value
+	x, err := drv.RdMem(r.Size, addr, 1)
+	if err != nil {
+		return [][]string{{r.Name, addrStr, "0", fmt.Sprintf("%s", err)}}
+	}
+	val := x[0]
 
 	// has the value changed?
 	changed := ""
@@ -81,7 +86,8 @@ func (r *Register) Display(drv Driver, fields bool) [][]string {
 
 	s := [][]string{}
 	s = append(s, []string{r.Name, addrStr, valStr, r.Descr})
-	// field decodes
+
+	// add field decodes
 	if fields && len(r.Fields) != 0 {
 		for i := range r.Fields {
 			s = append(s, r.Fields[i].Display(val))

@@ -95,15 +95,17 @@ type Debug interface {
 	WrFPR(reg, size uint, val uint64) error // write floating point register
 	WrCSR(reg, size uint, val uint64) error // write control and status register
 	// memory
-	GetAddressSize() uint                   // get address size in bits
-	RdMem8(addr, n uint) ([]uint8, error)   // read 8-bit memory buffer
-	RdMem16(addr, n uint) ([]uint16, error) // read 16-bit memory buffer
-	RdMem32(addr, n uint) ([]uint32, error) // read 32-bit memory buffer
-	RdMem64(addr, n uint) ([]uint64, error) // read 64-bit memory buffer
-	WrMem8(addr uint, val []uint8) error    // write 8-bit memory buffer
-	WrMem16(addr uint, val []uint16) error  // write 16-bit memory buffer
-	WrMem32(addr uint, val []uint32) error  // write 32-bit memory buffer
-	WrMem64(addr uint, val []uint64) error  // write 64-bit memory buffer
+	GetAddressSize() uint                      // get address size in bits
+	RdMem(width, addr, n uint) ([]uint, error) // read width-bit memory buffer
+	WrMem(width, addr uint, val []uint) error  // write width-bit memory buffer
+	//RdMem8(addr, n uint) ([]uint8, error)   // read 8-bit memory buffer
+	//RdMem16(addr, n uint) ([]uint16, error) // read 16-bit memory buffer
+	//RdMem32(addr, n uint) ([]uint32, error) // read 32-bit memory buffer
+	//RdMem64(addr, n uint) ([]uint64, error) // read 64-bit memory buffer
+	//WrMem8(addr uint, val []uint8) error    // write 8-bit memory buffer
+	//WrMem16(addr uint, val []uint16) error  // write 16-bit memory buffer
+	//WrMem32(addr uint, val []uint32) error  // write 32-bit memory buffer
+	//WrMem64(addr uint, val []uint64) error  // write 64-bit memory buffer
 	// test
 	Test1() string
 	Test2() string
