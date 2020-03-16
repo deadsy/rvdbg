@@ -19,20 +19,22 @@ import (
 
 //-----------------------------------------------------------------------------
 
+// Enum provides descriptive strings for the enumeration of a bit field.
+type Enum map[uint]string
+
 // fmtFunc is formatting function for a uint.
 type fmtFunc func(x uint) string
 
-// Enum maps a field value to a display string.
-type Enum map[uint]string
-
 // Field is a bit field within a register value.
 type Field struct {
-	Name  string  // name
-	Msb   uint    // most significant bit
-	Lsb   uint    // least significant bit
-	Descr string  // description
-	Fmt   fmtFunc // formatting function
-	Enums Enum    // enumeration values
+	Name       string  // name
+	Msb        uint    // most significant bit
+	Lsb        uint    // least significant bit
+	Descr      string  // description
+	Fmt        fmtFunc // formatting function
+	Enums      Enum    // enumeration values
+	cacheValid bool    // is the cached field value valid?
+	cacheVal   uint    // cached field value
 }
 
 // FieldSet is a set of fields.
@@ -62,6 +64,11 @@ func (f *Field) Display(val uint) []string {
 
 	// has the value changed?
 	changed := ""
+	if x != f.cacheVal && f.cacheValid {
+		f.cacheVal = x
+		f.cacheValid = true
+		changed = " *"
+	}
 
 	// name string
 	var nameStr string

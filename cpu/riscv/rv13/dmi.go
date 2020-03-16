@@ -164,17 +164,17 @@ func dmiNameLookup(addr uint) string {
 // DM control
 
 var dmcontrolFields = soc.FieldSet{
-	{"haltreq", 31, 31, "", soc.FmtDec, nil},
-	{"resumereq", 30, 30, "", soc.FmtDec, nil},
-	{"hartreset", 29, 29, "", soc.FmtDec, nil},
-	{"ackhavereset", 28, 28, "", soc.FmtDec, nil},
-	{"hasel", 26, 26, "", soc.FmtDec, nil},
-	{"hartsello", 25, 16, "", soc.FmtDec, nil},
-	{"hartselhi", 15, 6, "", soc.FmtDec, nil},
-	{"setresethaltreq", 3, 3, "", soc.FmtDec, nil},
-	{"clrresethaltreq", 2, 2, "", soc.FmtDec, nil},
-	{"ndmreset", 1, 1, "", soc.FmtDec, nil},
-	{"dmactive", 0, 0, "", soc.FmtDec, nil},
+	{Name: "haltreq", Msb: 31, Lsb: 31, Fmt: soc.FmtDec},
+	{Name: "resumereq", Msb: 30, Lsb: 30, Fmt: soc.FmtDec},
+	{Name: "hartreset", Msb: 29, Lsb: 29, Fmt: soc.FmtDec},
+	{Name: "ackhavereset", Msb: 28, Lsb: 28, Fmt: soc.FmtDec},
+	{Name: "hasel", Msb: 26, Lsb: 26, Fmt: soc.FmtDec},
+	{Name: "hartsello", Msb: 25, Lsb: 16, Fmt: soc.FmtDec},
+	{Name: "hartselhi", Msb: 15, Lsb: 6, Fmt: soc.FmtDec},
+	{Name: "setresethaltreq", Msb: 3, Lsb: 3, Fmt: soc.FmtDec},
+	{Name: "clrresethaltreq", Msb: 2, Lsb: 2, Fmt: soc.FmtDec},
+	{Name: "ndmreset", Msb: 1, Lsb: 1, Fmt: soc.FmtDec},
+	{Name: "dmactive", Msb: 0, Lsb: 0, Fmt: soc.FmtDec},
 }
 
 const haltreq = (1 << 31)
@@ -234,25 +234,25 @@ func (dbg *Debug) selectHart(id int) error {
 //-----------------------------------------------------------------------------
 // DM status
 
-var dmstatusFields = soc.FieldSet{
-	{"impebreak", 22, 22, "", soc.FmtDec, nil},
-	{"allhavereset", 19, 19, "", soc.FmtDec, nil},
-	{"anyhavereset", 18, 18, "", soc.FmtDec, nil},
-	{"allresumeack", 17, 17, "", soc.FmtDec, nil},
-	{"anyresumeack", 16, 16, "", soc.FmtDec, nil},
-	{"allnonexistent", 15, 15, "", soc.FmtDec, nil},
-	{"anynonexistent", 14, 14, "", soc.FmtDec, nil},
-	{"allunavail", 13, 13, "", soc.FmtDec, nil},
-	{"anyunavail", 12, 12, "", soc.FmtDec, nil},
-	{"allrunning", 11, 11, "", soc.FmtDec, nil},
-	{"anyrunning", 10, 10, "", soc.FmtDec, nil},
-	{"allhalted", 9, 9, "", soc.FmtDec, nil},
-	{"anyhalted", 8, 8, "", soc.FmtDec, nil},
-	{"authenticated", 7, 7, "", soc.FmtDec, nil},
-	{"authbusy", 6, 6, "", soc.FmtDec, nil},
-	{"hasresethaltreq", 5, 5, "", soc.FmtDec, nil},
-	{"confstrptrvalid", 4, 4, "", soc.FmtDec, nil},
-	{"version", 3, 0, "", soc.FmtDec, nil},
+var dmstatusFields = []soc.Field{
+	{Name: "impebreak", Msb: 22, Lsb: 22, Fmt: soc.FmtDec},
+	{Name: "allhavereset", Msb: 19, Lsb: 19, Fmt: soc.FmtDec},
+	{Name: "anyhavereset", Msb: 18, Lsb: 18, Fmt: soc.FmtDec},
+	{Name: "allresumeack", Msb: 17, Lsb: 17, Fmt: soc.FmtDec},
+	{Name: "anyresumeack", Msb: 16, Lsb: 16, Fmt: soc.FmtDec},
+	{Name: "allnonexistent", Msb: 15, Lsb: 15, Fmt: soc.FmtDec},
+	{Name: "anynonexistent", Msb: 14, Lsb: 14, Fmt: soc.FmtDec},
+	{Name: "allunavail", Msb: 13, Lsb: 13, Fmt: soc.FmtDec},
+	{Name: "anyunavail", Msb: 12, Lsb: 12, Fmt: soc.FmtDec},
+	{Name: "allrunning", Msb: 11, Lsb: 11, Fmt: soc.FmtDec},
+	{Name: "anyrunning", Msb: 10, Lsb: 10, Fmt: soc.FmtDec},
+	{Name: "allhalted", Msb: 9, Lsb: 9, Fmt: soc.FmtDec},
+	{Name: "anyhalted", Msb: 8, Lsb: 8, Fmt: soc.FmtDec},
+	{Name: "authenticated", Msb: 7, Lsb: 7, Fmt: soc.FmtDec},
+	{Name: "authbusy", Msb: 6, Lsb: 6, Fmt: soc.FmtDec},
+	{Name: "hasresethaltreq", Msb: 5, Lsb: 5, Fmt: soc.FmtDec},
+	{Name: "confstrptrvalid", Msb: 4, Lsb: 4, Fmt: soc.FmtDec},
+	{Name: "version", Msb: 3, Lsb: 0, Fmt: soc.FmtDec},
 }
 
 const anyhavereset = (1 << 18)
@@ -275,10 +275,10 @@ func (dbg *Debug) checkStatus(flag uint32) (bool, error) {
 //-----------------------------------------------------------------------------
 
 var hartinfoFields = soc.FieldSet{
-	{"nscratch", 23, 20, "", soc.FmtDec, nil},
-	{"dataaccess", 16, 16, "", soc.FmtDec, nil},
-	{"datasize", 15, 12, "", soc.FmtDec, nil},
-	{"dataaddr", 11, 0, "", soc.FmtHex, nil},
+	{Name: "nscratch", Msb: 23, Lsb: 20, Fmt: soc.FmtDec},
+	{Name: "dataaccess", Msb: 16, Lsb: 16, Fmt: soc.FmtDec},
+	{Name: "datasize", Msb: 15, Lsb: 12, Fmt: soc.FmtDec},
+	{Name: "dataaddr", Msb: 11, Lsb: 0, Fmt: soc.FmtHex},
 }
 
 //-----------------------------------------------------------------------------
@@ -365,10 +365,10 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 // abstract commands
 
 var abstractcsFields = soc.FieldSet{
-	{"progbufsize", 28, 24, "", soc.FmtDec, nil},
-	{"busy", 12, 12, "", soc.FmtDec, nil},
-	{"cmderr", 10, 8, "", soc.FmtDec, nil},
-	{"datacount", 3, 0, "", soc.FmtDec, nil},
+	{Name: "progbufsize", Msb: 28, Lsb: 24, Fmt: soc.FmtDec},
+	{Name: "busy", Msb: 12, Lsb: 12, Fmt: soc.FmtDec},
+	{Name: "cmderr", Msb: 10, Lsb: 8, Fmt: soc.FmtDec},
+	{Name: "datacount", Msb: 3, Lsb: 0, Fmt: soc.FmtDec},
 }
 
 // command error

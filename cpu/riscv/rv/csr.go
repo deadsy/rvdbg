@@ -80,8 +80,8 @@ func fmtExtensions(x uint) string {
 // DisplayMISA returns a string decoding a MISA value.
 func DisplayMISA(misa, mxlen uint) string {
 	fs := []soc.Field{
-		{"mxl", mxlen - 1, mxlen - 2, "", fmtMXL, nil},
-		{"extensions", 25, 0, "", fmtExtensions, nil},
+		{Name: "mxl", Msb: mxlen - 1, Lsb: mxlen - 2, Fmt: fmtMXL},
+		{Name: "extensions", Msb: 25, Lsb: 0, Fmt: fmtExtensions},
 	}
 	return soc.DisplayH(fs, misa)
 }

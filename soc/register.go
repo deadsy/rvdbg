@@ -17,12 +17,14 @@ import (
 
 // Register is peripheral register.
 type Register struct {
-	Name   string
-	Offset uint
-	Size   uint
-	Descr  string
-	Fields []Field
-	parent *Peripheral
+	Name       string
+	Offset     uint
+	Size       uint
+	Descr      string
+	Fields     []Field
+	parent     *Peripheral
+	cacheValid bool // is the cached field value valid?
+	cacheVal   uint // cached field value
 }
 
 // RegisterSet is a set of registers.
@@ -61,7 +63,12 @@ func (r *Register) Display(drv Driver, fields bool) [][]string {
 	addrStr := fmt.Sprintf(fmtStr, addr, r.Size-1)
 
 	// has the value changed?
-	changed := "  "
+	changed := ""
+	if val != r.cacheVal && r.cacheValid {
+		r.cacheVal = val
+		r.cacheValid = true
+		changed = " *"
+	}
 
 	// value string
 	var valStr string

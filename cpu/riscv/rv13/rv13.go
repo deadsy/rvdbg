@@ -253,13 +253,13 @@ func (dbg *Debug) wrIR(ir uint) error {
 //-----------------------------------------------------------------------------
 // dtmcs
 
-var dtmcsFields = soc.FieldSet{
-	{"dmihardreset", 17, 17, "", soc.FmtDec, nil},
-	{"dmireset", 16, 16, "", soc.FmtDec, nil},
-	{"idle", 14, 12, "", soc.FmtDec, nil},
-	{"dmistat", 11, 10, "", soc.FmtDec, nil},
-	{"abits", 9, 4, "", soc.FmtDec, nil},
-	{"version", 3, 0, "", soc.FmtDec, nil},
+var dtmcsFields = []soc.Field{
+	{Name: "dmihardreset", Msb: 17, Lsb: 17, Fmt: soc.FmtDec},
+	{Name: "dmireset", Msb: 16, Lsb: 16, Fmt: soc.FmtDec},
+	{Name: "idle", Msb: 14, Lsb: 12, Fmt: soc.FmtDec},
+	{Name: "dmistat", Msb: 11, Lsb: 10, Fmt: soc.FmtDec},
+	{Name: "abits", Msb: 9, Lsb: 4, Fmt: soc.FmtDec},
+	{Name: "version", Msb: 3, Lsb: 0, Fmt: soc.FmtDec},
 }
 
 const dmireset = (1 << 16)
