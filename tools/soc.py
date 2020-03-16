@@ -246,23 +246,18 @@ class field(object):
     s = []
     #s.append("soc.Field{")
     s.append("{")
-    s.append("%s,"% attribute_string(self.name))
-    s.append("%d,"% self.msb)
-    s.append("%d,"% self.lsb)
-    s.append("%s," % attribute_string(self.description))
-    s.append("nil,")
+    s.append("Name: %s,"% attribute_string(self.name))
+    s.append("Msb: %d,"% self.msb)
+    s.append("Lsb: %d,"% self.lsb)
+    if self.description is not None:
+      s.append("Descr: %s," % attribute_string(self.description))
     if self.enumvals is not None:
       # dump the enumerate values in name order
       e_list = self.enumvals
       e_list.sort(key=lambda x: x.usage)
       for e in e_list:
-        s.append("%s" % e)
-    else:
-      s.append("nil")
+        s.append("Enums: %s," % e)
     s.append("}")
-
-    #s.append('f.enumvals = %s' % ('enumvals', 'None')[self.enumvals is None])
-    #s.append('fields[%s] = f\n' % attribute_string(self.name))
 
     return "".join(s)
 
