@@ -35,6 +35,8 @@ def name_cleanup(s):
 
 def sizeof_address_blocks(blocks, usage):
   """return the consolidated size (offset == 0) for a list of address blocks"""
+  if blocks is None:
+    return 0
   end = 0
   for b in blocks:
     if b.usage != usage:
