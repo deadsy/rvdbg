@@ -5,15 +5,11 @@ SoC Object
 
 Takes an SVD file, parses it, and re-encodes it as a python object.
 It can then be printed a golang structure definition.
-Typically the resulting data structures will need some vendor/device specific
-tweaking to make up for things in the svd file that are missing or wrong.
-These tweaks are done by the vendor specific SoC code.
 
 """
 # -----------------------------------------------------------------------------
 
 import svd
-import util
 
 # -----------------------------------------------------------------------------
 # utility functions
@@ -124,7 +120,7 @@ def attribute_hex(x):
 
 # -----------------------------------------------------------------------------
 
-class interrupt(object):
+class interrupt:
   """interrupt information"""
 
   def __init__(self):
@@ -137,15 +133,16 @@ class interrupt(object):
     s = []
     #s.append("soc.Interrupt{")
     s.append("{")
-    s.append("%s," % attribute_string(self.name))
-    s.append("%d," % self.irq)
-    s.append(attribute_string(self.description))
+    s.append("Name: %s," % attribute_string(self.name))
+    s.append("IRQ: %d," % self.irq)
+    if self.description is not None:
+      s.append("Descr: %s," % attribute_string(self.description))
     s.append("}")
     return "".join(s)
 
 # -----------------------------------------------------------------------------
 
-class enumval(object):
+class enumval:
   """associate a name string with a bitfield value"""
 
   def __init__(self):
@@ -163,7 +160,7 @@ class enumval(object):
 
 # -----------------------------------------------------------------------------
 
-class enumvals(object):
+class enumvals:
   """a set of enumvals for a given register bitfield"""
 
   def __init__(self):
@@ -177,7 +174,7 @@ class enumvals(object):
     s.append("soc.Enum{")
     if self.enumval is not None:
       # dump the enumerate values in name order
-      e_list = sorted(self.enumval.values(),key=lambda x: x.name)
+      e_list = sorted(self.enumval.values(), key=lambda x: x.name)
       for e in e_list:
         s.append("%s," % e)
     s.append("}")
@@ -185,7 +182,7 @@ class enumvals(object):
 
 # -----------------------------------------------------------------------------
 
-class field(object):
+class field:
   """information for a set of bits within a register"""
 
   def __init__(self):
@@ -215,35 +212,6 @@ class field(object):
           val_name = e.enumval[val].name
     return val_name
 
-  def display(self, val):
-    """return display columns (name, val, '', descr) for this field"""
-    mask = ((1 << (self.msb - self.lsb + 1)) - 1) << self.lsb
-    val = (val & mask) >> self.lsb
-    # work out if the value has changed since we last displayed it
-    changed = '  '
-    if self.cached_val is None:
-      self.cached_val = val
-    elif self.cached_val != val:
-      self.cached_val = val
-      changed = ' *'
-    if self.msb == self.lsb:
-      name = '  %s[%d]' % (self.name, self.lsb)
-    else:
-      name = '  %s[%d:%d]' % (self.name, self.msb, self.lsb)
-    val_name = ''
-    if callable(self.fmt):
-      val_name = self.fmt(val)
-    else:
-      if self.enumvals is not None and len(self.enumvals) >= 1:
-        # find the enumvals with usage 'read', or just find one
-        for e in self.enumvals:
-          if e.usage == 'read':
-            break
-        if val in e.enumval:
-          val_name = e.enumval[val].name
-    val_str = (': 0x%x %s%s' % (val, val_name, changed), ': %d %s%s' % (val, val_name, changed))[val < 10]
-    return [name, val_str, '', self.description]
-
   def __str__(self):
     s = []
     #s.append("soc.Field{")
@@ -265,7 +233,7 @@ class field(object):
 
 # -----------------------------------------------------------------------------
 
-class register(object):
+class register:
   """a peripheral register"""
 
   def __init__(self):
@@ -315,31 +283,6 @@ class register(object):
     # build a list of fields in most significant bit order
     return sorted(self.fields.values(), key=lambda x: x.msb, reverse=True)
 
-  def display(self, display_fields):
-    """return display columns (name, adr, val, descr) for this register"""
-    adr = self.adr(0, self.size)
-    val = self.rd()
-    # work out if the value has changed since we last displayed it
-    changed = '  '
-    if self.cached_val is None:
-      self.cached_val = val
-    elif self.cached_val != val:
-      self.cached_val = val
-      changed = ' *'
-    adr_str = ': %08x[%d:0]' % (adr, self.size - 1)
-    if val == 0:
-      val_str = '= 0%s' % changed
-    else:
-      fmt = '= 0x%%0%dx%%s' % (self.size / 4)
-      val_str = fmt % (val, changed)
-    clist = []
-    clist.append([self.name, adr_str, val_str, self.description])
-    # output the fields
-    if display_fields and self.fields:
-      for f in self.field_list():
-        clist.append(f.display(val))
-    return clist
-
   def __str__(self):
     s = []
     #s.append("soc.Register{")
@@ -348,19 +291,19 @@ class register(object):
     s.append("Offset: 0x%x," % self.offset)
     s.append("Size: %d," % self.size)
     s.append("Descr: %s," % attribute_string(self.description))
-    s.append("Fields: []soc.Field{")
     if self.fields is not None:
+      s.append("Fields: []soc.Field{")
       # dump the fields in most significant bit order
-      f_list = sorted(self.fields.values(),key=lambda x: x.msb, reverse=True)
+      f_list = sorted(self.fields.values(), key=lambda x: x.msb, reverse=True)
       for f in f_list:
         s.append("%s," % f)
-    s.append("},")
+      s.append("},")
     s.append("}")
     return "\n".join(s)
 
 # -----------------------------------------------------------------------------
 
-class peripheral(object):
+class peripheral:
   """a set of registers for an SoC peripheral"""
 
   def __init__(self):
@@ -413,22 +356,6 @@ class peripheral(object):
     # tie break with the name to give a well-defined sort order
     return sorted(self.registers.values(), key=lambda x: (x.offset << 16) + sum(bytearray(x.name.encode('utf8'))))
 
-  def display(self, register_name=None, fields=False):
-    """return a display string for this peripheral"""
-    if self.registers:
-      clist = []
-      if register_name is not None:
-        # decode a single register
-        r = self.registers[register_name]
-        clist.extend(r.display(fields))
-      else:
-        # decode all registers
-        for r in self.register_list():
-          clist.extend(r.display(fields))
-      return util.display_cols(clist, [0, 0, 0, 0])
-    else:
-      return 'no registers for %s' % self.name
-
   def __str__(self):
     s = []
     #s.append("soc.Peripheral{")
@@ -448,7 +375,7 @@ class peripheral(object):
 
 # -----------------------------------------------------------------------------
 
-class cpu_info(object):
+class cpu_info:
   """CPU information for the SoC"""
 
   def __init__(self):
@@ -475,7 +402,7 @@ class cpu_info(object):
 
 # -----------------------------------------------------------------------------
 
-class device(object):
+class device:
   """Information for the SoC device"""
 
   def __init__(self):
@@ -524,38 +451,6 @@ class device(object):
     """return an ordered interrupt list"""
     # sort by irq order
     return sorted(self.interrupts.values(), key=lambda x: x.irq)
-
-  def cmd_map(self, ui, args):
-    """display memory map"""
-    clist = []
-    for p in self.peripheral_list():
-      start = p.address
-      size = p.size
-      if size is None:
-        region = ': %08x' % start
-      else:
-        region = ': %08x %08x %s' % (start, start + size - 1, util.memsize(size))
-      clist.append([p.name, region, p.description])
-    ui.put('%s\n' % util.display_cols(clist, [0, 0, 0]))
-
-  def cmd_regs(self, ui, args):
-    """display peripheral registers"""
-    if util.wrong_argc(ui, args, (1, 2)):
-      return
-    if not args[0] in self.peripherals:
-      ui.put("no peripheral named '%s' (run 'map' command for the names)\n" % args[0])
-      return
-    p = self.peripherals[args[0]]
-    if len(args) == 1:
-      ui.put('%s\n' % p.display(fields=False))
-      return
-    if args[1] == '*':
-      ui.put('%s\n' % p.display(fields=True))
-      return
-    if not args[1] in p.registers:
-      ui.put("no register named '%s' (run 'regs %s' command for the names)\n" % (args[1], args[0]))
-      return
-    ui.put('%s\n' % p.display(args[1], fields=True))
 
   def __str__(self):
     s = []

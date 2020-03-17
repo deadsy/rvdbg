@@ -17,14 +17,22 @@ import soc
 
 # -----------------------------------------------------------------------------
 
+infile = ""
+outfile = ""
+
+# -----------------------------------------------------------------------------
+
 def pr_err(*args):
-  sys.stderr.write(' '.join(map(str,args)) + '\n')
+  """print error"""
+  sys.stderr.write(' '.join(map(str, args)) + '\n')
   sys.stderr.flush()
 
 def pr_usage(argv):
+  """print usage"""
   pr_err('Usage: %s <input_file> <output_file>' % argv[0])
 
-def error(msg, usage = False):
+def error(msg, usage=False):
+  """error messsage and exit"""
   pr_err(msg)
   if usage:
     pr_usage(sys.argv)
@@ -47,6 +55,7 @@ def Process_Options(argv):
   outfile = sys.argv[2]
 
 def main():
+  """main routine"""
   Process_Options(sys.argv)
   d = soc.build_device(infile)
   f = open(outfile, 'w')

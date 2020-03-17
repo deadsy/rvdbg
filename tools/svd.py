@@ -23,7 +23,7 @@ def set_derived_from(x, thing):
     else:
       e.derived_from = None
 
-class svd_object(object):
+class svd_object:
 
   def __init__(self):
     pass
@@ -134,7 +134,7 @@ def integer_node(node, tag, default=None):
 
 # -----------------------------------------------------------------------------
 
-class parser(object):
+class parser:
 
   def __init__(self, path):
     self.tree = ET.parse(path)
