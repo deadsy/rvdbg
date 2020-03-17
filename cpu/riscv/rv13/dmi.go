@@ -490,7 +490,7 @@ func (dbg *Debug) checkError(cs cmdStatus) error {
 	return fmt.Errorf("error: %s(%d)", ce, ce)
 }
 
-const cmdTimeout = 500 * time.Millisecond
+const cmdTimeout = 10 * time.Millisecond
 
 // cmdWait waits for command completion.
 func (dbg *Debug) cmdWait(cs cmdStatus, to time.Duration) error {
@@ -512,7 +512,7 @@ func (dbg *Debug) cmdWait(cs cmdStatus, to time.Duration) error {
 			return nil
 		}
 		// wait a while
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 		// read the command status
 		x, err := dbg.rdDmi(abstractcs)
 		if err != nil {
@@ -525,7 +525,6 @@ func (dbg *Debug) cmdWait(cs cmdStatus, to time.Duration) error {
 	err := dbg.ndmResetPulse()
 	if err != nil {
 		return err
-
 	}
 	// reset the debug module
 	err = dbg.dmActivePulse()

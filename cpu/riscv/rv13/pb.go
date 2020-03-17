@@ -121,7 +121,9 @@ func pbWrCSR(dbg *Debug, reg, size uint, val uint64) error {
 //-----------------------------------------------------------------------------
 // read memory 8/16/32-bits
 
-// pbRdMemRV32 performs 8/16/32-bit memory reads using RV32 instructions.
+// pbRdMemRV32 performs n X 8/16/32-bit memory reads using RV32 instructions.
+// This sequence checks for command errors at the end of the sequence.
+// Slower devices may return busy errors.
 func (dbg *Debug) pbRdMemRV32(addr, n uint, pb []uint32) ([]uint32, error) {
 	// build the operations buffer
 	ops := pbOps(pb, int(n)+10)
@@ -179,14 +181,85 @@ func (dbg *Debug) pbRdMemRV32(addr, n uint, pb []uint32) ([]uint32, error) {
 	return data[:len(data)-1], nil
 }
 
+// pbRdMemSingleRV32 performs a single 8/16/32-bit memory reads using RV32 instructions.
+// This sequence checks for a busy condition on the initial read and waits for completion.
+func (dbg *Debug) pbRdMemSingleRV32(addr uint, pb []uint32) ([]uint32, error) {
+	// build the operations buffer
+	ops := pbOps(pb, 5)
+	// setup the address in dataX
+	mxlen := dbg.GetCurrentHart().MXLEN
+	switch mxlen {
+	case 32:
+		// setup the 32-bit address in data0
+		ops = append(ops, dmiWr(data0, uint32(addr)))
+		// transfer the address to s0 and postexec to read the first value
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size32, cmdWrite|cmdPostExec)))
+	case 64:
+		// setup the 64-bit address in data0/1
+		ops = append(ops, dmiWr(data0, uint32(addr)))
+		ops = append(ops, dmiWr(data1, uint32(addr>>32)))
+		// transfer the address to s0 and postexec to read the value.
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, cmdWrite|cmdPostExec)))
+	default:
+		return nil, fmt.Errorf("memory reads from a %d-bit address are not supported", mxlen)
+	}
+	// read the command status
+	ops = append(ops, dmiRd(abstractcs))
+	// done
+	ops = append(ops, dmiEnd())
+	// run the operations
+	data, err := dbg.dmiOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	// wait for command completion
+	cs := cmdStatus(data[0])
+	err = dbg.cmdWait(cs, cmdTimeout)
+	if err != nil {
+		return nil, err
+	}
+	// the value read from memory is in s1
+	ops = []dmiOp{
+		// transfer s1 to data0
+		dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, cmdRead)),
+		// read the data0 value
+		dmiRd(data0),
+		// read the command status
+		dmiRd(abstractcs),
+		// done
+		dmiEnd(),
+	}
+	// run the operations
+	data, err = dbg.dmiOps(ops)
+	if err != nil {
+		return nil, err
+	}
+	// check the command status
+	cs = cmdStatus(data[1])
+	err = dbg.checkError(cs)
+	if err != nil {
+		return nil, err
+	}
+	// return the data
+	return data[0:1], nil
+}
+
+//-----------------------------------------------------------------------------
+
 // pbRdMem8 reads n x 8-bit values from memory using program buffer operations.
 func pbRdMem8(dbg *Debug, addr, n uint) ([]uint8, error) {
-	// 8-bit reads
-	pb := dbg.newProgramBuffer(3)
-	pb[0] = rv.InsLB(rv.RegS1, 0, rv.RegS0)
-	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 1)
-	// read the memory
-	data, err := dbg.pbRdMemRV32(addr, n, pb)
+	var err error
+	var data []uint32
+	if n == 1 {
+		pb := dbg.newProgramBuffer(2)
+		pb[0] = rv.InsLB(rv.RegS1, 0, rv.RegS0)
+		data, err = dbg.pbRdMemSingleRV32(addr, pb)
+	} else {
+		pb := dbg.newProgramBuffer(3)
+		pb[0] = rv.InsLB(rv.RegS1, 0, rv.RegS0)
+		pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 1)
+		data, err = dbg.pbRdMemRV32(addr, n, pb)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -195,12 +268,18 @@ func pbRdMem8(dbg *Debug, addr, n uint) ([]uint8, error) {
 
 // pbRdMem16 reads n x 16-bit values from memory using program buffer operations.
 func pbRdMem16(dbg *Debug, addr, n uint) ([]uint16, error) {
-	// 16-bit reads
-	pb := dbg.newProgramBuffer(3)
-	pb[0] = rv.InsLH(rv.RegS1, 0, rv.RegS0)
-	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 2)
-	// read the memory
-	data, err := dbg.pbRdMemRV32(addr, n, pb)
+	var err error
+	var data []uint32
+	if n == 1 {
+		pb := dbg.newProgramBuffer(2)
+		pb[0] = rv.InsLH(rv.RegS1, 0, rv.RegS0)
+		data, err = dbg.pbRdMemSingleRV32(addr, pb)
+	} else {
+		pb := dbg.newProgramBuffer(3)
+		pb[0] = rv.InsLH(rv.RegS1, 0, rv.RegS0)
+		pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 2)
+		data, err = dbg.pbRdMemRV32(addr, n, pb)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -209,18 +288,21 @@ func pbRdMem16(dbg *Debug, addr, n uint) ([]uint16, error) {
 
 // pbRdMem32 reads n x 32-bit values from memory using program buffer operations.
 func pbRdMem32(dbg *Debug, addr, n uint) ([]uint32, error) {
-	// 32-bit reads
+	if n == 1 {
+		pb := dbg.newProgramBuffer(2)
+		pb[0] = rv.InsLW(rv.RegS1, 0, rv.RegS0)
+		return dbg.pbRdMemSingleRV32(addr, pb)
+	}
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsLW(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 4)
-	// read the memory
 	return dbg.pbRdMemRV32(addr, n, pb)
 }
 
 //-----------------------------------------------------------------------------
 // read memory 64-bits
 
-// pbRdMem_RV64 performs 64-bit memory reads using RV64 instructions.
+// pbRdMem_RV64 performs n X 64-bit memory reads using RV64 instructions.
 func (dbg *Debug) pbRdMemRV64(addr, n uint, pb []uint32) ([]uint64, error) {
 	// build the operations buffer
 	ops := pbOps(pb, (int(n)<<1)+10)
