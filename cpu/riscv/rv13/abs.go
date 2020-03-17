@@ -19,7 +19,7 @@ import (
 func (dbg *Debug) acRd32(reg uint) (uint32, error) {
 	ops := []dmiOp{
 		// read the register
-		dmiWr(command, cmdRegister(reg, size32, false, false, true, false)),
+		dmiWr(command, cmdRegister(reg, size32, cmdRead)),
 		// readback the command status
 		dmiRd(abstractcs),
 		// done
@@ -40,7 +40,7 @@ func (dbg *Debug) acRd32(reg uint) (uint32, error) {
 func (dbg *Debug) acRd64(reg uint) (uint64, error) {
 	ops := []dmiOp{
 		// read the register
-		dmiWr(command, cmdRegister(reg, size64, false, false, true, false)),
+		dmiWr(command, cmdRegister(reg, size64, cmdRead)),
 		// readback the command status
 		dmiRd(abstractcs),
 		// done
@@ -61,7 +61,7 @@ func (dbg *Debug) acRd64(reg uint) (uint64, error) {
 func (dbg *Debug) acRd128(reg uint) (uint64, uint64, error) {
 	ops := []dmiOp{
 		// read the register
-		dmiWr(command, cmdRegister(reg, size128, false, false, true, false)),
+		dmiWr(command, cmdRegister(reg, size128, cmdRead)),
 		// readback the command status
 		dmiRd(abstractcs),
 		// done
@@ -87,7 +87,7 @@ func (dbg *Debug) acWr32(reg uint, val uint32) error {
 		// write val
 		dmiWr(data0, val),
 		// write the register
-		dmiWr(command, cmdRegister(reg, size32, false, false, true, true)),
+		dmiWr(command, cmdRegister(reg, size32, cmdWrite)),
 		// readback the command status
 		dmiRd(abstractcs),
 		// done
@@ -107,7 +107,7 @@ func (dbg *Debug) acWr64(reg uint, val uint64) error {
 		dmiWr(data0, uint32(val)),
 		dmiWr(data0+1, uint32(val>>32)),
 		// write the register
-		dmiWr(command, cmdRegister(reg, size64, false, false, true, true)),
+		dmiWr(command, cmdRegister(reg, size64, cmdWrite)),
 		// readback the command status
 		dmiRd(abstractcs),
 		// done

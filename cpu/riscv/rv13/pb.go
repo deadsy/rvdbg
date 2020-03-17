@@ -44,9 +44,9 @@ func (dbg *Debug) pbRead(size uint, pb []uint32) (uint64, error) {
 	// build the operations buffer
 	ops := pbOps(pb, 4)
 	// postexec
-	ops = append(ops, dmiWr(command, cmdRegister(0, 0, false, true, false, false)))
+	ops = append(ops, dmiWr(command, cmdRegister(0, 0, cmdPostExec)))
 	// transfer GPR s0 to data0
-	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), sizeMap[size], false, false, true, false)))
+	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), sizeMap[size], cmdRead)))
 	// read the command status
 	ops = append(ops, dmiRd(abstractcs))
 	// done
@@ -97,7 +97,7 @@ func (dbg *Debug) pbWrite(size uint, val uint64, pb []uint32) error {
 		return fmt.Errorf("%-bit write size not supported", size)
 	}
 	// transfer dataX to GPR s0 and then postexec
-	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), sizeMap[size], false, true, true, true)))
+	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), sizeMap[size], cmdWrite|cmdPostExec)))
 	// read the command status
 	ops = append(ops, dmiRd(abstractcs))
 	// done
@@ -132,23 +132,23 @@ func (dbg *Debug) pbRdMemRV32(addr, n uint, pb []uint32) ([]uint32, error) {
 		// setup the 32-bit address in data0
 		ops = append(ops, dmiWr(data0, uint32(addr)))
 		// transfer the address to s0 and postexec to read the first value
-		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size32, false, true, true, true)))
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size32, cmdWrite|cmdPostExec)))
 	case 64:
 		// setup the 64-bit address in data0/1
 		ops = append(ops, dmiWr(data0, uint32(addr)))
 		ops = append(ops, dmiWr(data1, uint32(addr>>32)))
 		// transfer the address to s0 and postexec to read the first value
-		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, false, true, true, true)))
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, cmdWrite|cmdPostExec)))
 	default:
 		return nil, fmt.Errorf("memory reads from a %d-bit address are not supported", mxlen)
 	}
 	// the value read from memory is in s1
 	if n == 1 {
 		// transfer s1 to data0
-		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, false, false, true, false)))
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, cmdRead)))
 	} else {
 		// transfer s1 to data0 and then postexec to get the next value in s1
-		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, false, true, true, false)))
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, cmdRead|cmdPostExec)))
 		// turn on autoexec for data0
 		ops = append(ops, dmiWr(abstractauto, 1<<0))
 		// do n-1 data reads
@@ -232,17 +232,17 @@ func (dbg *Debug) pbRdMemRV64(addr, n uint, pb []uint32) ([]uint64, error) {
 		ops = append(ops, dmiWr(data0, uint32(addr)))
 		ops = append(ops, dmiWr(data1, uint32(addr>>32)))
 		// transfer the address to s0 and postexec to read the first value
-		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, false, true, true, true)))
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, cmdWrite|cmdPostExec)))
 	default:
 		return nil, fmt.Errorf("memory reads from a %d-bit address are not supported", mxlen)
 	}
 	// the value read from memory is in s1
 	if n == 1 {
 		// transfer s1 to data0/1
-		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size64, false, false, true, false)))
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size64, cmdRead)))
 	} else {
 		// transfer s1 to data0/1 and then postexec to get the next value in s1
-		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size64, false, true, true, false)))
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size64, cmdRead|cmdPostExec)))
 		// turn on autoexec for data1
 		ops = append(ops, dmiWr(abstractauto, 1<<1))
 		// do n-1 data reads
@@ -303,20 +303,20 @@ func (dbg *Debug) pbWrMemRV32(addr uint, val, pb []uint32) error {
 		// setup the 32-bit address in data0
 		ops = append(ops, dmiWr(data0, uint32(addr)))
 		// transfer data0 to s0
-		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size32, false, false, true, true)))
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size32, cmdWrite)))
 	case 64:
 		// setup the 64-bit address in data0/1
 		ops = append(ops, dmiWr(data0, uint32(addr)))
 		ops = append(ops, dmiWr(data1, uint32(addr>>32)))
 		// transfer data0/1 to s0
-		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, false, false, true, true)))
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, cmdWrite)))
 	default:
 		return fmt.Errorf("memory writes to a %d-bit address are not supported", mxlen)
 	}
 	// setup val[0] in data0
 	ops = append(ops, dmiWr(data0, val[0]))
 	// transfer data0 to s1 and then postexec to write the value to memory.
-	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, false, true, true, true)))
+	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size32, cmdWrite|cmdPostExec)))
 	if len(val) > 1 {
 		// turn on autoexec for data0
 		ops = append(ops, dmiWr(abstractauto, 1<<0))
@@ -382,7 +382,7 @@ func (dbg *Debug) pbWrMemRV64(addr uint, val []uint64, pb []uint32) error {
 		ops = append(ops, dmiWr(data0, uint32(addr)))
 		ops = append(ops, dmiWr(data1, uint32(addr>>32)))
 		// transfer data0/1 to s0
-		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, false, false, true, true)))
+		ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS0), size64, cmdWrite)))
 	default:
 		return fmt.Errorf("memory writes to a %d-bit address are not supported", mxlen)
 	}
@@ -390,7 +390,7 @@ func (dbg *Debug) pbWrMemRV64(addr uint, val []uint64, pb []uint32) error {
 	ops = append(ops, dmiWr(data0, uint32(val[0])))
 	ops = append(ops, dmiWr(data1, uint32(val[0]>>32)))
 	// transfer data0/1 to s1 and then postexec to write the value to memory.
-	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size64, false, true, true, true)))
+	ops = append(ops, dmiWr(command, cmdRegister(regGPR(rv.RegS1), size64, cmdWrite|cmdPostExec)))
 	if len(val) > 1 {
 		// turn on autoexec for data1
 		ops = append(ops, dmiWr(abstractauto, 1<<1))

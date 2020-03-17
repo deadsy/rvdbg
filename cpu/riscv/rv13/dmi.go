@@ -443,14 +443,17 @@ var sizeMap = map[uint]uint{
 	128: size128,
 }
 
-func cmdRegister(reg, size uint, postinc, postexec, transfer, write bool) uint32 {
-	return uint32((0 << 24) |
-		(size << 20) |
-		(util.BoolToUint(postinc) << 19) |
-		(util.BoolToUint(postexec) << 18) |
-		(util.BoolToUint(transfer) << 17) |
-		(util.BoolToUint(write) << 16) |
-		(reg << 0))
+type cmdFlag uint
+
+const (
+	cmdPostInc  = cmdFlag(1 << 19)               // post increment register number
+	cmdPostExec = cmdFlag(1 << 18)               // post execute program buffer
+	cmdRead     = cmdFlag(1 << 17)               // dataX = register
+	cmdWrite    = cmdFlag((1 << 17) | (1 << 16)) // register = dataX
+)
+
+func cmdRegister(reg, size uint, flags cmdFlag) uint32 {
+	return uint32((0 << 24) | (size << 20) | uint(flags) | (reg << 0))
 }
 
 func cmdQuick() uint32 {
