@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 /*
 
-SparkFun RED-V RedBoard - SiFive RISC-V FE310 SoC
+SparkFun RED-V RedBoard - SiFive RISC-V FE310-G002 SoC
 
 See: https://www.sparkfun.com/products/15594
 
@@ -30,7 +30,7 @@ import (
 // Info is target information.
 var Info = target.Info{
 	Name:     "redv",
-	Descr:    "SparkFun RED-V RedBoard (SiFive FE310 RISC-V RV32)",
+	Descr:    "SparkFun RED-V RedBoard (SiFive FE310-G002 RISC-V RV32)",
 	DbgType:  itf.TypeJlink,
 	DbgMode:  itf.ModeJtag,
 	DbgSpeed: 4000,

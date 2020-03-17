@@ -37,6 +37,19 @@ func Convert32to8(x []uint32) []uint8 {
 	return y
 }
 
+// Convert32to8Little converts a 32-bit slice to a little endian 8-bit slice.
+func Convert32to8Little(x []uint32) []uint8 {
+	y := make([]uint8, len(x)*4)
+	for i := range x {
+		j := i * 4
+		y[j+0] = uint8(x[i])
+		y[j+1] = uint8(x[i] >> 8)
+		y[j+2] = uint8(x[i] >> 16)
+		y[j+3] = uint8(x[i] >> 24)
+	}
+	return y
+}
+
 // Convert8to32 converts an 8-bit slice to a 32-bit slice.
 func Convert8to32(x []uint8) []uint32 {
 	y := make([]uint32, len(x))

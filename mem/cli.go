@@ -10,8 +10,10 @@ package mem
 
 import (
 	"fmt"
+	"math"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/util"
 )
 
 //-----------------------------------------------------------------------------
@@ -175,9 +177,86 @@ var cmdToFile = cli.Leaf{
 //-----------------------------------------------------------------------------
 // memory picture
 
+// analyze the buffer and return a character to represent it
+func analyze(data []uint8, ofs, n int) rune {
+	// are we off the end of the buffer?
+	if ofs >= len(data) {
+		return ' '
+	}
+	// trim the length we will check
+	if ofs+n > len(data) {
+		n = len(data) - ofs
+	}
+	var c rune
+	b0 := data[ofs]
+	if b0 == 0 {
+		c = '-'
+	} else if b0 == 0xff {
+		c = '.'
+	} else {
+		return '$'
+	}
+	for i := 0; i < n; i++ {
+		if data[ofs+i] != b0 {
+			return '$'
+		}
+	}
+	return c
+}
+
 var cmdPic = cli.Leaf{
 	Descr: "display a pictorial summary of memory",
 	F: func(c *cli.CLI, args []string) {
+		tgt := c.User.(target).GetMemoryDriver()
+		// get the arguments
+		maxAddr := uint((1 << tgt.GetAddressSize()) - 1)
+		addr, n, err := regionArg(0, maxAddr, args)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
+		// round down address to 32-bit byte boundary
+		addr &= ^uint(3)
+		// round up n to an integral multiple of 4 bytes
+		n = (n + 3) & ^uint(3)
+		// work out how many rows, columns and bytes per symbol we should display
+		colsMax := 70
+		cols := colsMax + 1
+		bytesPerSymbol := 1
+		// we try to display a matrix that is roughly square
+		for cols > colsMax {
+			bytesPerSymbol *= 2
+			cols = int(math.Sqrt(float64(n) / float64(bytesPerSymbol)))
+		}
+		rows := int(math.Ceil(float64(n) / (float64(cols) * float64(bytesPerSymbol))))
+		// bytes per row
+		bytesPerRow := cols * bytesPerSymbol
+		// read the memory
+		if n > 16*util.KiB {
+			c.User.Put("reading memory ...\n")
+		}
+		data32, err := tgt.RdMem(32, addr, n>>2)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
+		data8 := util.Convert32to8Little(util.ConvertUintto32(data32))
+		// display the summary
+		c.User.Put("'.' all ones, '-' all zeroes, '$' various\n")
+		c.User.Put(fmt.Sprintf("%d (0x%x) bytes per symbol\n", bytesPerSymbol, bytesPerSymbol))
+		c.User.Put(fmt.Sprintf("%d (0x%x) bytes per row\n", bytesPerRow, bytesPerRow))
+		c.User.Put(fmt.Sprintf("%d cols x %d rows\n", cols, rows))
+		// display the matrix
+		var ofs int
+		for y := 0; y < rows; y++ {
+			s := []rune{}
+			addrStr := fmt.Sprintf("0x%08x: ", addr+uint(ofs))
+			for x := 0; x < cols; x++ {
+				s = append(s, analyze(data8, ofs, bytesPerSymbol))
+				ofs += bytesPerSymbol
+			}
+			c.User.Put(fmt.Sprintf("%s%s\n", addrStr, string(s)))
+		}
 	},
 }
 
