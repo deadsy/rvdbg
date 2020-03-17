@@ -247,10 +247,11 @@ var cmdPic = cli.Leaf{
 		c.User.Put(fmt.Sprintf("%d (0x%x) bytes per row\n", bytesPerRow, bytesPerRow))
 		c.User.Put(fmt.Sprintf("%d cols x %d rows\n", cols, rows))
 		// display the matrix
+		addrFmt := fmt.Sprintf("0x%s: ", util.UintFormat(tgt.GetAddressSize()))
 		var ofs int
 		for y := 0; y < rows; y++ {
 			s := []rune{}
-			addrStr := fmt.Sprintf("0x%08x: ", addr+uint(ofs))
+			addrStr := fmt.Sprintf(addrFmt, addr+uint(ofs))
 			for x := 0; x < cols; x++ {
 				s = append(s, analyze(data8, ofs, bytesPerSymbol))
 				ofs += bytesPerSymbol

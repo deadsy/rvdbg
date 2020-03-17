@@ -30,25 +30,20 @@ type target interface {
 
 //-----------------------------------------------------------------------------
 
-func getAddressFormat(drv Driver) string {
-	return fmt.Sprintf("%%0%dx", drv.GetAddressSize()>>2)
-}
-
-//-----------------------------------------------------------------------------
-
 // CmdMap displays the memory map of the target.
 var CmdMap = cli.Leaf{
 	Descr: "display memory map",
 	F: func(c *cli.CLI, args []string) {
 		dev, drv := c.User.(target).GetSoC()
+		addrFmt := util.UintFormat(drv.GetAddressSize())
 		s := make([][]string, len(dev.Peripherals))
 		for i, p := range dev.Peripherals {
 			var region string
 			if p.Size == 0 {
-				fmtStr := fmt.Sprintf(": %s", getAddressFormat(drv))
+				fmtStr := fmt.Sprintf(": %s", addrFmt)
 				region = fmt.Sprintf(fmtStr, p.Addr)
 			} else {
-				fmtStr := fmt.Sprintf(": %s %s %%s", getAddressFormat(drv), getAddressFormat(drv))
+				fmtStr := fmt.Sprintf(": %s %s %%s", addrFmt, addrFmt)
 				region = fmt.Sprintf(fmtStr, p.Addr, p.Addr+p.Size-1, util.MemSize(p.Size))
 			}
 			s[i] = []string{p.Name, region, p.Descr}

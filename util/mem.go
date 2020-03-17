@@ -31,3 +31,20 @@ func MemSize(x uint) string {
 }
 
 //-----------------------------------------------------------------------------
+
+// UintFormat returns a format string for the bit size.
+func UintFormat(size uint) string {
+	switch size {
+	case 8:
+		return "%02x"
+	case 16:
+		return "%04x"
+	case 32:
+		return "%08x"
+	case 64:
+		return "%016x"
+	}
+	return "%x"
+}
+
+//-----------------------------------------------------------------------------

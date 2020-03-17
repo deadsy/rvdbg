@@ -59,7 +59,7 @@ func (r *Register) Display(drv Driver, fields bool) [][]string {
 
 	// address string
 	addr := r.address(r.parent.Addr, 0)
-	fmtStr := fmt.Sprintf(": %s[%%d:0]", getAddressFormat(drv))
+	fmtStr := fmt.Sprintf(": %s[%%d:0]", util.UintFormat(drv.GetAddressSize()))
 	addrStr := fmt.Sprintf(fmtStr, addr, r.Size-1)
 
 	// read the value
