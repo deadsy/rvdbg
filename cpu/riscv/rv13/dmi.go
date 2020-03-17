@@ -484,7 +484,7 @@ func (dbg *Debug) checkError(cs cmdStatus) error {
 	if err != nil {
 		return err
 	}
-	return fmt.Errorf("command error %s(%d)", ce, ce)
+	return fmt.Errorf("error: %s(%d)", ce, ce)
 }
 
 const cmdTimeout = 500 * time.Millisecond
@@ -504,7 +504,7 @@ func (dbg *Debug) cmdWait(cs cmdStatus, to time.Duration) error {
 				if err != nil {
 					return err
 				}
-				return fmt.Errorf("command error %s(%d)", ce, ce)
+				return fmt.Errorf("error: %s(%d)", ce, ce)
 			}
 			return nil
 		}

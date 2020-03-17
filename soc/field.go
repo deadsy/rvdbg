@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 /*
 
-Bit fields within Registers.
+Decode bitfields within registers.
 
 */
 //-----------------------------------------------------------------------------
@@ -59,42 +59,38 @@ func (a FieldSet) Less(i, j int) bool {
 
 // Display returns display strings for a bit field.
 func (f *Field) Display(val uint) []string {
-
-	x := util.Bits(val, f.Msb, f.Lsb)
-
+	// get the field
+	val = util.Bits(val, f.Msb, f.Lsb)
 	// has the value changed?
 	changed := ""
-	if x != f.cacheVal && f.cacheValid {
-		f.cacheVal = x
+	if val != f.cacheVal && f.cacheValid {
+		f.cacheVal = val
 		f.cacheValid = true
 		changed = " *"
 	}
-
-	// name string
+	// field name
 	var nameStr string
 	if f.Msb == f.Lsb {
 		nameStr = fmt.Sprintf("  %s[%d]", f.Name, f.Lsb)
 	} else {
 		nameStr = fmt.Sprintf("  %s[%d:%d]", f.Name, f.Msb, f.Lsb)
 	}
-
-	// value string
-
-	var valName string
-
+	// value name
+	valName := ""
 	if f.Fmt != nil {
-		valName = f.Fmt(x)
+		valName = f.Fmt(val)
 	} else if f.Enums != nil {
-
+		if s, ok := f.Enums[val]; ok {
+			valName = s
+		}
 	}
-
+	// value string
 	var valStr string
-	if x < 10 {
-		valStr = fmt.Sprintf(": %d %s%s", x, valName, changed)
+	if val < 10 {
+		valStr = fmt.Sprintf(": %d %s%s", val, valName, changed)
 	} else {
-		valStr = fmt.Sprintf(": 0x%x %s%s", x, valName, changed)
+		valStr = fmt.Sprintf(": 0x%x %s%s", val, valName, changed)
 	}
-
 	return []string{nameStr, valStr, "", f.Descr}
 }
 
@@ -131,17 +127,6 @@ func FmtHex8(x uint) string {
 // FmtHex16 formats a uint as a 4-nybble hexadecimal string.
 func FmtHex16(x uint) string {
 	return fmt.Sprintf("%04x", x)
-}
-
-//-----------------------------------------------------------------------------
-
-// DisplayEnum returns the display string for an enumeration.
-func DisplayEnum(x uint, m map[uint]string, unknown string) string {
-	s, ok := m[x]
-	if !ok {
-		s = unknown
-	}
-	return fmt.Sprintf("%s(%d)", s, x)
 }
 
 //-----------------------------------------------------------------------------

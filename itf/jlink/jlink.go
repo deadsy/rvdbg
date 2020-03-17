@@ -12,20 +12,16 @@ package jlink
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/deadsy/jaylink"
+	"github.com/deadsy/rvdbg/util"
 	"github.com/deadsy/rvdbg/util/log"
 )
 
 //-----------------------------------------------------------------------------
 
-const colorGreen = "\033[0;32m"
-const colorNone = "\033[0m"
-
 func logCallback(domain, msg string, user interface{}) {
-	s := []string{colorGreen, domain, msg, colorNone}
-	log.Debug.Printf("%s\n", strings.Join(s, ""))
+	log.Debug.Printf("%s\n", util.GreenString(domain+msg))
 }
 
 //-----------------------------------------------------------------------------

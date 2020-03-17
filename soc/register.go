@@ -11,6 +11,8 @@ package soc
 import (
 	"fmt"
 	"strings"
+
+	"github.com/deadsy/rvdbg/util"
 )
 
 //-----------------------------------------------------------------------------
@@ -63,7 +65,7 @@ func (r *Register) Display(drv Driver, fields bool) [][]string {
 	// read the value
 	x, err := drv.RdMem(r.Size, addr, 1)
 	if err != nil {
-		return [][]string{{r.Name, addrStr, "0", fmt.Sprintf("%s", err)}}
+		return [][]string{{r.Name, addrStr, "?", util.RedString(err.Error())}}
 	}
 	val := x[0]
 
