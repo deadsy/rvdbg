@@ -103,15 +103,14 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 	}
 
 	// create the SoC device
-	socDevice := fe310.NewSoC()
-	socDevice = socDevice.Setup()
+	socDevice := fe310.NewSoC(fe310.G002)
 
 	return &Target{
 		jtagDriver: jtagDriver,
 		jtagChain:  jtagChain,
 		jtagDevice: jtagDevice,
 		riscvCPU:   riscvCPU,
-		socDevice:  socDevice,
+		socDevice:  socDevice.Setup(),
 	}, nil
 
 }

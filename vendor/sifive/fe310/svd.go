@@ -1398,7 +1398,7 @@ func baseSoC() *soc.Device {
 				},
 			},
 			{
-				Name:  "PRIC",
+				Name:  "PRCI",
 				Addr:  0x10008000,
 				Size:  0x10,
 				Descr: "Power, Reset, Clock, Interrupt",
