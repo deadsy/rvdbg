@@ -168,9 +168,42 @@ var helpMemToFile = []cli.Help{
 	{"  len", "length (hex), defaults to region size or 0x100"},
 }
 
+// fileRegionArg converts filename and memory region arguments to a (name, addr, n) tuple.
+func fileRegionArg(defAddr, maxAddr uint, args []string) (string, uint, uint, error) {
+	err := cli.CheckArgc(args, []int{1, 2, 3})
+	if err != nil {
+		return "", 0, 0, err
+	}
+	// args[0] is the filename
+	name := args[0]
+	// the remaining arguments define the memory region
+	addr, n, err := regionArg(defAddr, maxAddr, args[1:])
+	if err != nil {
+		return "", 0, 0, err
+	}
+	return name, addr, n, nil
+}
+
 var cmdToFile = cli.Leaf{
 	Descr: "read from memory, write to file",
 	F: func(c *cli.CLI, args []string) {
+
+		tgt := c.User.(target).GetMemoryDriver()
+		// get the arguments
+		maxAddr := uint((1 << tgt.GetAddressSize()) - 1)
+		name, addr, n, err := fileRegionArg(0, maxAddr, args)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
+
+		// round down address to 32-bit byte boundary
+		addr &= ^uint(3)
+		// round up n to an integral multiple of 4 bytes
+		n = (n + 3) & ^uint(3)
+
+		c.User.Put(fmt.Sprintf("TODO: %s %x %x\n", name, addr, n))
+
 	},
 }
 
