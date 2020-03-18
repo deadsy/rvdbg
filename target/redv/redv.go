@@ -64,6 +64,7 @@ type Target struct {
 	jtagDevice *jtag.Device
 	riscvCPU   *riscv.CPU
 	socDevice  *soc.Device
+	memDriver  *memDriver
 }
 
 // New returns a new redv target.
@@ -103,14 +104,15 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 	}
 
 	// create the SoC device
-	socDevice := fe310.NewSoC(fe310.G002)
+	socDevice := fe310.NewSoC(fe310.G002).Setup()
 
 	return &Target{
 		jtagDriver: jtagDriver,
 		jtagChain:  jtagChain,
 		jtagDevice: jtagDevice,
 		riscvCPU:   riscvCPU,
-		socDevice:  socDevice.Setup(),
+		socDevice:  socDevice,
+		memDriver:  newMemDriver(riscvCPU.Dbg, socDevice),
 	}, nil
 
 }
@@ -136,7 +138,7 @@ func (t *Target) Put(s string) {
 
 // GetMemoryDriver returns a memory driver for this target.
 func (t *Target) GetMemoryDriver() mem.Driver {
-	return t.riscvCPU.Dbg
+	return t.memDriver
 }
 
 // GetRiscvDebug returns a RISC-V debug driver for this target.

@@ -8,7 +8,9 @@ SoC Device
 
 package soc
 
-import "sort"
+import (
+	"sort"
+)
 
 //-----------------------------------------------------------------------------
 
@@ -40,21 +42,9 @@ func (dev *Device) GetPeripheral(name string) *Peripheral {
 	return nil
 }
 
-//-----------------------------------------------------------------------------
-
-// AddPeripheral adds periphals to the device.
+// AddePeripheral adds periphals to the device.
 func (dev *Device) AddPeripheral(p []Peripheral) {
 	dev.Peripherals = append(dev.Peripherals, p...)
-}
-
-// RenamePeripheral renames a peripheral in the device.
-func (dev *Device) RenamePeripheral(oldname, newname string) {
-	for i := range dev.Peripherals {
-		p := &dev.Peripherals[i]
-		if p.Name == oldname {
-			p.Name = newname
-		}
-	}
 }
 
 //-----------------------------------------------------------------------------

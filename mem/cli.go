@@ -25,27 +25,48 @@ var helpMemRegion = []cli.Help{
 	{"  len", "length (hex), defaults to region size or 0x100"},
 }
 
+const defAddr = 0
+const defSize = 0x100
+
 // regionArg converts memory region arguments to an (address, n) tuple.
-func regionArg(defAddr, maxAddr uint, args []string) (uint, uint, error) {
+func regionArg(drv Driver, args []string) (uint, uint, error) {
 	err := cli.CheckArgc(args, []int{0, 1, 2})
 	if err != nil {
 		return 0, 0, err
 	}
-	// address
-	addr := defAddr
-	if len(args) >= 1 {
-		addr, err = cli.UintArg(args[0], [2]uint{0, maxAddr}, 16)
-		if err != nil {
-			return 0, 0, err
-		}
+
+	if len(args) == 0 {
+		return defAddr, defSize, nil
 	}
-	// number of bytes
-	n := uint(0x100) // default size
-	if len(args) >= 2 {
-		n, err = cli.UintArg(args[1], [2]uint{1, 0x100000000}, 16)
-		if err != nil {
-			return 0, 0, err
+
+	// lookup the first argument as a symbol
+	addr, n, err := drv.LookupSymbol(args[0])
+	if err == nil {
+		if len(args) == 2 {
+			// don't take the symbol size, use the argument
+			n, err = cli.UintArg(args[1], [2]uint{1, 0x100000000}, 16)
+			if err != nil {
+				return 0, 0, err
+			}
 		}
+		return addr, n, nil
+	}
+
+	// get the address
+	maxAddr := uint((1 << drv.GetAddressSize()) - 1)
+	addr, err = cli.UintArg(args[0], [2]uint{0, maxAddr}, 16)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if len(args) == 1 {
+		return addr, defSize, nil
+	}
+
+	// get the size
+	n, err = cli.UintArg(args[1], [2]uint{1, 0x100000000}, 16)
+	if err != nil {
+		return 0, 0, err
 	}
 	return addr, n, nil
 }
@@ -54,14 +75,16 @@ func regionArg(defAddr, maxAddr uint, args []string) (uint, uint, error) {
 // memory display
 
 func display(c *cli.CLI, args []string, width uint) {
-	tgt := c.User.(target).GetMemoryDriver()
-	maxAddr := uint((1 << tgt.GetAddressSize()) - 1)
-	addr, n, err := regionArg(0, maxAddr, args)
+
+	drv := c.User.(target).GetMemoryDriver()
+
+	addr, n, err := regionArg(drv, args)
+
 	if err != nil {
 		c.User.Put(fmt.Sprintf("%s\n", err))
 		return
 	}
-	c.User.Put(fmt.Sprintf("%s\n", displayMem(tgt, addr, n, width)))
+	c.User.Put(fmt.Sprintf("%s\n", displayMem(drv, addr, n, width)))
 }
 
 var cmdDisplay8 = cli.Leaf{
@@ -169,7 +192,7 @@ var helpMemToFile = []cli.Help{
 }
 
 // fileRegionArg converts filename and memory region arguments to a (name, addr, n) tuple.
-func fileRegionArg(defAddr, maxAddr uint, args []string) (string, uint, uint, error) {
+func fileRegionArg(drv Driver, args []string) (string, uint, uint, error) {
 	err := cli.CheckArgc(args, []int{1, 2, 3})
 	if err != nil {
 		return "", 0, 0, err
@@ -177,7 +200,7 @@ func fileRegionArg(defAddr, maxAddr uint, args []string) (string, uint, uint, er
 	// args[0] is the filename
 	name := args[0]
 	// the remaining arguments define the memory region
-	addr, n, err := regionArg(defAddr, maxAddr, args[1:])
+	addr, n, err := regionArg(drv, args[1:])
 	if err != nil {
 		return "", 0, 0, err
 	}
@@ -187,11 +210,8 @@ func fileRegionArg(defAddr, maxAddr uint, args []string) (string, uint, uint, er
 var cmdToFile = cli.Leaf{
 	Descr: "read from memory, write to file",
 	F: func(c *cli.CLI, args []string) {
-
-		tgt := c.User.(target).GetMemoryDriver()
-		// get the arguments
-		maxAddr := uint((1 << tgt.GetAddressSize()) - 1)
-		name, addr, n, err := fileRegionArg(0, maxAddr, args)
+		drv := c.User.(target).GetMemoryDriver()
+		name, addr, n, err := fileRegionArg(drv, args)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
@@ -240,10 +260,9 @@ func analyze(data []uint8, ofs, n int) rune {
 var cmdPic = cli.Leaf{
 	Descr: "display a pictorial summary of memory",
 	F: func(c *cli.CLI, args []string) {
-		tgt := c.User.(target).GetMemoryDriver()
+		drv := c.User.(target).GetMemoryDriver()
 		// get the arguments
-		maxAddr := uint((1 << tgt.GetAddressSize()) - 1)
-		addr, n, err := regionArg(0, maxAddr, args)
+		addr, n, err := regionArg(drv, args)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
@@ -268,7 +287,7 @@ var cmdPic = cli.Leaf{
 		if n > 16*util.KiB {
 			c.User.Put("reading memory ...\n")
 		}
-		data32, err := tgt.RdMem(32, addr, n>>2)
+		data32, err := drv.RdMem(32, addr, n>>2)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
@@ -280,7 +299,7 @@ var cmdPic = cli.Leaf{
 		c.User.Put(fmt.Sprintf("%d (0x%x) bytes per row\n", bytesPerRow, bytesPerRow))
 		c.User.Put(fmt.Sprintf("%d cols x %d rows\n", cols, rows))
 		// display the matrix
-		addrFmt := fmt.Sprintf("0x%s: ", util.UintFormat(tgt.GetAddressSize()))
+		addrFmt := fmt.Sprintf("0x%s: ", util.UintFormat(drv.GetAddressSize()))
 		var ofs int
 		for y := 0; y < rows; y++ {
 			s := []rune{}
