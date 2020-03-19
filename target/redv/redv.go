@@ -60,8 +60,6 @@ var menuRoot = cli.Menu{
 
 // Target is the application structure for the target.
 type Target struct {
-	jtagDriver jtag.Driver
-	jtagChain  *jtag.Chain
 	jtagDevice *jtag.Device
 	rvDebug    rv.Debug
 	socDevice  *soc.Device
@@ -108,8 +106,6 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 	socDevice := fe310.NewSoC(fe310.G002).Setup()
 
 	return &Target{
-		jtagDriver: jtagDriver,
-		jtagChain:  jtagChain,
 		jtagDevice: jtagDevice,
 		rvDebug:    rvDebug,
 		socDevice:  socDevice,
@@ -152,21 +148,9 @@ func (t *Target) GetSoC() (*soc.Device, soc.Driver) {
 	return t.socDevice, t.rvDebug
 }
 
-//-----------------------------------------------------------------------------
-
 // GetJtagDevice returns the JTAG device.
 func (t *Target) GetJtagDevice() *jtag.Device {
 	return t.jtagDevice
-}
-
-// GetJtagChain returns the JTAG chain.
-func (t *Target) GetJtagChain() *jtag.Chain {
-	return t.jtagChain
-}
-
-// GetJtagDriver returns the JTAG driver.
-func (t *Target) GetJtagDriver() jtag.Driver {
-	return t.jtagDriver
 }
 
 //-----------------------------------------------------------------------------
