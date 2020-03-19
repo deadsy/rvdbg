@@ -66,10 +66,7 @@ func displayMem(tgt Driver, addr, n, width uint) string {
 		dataStr := strings.Join(xStr, " ")
 
 		// create the ascii string
-		data, err := tgt.RdMem(8, addr, bytesPerLine)
-		if err != nil {
-			return fmt.Sprintf("%s", err)
-		}
+		data := util.ConvertXY(width, 8, buf)
 		var ascii [bytesPerLine]rune
 		for j, val := range data {
 			if val >= 32 && val <= 126 {

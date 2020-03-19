@@ -231,7 +231,7 @@ var cmdToFile = cli.Leaf{
 // memory picture
 
 // analyze the buffer and return a character to represent it
-func analyze(data []uint8, ofs, n int) rune {
+func analyze(data []uint, ofs, n int) rune {
 	// are we off the end of the buffer?
 	if ofs >= len(data) {
 		return ' '
@@ -292,7 +292,7 @@ var cmdPic = cli.Leaf{
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
 		}
-		data8 := util.Convert32to8Little(util.ConvertUintto32(data32))
+		data8 := util.ConvertXY(32, 8, data32)
 		// display the summary
 		c.User.Put("'.' all ones, '-' all zeroes, '$' various\n")
 		c.User.Put(fmt.Sprintf("%d (0x%x) bytes per symbol\n", bytesPerSymbol, bytesPerSymbol))

@@ -8,10 +8,13 @@ Utilities to Convert Slice Types
 
 package util
 
-//-----------------------------------------------------------------------------
+import "fmt"
 
-// Convert32to16 converts a 32-bit slice to a 16-bit slice.
-func Convert32to16(x []uint32) []uint16 {
+//-----------------------------------------------------------------------------
+// 1-1 conversion of []uintX to []uintY
+
+// Cast32to16 one-to-one converts a 32-bit slice to a 16-bit slice.
+func Cast32to16(x []uint32) []uint16 {
 	y := make([]uint16, len(x))
 	for i := range x {
 		y[i] = uint16(x[i])
@@ -19,8 +22,8 @@ func Convert32to16(x []uint32) []uint16 {
 	return y
 }
 
-// Convert16to32 converts a 16-bit slice to a 32-bit slice.
-func Convert16to32(x []uint16) []uint32 {
+// Cast16to32 one-to-one converts a 16-bit slice to a 32-bit slice.
+func Cast16to32(x []uint16) []uint32 {
 	y := make([]uint32, len(x))
 	for i := range x {
 		y[i] = uint32(x[i])
@@ -28,8 +31,8 @@ func Convert16to32(x []uint16) []uint32 {
 	return y
 }
 
-// Convert32to8 converts a 32-bit slice to an 8-bit slice.
-func Convert32to8(x []uint32) []uint8 {
+// Cast32to8 one-to-one converts a 32-bit slice to an 8-bit slice.
+func Cast32to8(x []uint32) []uint8 {
 	y := make([]uint8, len(x))
 	for i := range x {
 		y[i] = uint8(x[i])
@@ -37,21 +40,8 @@ func Convert32to8(x []uint32) []uint8 {
 	return y
 }
 
-// Convert32to8Little converts a 32-bit slice to a little endian 8-bit slice.
-func Convert32to8Little(x []uint32) []uint8 {
-	y := make([]uint8, len(x)*4)
-	for i := range x {
-		j := i * 4
-		y[j+0] = uint8(x[i])
-		y[j+1] = uint8(x[i] >> 8)
-		y[j+2] = uint8(x[i] >> 16)
-		y[j+3] = uint8(x[i] >> 24)
-	}
-	return y
-}
-
-// Convert8to32 converts an 8-bit slice to a 32-bit slice.
-func Convert8to32(x []uint8) []uint32 {
+// Cast8to32 one-to-one converts an 8-bit slice to a 32-bit slice.
+func Cast8to32(x []uint8) []uint32 {
 	y := make([]uint32, len(x))
 	for i := range x {
 		y[i] = uint32(x[i])
@@ -59,7 +49,87 @@ func Convert8to32(x []uint8) []uint32 {
 	return y
 }
 
-// Convert32to64 converts an 32-bit slice to a 64-bit slice.
+//-----------------------------------------------------------------------------
+// 1-1 conversion of []uintX to []uint
+
+// Cast8toUint one-to-one converts an 8-bit slice to a uint slice.
+func Cast8toUint(x []uint8) []uint {
+	y := make([]uint, len(x))
+	for i := range x {
+		y[i] = uint(x[i])
+	}
+	return y
+}
+
+// Cast16toUint one-to-one converts a 16-bit slice to a uint slice.
+func Cast16toUint(x []uint16) []uint {
+	y := make([]uint, len(x))
+	for i := range x {
+		y[i] = uint(x[i])
+	}
+	return y
+}
+
+// Cast32toUint one-to-one converts a 32-bit slice to a uint slice.
+func Cast32toUint(x []uint32) []uint {
+	y := make([]uint, len(x))
+	for i := range x {
+		y[i] = uint(x[i])
+	}
+	return y
+}
+
+// Cast64toUint one-to-one converts a 64-bit slice to a uint slice.
+func Cast64toUint(x []uint64) []uint {
+	y := make([]uint, len(x))
+	for i := range x {
+		y[i] = uint(x[i])
+	}
+	return y
+}
+
+//-----------------------------------------------------------------------------
+// 1-1 conversion of []uint to []uintX
+
+// CastUintto8 one-to-one converts an uint slice to an 8-bit slice.
+func CastUintto8(x []uint) []uint8 {
+	y := make([]uint8, len(x))
+	for i := range x {
+		y[i] = uint8(x[i])
+	}
+	return y
+}
+
+// CastUintto16 one-to-one converts an uint slice to a 16-bit slice.
+func CastUintto16(x []uint) []uint16 {
+	y := make([]uint16, len(x))
+	for i := range x {
+		y[i] = uint16(x[i])
+	}
+	return y
+}
+
+// CastUintto32 one-to-one converts an uint slice to a 32-bit slice.
+func CastUintto32(x []uint) []uint32 {
+	y := make([]uint32, len(x))
+	for i := range x {
+		y[i] = uint32(x[i])
+	}
+	return y
+}
+
+// CastUintto64 one-to-one converts an uint slice to a 64-bit slice.
+func CastUintto64(x []uint) []uint64 {
+	y := make([]uint64, len(x))
+	for i := range x {
+		y[i] = uint64(x[i])
+	}
+	return y
+}
+
+//-----------------------------------------------------------------------------
+
+// Convert32to64 converts []uint32 to []uint64 (little endian).
 func Convert32to64(x []uint32) []uint64 {
 	if len(x)&1 != 0 {
 		panic("len(x) must be a multiple of 2")
@@ -67,82 +137,55 @@ func Convert32to64(x []uint32) []uint64 {
 	y := make([]uint64, len(x)>>1)
 	i := 0
 	for j := range y {
-		y[j] = uint64(x[i+0]) | uint64(x[i+1]<<32)
+		y[j] = uint64(x[i+0]<<0) | uint64(x[i+1]<<32)
 		i += 2
 	}
 	return y
 }
 
-// Convert8toUint converts an 8-bit slice to a uint slice.
-func Convert8toUint(x []uint8) []uint {
-	y := make([]uint, len(x))
-	for i := range x {
-		y[i] = uint(x[i])
-	}
-	return y
-}
+//-----------------------------------------------------------------------------
 
-// Convert16toUint converts a 16-bit slice to a uint slice.
-func Convert16toUint(x []uint16) []uint {
-	y := make([]uint, len(x))
-	for i := range x {
-		y[i] = uint(x[i])
+// ConvertXY converts x-bit []uint to y-bit []uint (little endian).
+func ConvertXY(x, y uint, in []uint) []uint {
+	if x == y {
+		// no conversion
+		return in
 	}
-	return y
-}
-
-// Convert32toUint converts a 32-bit slice to a uint slice.
-func Convert32toUint(x []uint32) []uint {
-	y := make([]uint, len(x))
-	for i := range x {
-		y[i] = uint(x[i])
+	if y == 8 {
+		switch x {
+		case 64:
+			out := make([]uint, len(in)*8)
+			for i := range in {
+				out[(8*i)+0] = (in[i] >> 0) & 0xff
+				out[(8*i)+1] = (in[i] >> 8) & 0xff
+				out[(8*i)+2] = (in[i] >> 16) & 0xff
+				out[(8*i)+3] = (in[i] >> 24) & 0xff
+				out[(8*i)+4] = (in[i] >> 32) & 0xff
+				out[(8*i)+5] = (in[i] >> 40) & 0xff
+				out[(8*i)+6] = (in[i] >> 48) & 0xff
+				out[(8*i)+7] = (in[i] >> 56) & 0xff
+			}
+			return out
+		case 32:
+			out := make([]uint, len(in)*4)
+			for i := range in {
+				out[(4*i)+0] = (in[i] >> 0) & 0xff
+				out[(4*i)+1] = (in[i] >> 8) & 0xff
+				out[(4*i)+2] = (in[i] >> 16) & 0xff
+				out[(4*i)+3] = (in[i] >> 24) & 0xff
+			}
+			return out
+		case 16:
+			out := make([]uint, len(in)*2)
+			for i := range in {
+				out[(2*i)+0] = (in[i] >> 0) & 0xff
+				out[(2*i)+1] = (in[i] >> 8) & 0xff
+			}
+			return out
+		}
 	}
-	return y
-}
-
-// Convert64toUint converts a 64-bit slice to a uint slice.
-func Convert64toUint(x []uint64) []uint {
-	y := make([]uint, len(x))
-	for i := range x {
-		y[i] = uint(x[i])
-	}
-	return y
-}
-
-// ConvertUintto8 converts an uint slice to an 8-bit slice.
-func ConvertUintto8(x []uint) []uint8 {
-	y := make([]uint8, len(x))
-	for i := range x {
-		y[i] = uint8(x[i])
-	}
-	return y
-}
-
-// ConvertUintto16 converts an uint slice to a 16-bit slice.
-func ConvertUintto16(x []uint) []uint16 {
-	y := make([]uint16, len(x))
-	for i := range x {
-		y[i] = uint16(x[i])
-	}
-	return y
-}
-
-// ConvertUintto32 converts an uint slice to a 32-bit slice.
-func ConvertUintto32(x []uint) []uint32 {
-	y := make([]uint32, len(x))
-	for i := range x {
-		y[i] = uint32(x[i])
-	}
-	return y
-}
-
-// ConvertUintto64 converts an uint slice to a 64-bit slice.
-func ConvertUintto64(x []uint) []uint64 {
-	y := make([]uint64, len(x))
-	for i := range x {
-		y[i] = uint64(x[i])
-	}
-	return y
+	panic(fmt.Sprintf("%d to %d conversion not supported", x, y))
+	return nil
 }
 
 //-----------------------------------------------------------------------------

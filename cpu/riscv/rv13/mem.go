@@ -62,16 +62,16 @@ func (dbg *Debug) RdMem(width, addr, n uint) ([]uint, error) {
 	switch width {
 	case 8:
 		x, err := dbg.RdMem8(addr, n)
-		return util.Convert8toUint(x), err
+		return util.Cast8toUint(x), err
 	case 16:
 		x, err := dbg.RdMem16(addr, n)
-		return util.Convert16toUint(x), err
+		return util.Cast16toUint(x), err
 	case 32:
 		x, err := dbg.RdMem32(addr, n)
-		return util.Convert32toUint(x), err
+		return util.Cast32toUint(x), err
 	case 64:
 		x, err := dbg.RdMem64(addr, n)
-		return util.Convert64toUint(x), err
+		return util.Cast64toUint(x), err
 	}
 	return nil, fmt.Errorf("%d-bit memory reads are not supported", width)
 }
@@ -115,13 +115,13 @@ func (dbg *Debug) WrMem64(addr uint, val []uint64) error {
 func (dbg *Debug) WrMem(width, addr uint, val []uint) error {
 	switch width {
 	case 8:
-		return dbg.WrMem8(addr, util.ConvertUintto8(val))
+		return dbg.WrMem8(addr, util.CastUintto8(val))
 	case 16:
-		return dbg.WrMem16(addr, util.ConvertUintto16(val))
+		return dbg.WrMem16(addr, util.CastUintto16(val))
 	case 32:
-		return dbg.WrMem32(addr, util.ConvertUintto32(val))
+		return dbg.WrMem32(addr, util.CastUintto32(val))
 	case 64:
-		return dbg.WrMem64(addr, util.ConvertUintto64(val))
+		return dbg.WrMem64(addr, util.CastUintto64(val))
 	}
 	return fmt.Errorf("%d-bit memory writes are not supported", width)
 }

@@ -263,7 +263,7 @@ func pbRdMem8(dbg *Debug, addr, n uint) ([]uint8, error) {
 	if err != nil {
 		return nil, err
 	}
-	return util.Convert32to8(data), nil
+	return util.Cast32to8(data), nil
 }
 
 // pbRdMem16 reads n x 16-bit values from memory using program buffer operations.
@@ -283,7 +283,7 @@ func pbRdMem16(dbg *Debug, addr, n uint) ([]uint16, error) {
 	if err != nil {
 		return nil, err
 	}
-	return util.Convert32to16(data), nil
+	return util.Cast32to16(data), nil
 }
 
 // pbRdMem32 reads n x 32-bit values from memory using program buffer operations.
@@ -428,7 +428,7 @@ func pbWrMem8(dbg *Debug, addr uint, val []uint8) error {
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSB(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 1)
-	return dbg.pbWrMemRV32(addr, util.Convert8to32(val), pb)
+	return dbg.pbWrMemRV32(addr, util.Cast8to32(val), pb)
 }
 
 // pbWrMem16 writes n x 16-bit values to memory using program buffer operations.
@@ -437,7 +437,7 @@ func pbWrMem16(dbg *Debug, addr uint, val []uint16) error {
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSH(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 2)
-	return dbg.pbWrMemRV32(addr, util.Convert16to32(val), pb)
+	return dbg.pbWrMemRV32(addr, util.Cast16to32(val), pb)
 }
 
 // pbWrMem32 writes n x 32-bit values to memory using program buffer operations.
