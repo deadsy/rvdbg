@@ -372,6 +372,18 @@ func pbRdMem64Unsupported(dbg *Debug, addr, n uint) ([]uint64, error) {
 }
 
 //-----------------------------------------------------------------------------
+
+func pbRdMem(dbg *Debug, width, addr, n uint) ([]uint, error) {
+	switch width {
+	case 8:
+	case 16:
+	case 32:
+	case 64:
+	}
+	return nil, fmt.Errorf("%d-bit memory reads are not supported", width)
+}
+
+//-----------------------------------------------------------------------------
 // write memory 8/16/32-bits
 
 // pbWrMemRV32 performs 8/16/32-bit memory writes using RV32 instructions.
@@ -509,6 +521,18 @@ func pbWrMem64(dbg *Debug, addr uint, val []uint64) error {
 // pbWrMem64Unsupported
 func pbWrMem64Unsupported(dbg *Debug, addr uint, val []uint64) error {
 	return errors.New("64-bit memory writes are not supported")
+}
+
+//-----------------------------------------------------------------------------
+
+func pbWrMem(dbg *Debug, width, addr uint, val []uint) error {
+	switch width {
+	case 8:
+	case 16:
+	case 32:
+	case 64:
+	}
+	return fmt.Errorf("%d-bit memory writes are not supported", width)
 }
 
 //-----------------------------------------------------------------------------
