@@ -15,7 +15,6 @@ import (
 	"github.com/deadsy/rvdbg/cpu/riscv/rv11"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv13"
 	"github.com/deadsy/rvdbg/jtag"
-	"github.com/deadsy/rvdbg/util"
 )
 
 //-----------------------------------------------------------------------------
@@ -30,15 +29,8 @@ const drDtmLength = 32
 
 //-----------------------------------------------------------------------------
 
-// CPU is a RISC-V cpu.
-type CPU struct {
-	Dbg rv.Debug
-}
-
-//-----------------------------------------------------------------------------
-
-// NewCPU returns a new RISC-V cpu.
-func NewCPU(dev *jtag.Device) (*CPU, error) {
+// NewDebug returns a new RISC-V debugger interface.
+func NewDebug(dev *jtag.Device) (rv.Debug, error) {
 
 	// check the IR length
 	if dev.GetIRLength() != irLength {
@@ -61,33 +53,14 @@ func NewCPU(dev *jtag.Device) (*CPU, error) {
 	}
 	version &= 15
 
-	cpu := &CPU{}
-
 	switch version {
 	case 0:
-		cpu.Dbg, err = rv11.New(dev)
-		if err != nil {
-			return nil, err
-		}
+		return rv11.New(dev)
 	case 1:
-		cpu.Dbg, err = rv13.New(dev)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, fmt.Errorf("unknown dtm version %d", version)
+		return rv13.New(dev)
 	}
 
-	return cpu, nil
-}
-
-//-----------------------------------------------------------------------------
-
-// PromptState returns a short cpu state string for the prompt.
-func (cpu *CPU) PromptState() string {
-	hi := cpu.Dbg.GetCurrentHart()
-	state := []string{"h", "r"}[util.BoolToInt(hi.State == rv.Running)]
-	return fmt.Sprintf("%d%s", hi.ID, state)
+	return nil, fmt.Errorf("unknown dtm version %d", version)
 }
 
 //-----------------------------------------------------------------------------

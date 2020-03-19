@@ -64,7 +64,7 @@ func (dbg *Debug) String() string {
 }
 
 // New returns a RISC-V 0.13 debugger.
-func New(dev *jtag.Device) (rv.Debug, error) {
+func New(dev *jtag.Device) (*Debug, error) {
 
 	dbg := &Debug{
 		dev:   dev,
@@ -352,6 +352,15 @@ func (dbg *Debug) GetInfo() string {
 		s = append(s, dump)
 	}
 	return strings.Join(s, "\n")
+}
+
+//-----------------------------------------------------------------------------
+
+// GetPrompt returns a target prompt string.
+func (dbg *Debug) GetPrompt(name string) string {
+	hi := dbg.GetCurrentHart()
+	state := []rune{'h', 'r'}[util.BoolToInt(hi.State == rv.Running)]
+	return fmt.Sprintf("%s.%d%c> ", name, hi.ID, state)
 }
 
 //-----------------------------------------------------------------------------

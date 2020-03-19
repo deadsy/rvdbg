@@ -18,6 +18,7 @@ import (
 
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/cpu/riscv"
+	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/mem"
@@ -62,7 +63,7 @@ type Target struct {
 	jtagDriver jtag.Driver
 	jtagChain  *jtag.Chain
 	jtagDevice *jtag.Device
-	riscvCPU   *riscv.CPU
+	rvDebug    rv.Debug
 	socDevice  *soc.Device
 	memDriver  *memDriver
 }
@@ -98,7 +99,7 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 		return nil, err
 	}
 
-	riscvCPU, err := riscv.NewCPU(jtagDevice)
+	rvDebug, err := riscv.NewDebug(jtagDevice)
 	if err != nil {
 		return nil, err
 	}
@@ -110,16 +111,16 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 		jtagDriver: jtagDriver,
 		jtagChain:  jtagChain,
 		jtagDevice: jtagDevice,
-		riscvCPU:   riscvCPU,
+		rvDebug:    rvDebug,
 		socDevice:  socDevice,
-		memDriver:  newMemDriver(riscvCPU.Dbg, socDevice),
+		memDriver:  newMemDriver(rvDebug, socDevice),
 	}, nil
 
 }
 
 // GetPrompt returns the target prompt string.
 func (t *Target) GetPrompt() string {
-	return fmt.Sprintf("gd32v.%s> ", t.riscvCPU.PromptState())
+	return t.rvDebug.GetPrompt(Info.Name)
 }
 
 // GetMenuRoot returns the target root menu.
@@ -142,13 +143,13 @@ func (t *Target) GetMemoryDriver() mem.Driver {
 }
 
 // GetRiscvDebug returns a RISC-V debug driver for this target.
-func (t *Target) GetRiscvDebug() riscv.Driver {
-	return t.riscvCPU.Dbg
+func (t *Target) GetRiscvDebug() rv.Debug {
+	return t.rvDebug
 }
 
 // GetSoC returns the SoC device and driver.
 func (t *Target) GetSoC() (*soc.Device, soc.Driver) {
-	return t.socDevice, t.riscvCPU.Dbg
+	return t.socDevice, t.rvDebug
 }
 
 //-----------------------------------------------------------------------------
@@ -166,11 +167,6 @@ func (t *Target) GetJtagChain() *jtag.Chain {
 // GetJtagDriver returns the JTAG driver.
 func (t *Target) GetJtagDriver() jtag.Driver {
 	return t.jtagDriver
-}
-
-// GetCPU returns the RISC-V CPU.
-func (t *Target) GetCPU() *riscv.CPU {
-	return t.riscvCPU
 }
 
 //-----------------------------------------------------------------------------

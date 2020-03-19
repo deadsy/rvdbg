@@ -19,31 +19,9 @@ import (
 
 //-----------------------------------------------------------------------------
 
-// Driver is the RISC-V driver api.
-type Driver interface {
-	// hart control
-	GetInfo() string                             // get debug module information
-	GetHartCount() int                           // how many harts for this chip?
-	GetHartInfo(id int) (*rv.HartInfo, error)    // return the info structure for hart id
-	GetCurrentHart() *rv.HartInfo                // get the info structure for the current hart
-	SetCurrentHart(id int) (*rv.HartInfo, error) // set the current hart
-	HaltHart() error                             // halt the current hart
-	ResumeHart() error                           // resume the current hart
-	// registers
-	RdGPR(reg, size uint) (uint64, error)   // read general purpose register
-	RdFPR(reg, size uint) (uint64, error)   // read floating point register
-	RdCSR(reg, size uint) (uint64, error)   // read control and status register
-	WrGPR(reg, size uint, val uint64) error // write general purpose register
-	WrFPR(reg, size uint, val uint64) error // write floating point register
-	WrCSR(reg, size uint, val uint64) error // write control and status register
-	// test
-	Test1() string
-	Test2() string
-}
-
 // target provides a method for getting the CPU debugger driver.
 type target interface {
-	GetRiscvDebug() Driver
+	GetRiscvDebug() rv.Debug
 }
 
 //-----------------------------------------------------------------------------
