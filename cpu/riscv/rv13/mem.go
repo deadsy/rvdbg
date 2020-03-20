@@ -11,8 +11,6 @@ package rv13
 
 import (
 	"fmt"
-
-	"github.com/deadsy/rvdbg/util"
 )
 
 //-----------------------------------------------------------------------------
@@ -34,21 +32,7 @@ func (dbg *Debug) RdMem(width, addr, n uint) ([]uint, error) {
 	if width == 64 && hi.info.MXLEN < 64 {
 		return nil, fmt.Errorf("%d-bit memory reads are not supported", width)
 	}
-	switch width {
-	case 8:
-		x, err := hi.rdMem8(dbg, addr, n)
-		return util.Cast8toUint(x), err
-	case 16:
-		x, err := hi.rdMem16(dbg, addr, n)
-		return util.Cast16toUint(x), err
-	case 32:
-		x, err := hi.rdMem32(dbg, addr, n)
-		return util.Cast32toUint(x), err
-	case 64:
-		x, err := hi.rdMem64(dbg, addr, n)
-		return util.Cast64toUint(x), err
-	}
-	return nil, fmt.Errorf("%d-bit memory reads are not supported", width)
+	return hi.rdMem(dbg, width, addr, n)
 }
 
 //-----------------------------------------------------------------------------
@@ -63,17 +47,7 @@ func (dbg *Debug) WrMem(width, addr uint, val []uint) error {
 	if width == 64 && hi.info.MXLEN < 64 {
 		return fmt.Errorf("%d-bit memory writes are not supported", width)
 	}
-	switch width {
-	case 8:
-		return hi.wrMem8(dbg, addr, util.CastUintto8(val))
-	case 16:
-		return hi.wrMem16(dbg, addr, util.CastUintto16(val))
-	case 32:
-		return hi.wrMem32(dbg, addr, util.CastUintto32(val))
-	case 64:
-		return hi.wrMem64(dbg, addr, util.CastUintto64(val))
-	}
-	return fmt.Errorf("%d-bit memory writes are not supported", width)
+	return hi.wrMem(dbg, width, addr, val)
 }
 
 //-----------------------------------------------------------------------------

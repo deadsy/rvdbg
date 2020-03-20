@@ -283,8 +283,6 @@ var hartinfoFields = soc.FieldSet{
 
 //-----------------------------------------------------------------------------
 
-const mask32 = (1 << 32) - 1
-
 // dmi operations
 const opIgnore = 0
 const opRd = 1
@@ -353,7 +351,7 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 		}
 		// get the read data
 		if read {
-			data = append(data, uint32((x>>2)&mask32))
+			data = append(data, uint32((x>>2)&util.Mask32))
 		}
 		// setup the next read
 		read = dmi.isRead()

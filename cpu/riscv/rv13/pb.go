@@ -9,7 +9,6 @@ RISC-V Debugger 0.13 Program Buffer Command Operations
 package rv13
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
@@ -247,7 +246,7 @@ func (dbg *Debug) pbRdMemSingleRV32(addr uint, pb []uint32) ([]uint32, error) {
 //-----------------------------------------------------------------------------
 
 // pbRdMem8 reads n x 8-bit values from memory using program buffer operations.
-func pbRdMem8(dbg *Debug, addr, n uint) ([]uint8, error) {
+func (dbg *Debug) pbRdMem8(addr, n uint) ([]uint, error) {
 	var err error
 	var data []uint32
 	if n == 1 {
@@ -263,11 +262,11 @@ func pbRdMem8(dbg *Debug, addr, n uint) ([]uint8, error) {
 	if err != nil {
 		return nil, err
 	}
-	return util.Cast32to8(data), nil
+	return util.Cast32toUint(data, util.Mask8), nil
 }
 
 // pbRdMem16 reads n x 16-bit values from memory using program buffer operations.
-func pbRdMem16(dbg *Debug, addr, n uint) ([]uint16, error) {
+func (dbg *Debug) pbRdMem16(addr, n uint) ([]uint, error) {
 	var err error
 	var data []uint32
 	if n == 1 {
@@ -283,20 +282,27 @@ func pbRdMem16(dbg *Debug, addr, n uint) ([]uint16, error) {
 	if err != nil {
 		return nil, err
 	}
-	return util.Cast32to16(data), nil
+	return util.Cast32toUint(data, util.Mask16), nil
 }
 
 // pbRdMem32 reads n x 32-bit values from memory using program buffer operations.
-func pbRdMem32(dbg *Debug, addr, n uint) ([]uint32, error) {
+func (dbg *Debug) pbRdMem32(addr, n uint) ([]uint, error) {
+	var err error
+	var data []uint32
 	if n == 1 {
 		pb := dbg.newProgramBuffer(2)
 		pb[0] = rv.InsLW(rv.RegS1, 0, rv.RegS0)
-		return dbg.pbRdMemSingleRV32(addr, pb)
+		data, err = dbg.pbRdMemSingleRV32(addr, pb)
+	} else {
+		pb := dbg.newProgramBuffer(3)
+		pb[0] = rv.InsLW(rv.RegS1, 0, rv.RegS0)
+		pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 4)
+		data, err = dbg.pbRdMemRV32(addr, n, pb)
 	}
-	pb := dbg.newProgramBuffer(3)
-	pb[0] = rv.InsLW(rv.RegS1, 0, rv.RegS0)
-	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 4)
-	return dbg.pbRdMemRV32(addr, n, pb)
+	if err != nil {
+		return nil, err
+	}
+	return util.Cast32toUint(data, util.Mask32), nil
 }
 
 //-----------------------------------------------------------------------------
@@ -358,17 +364,16 @@ func (dbg *Debug) pbRdMemRV64(addr, n uint, pb []uint32) ([]uint64, error) {
 }
 
 // pbRdMem64 reads n x 64-bit values from memory using program buffer operations.
-func pbRdMem64(dbg *Debug, addr, n uint) ([]uint64, error) {
+func (dbg *Debug) pbRdMem64(addr, n uint) ([]uint, error) {
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsLD(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 8)
 	// read the memory
-	return dbg.pbRdMemRV64(addr, n, pb)
-}
-
-// pbRdMem64Unsupported
-func pbRdMem64Unsupported(dbg *Debug, addr, n uint) ([]uint64, error) {
-	return nil, errors.New("64-bit memory reads are not supported")
+	data, err := dbg.pbRdMemRV64(addr, n, pb)
+	if err != nil {
+		return nil, err
+	}
+	return util.Cast64toUint(data, util.Mask64), nil
 }
 
 //-----------------------------------------------------------------------------
@@ -376,9 +381,13 @@ func pbRdMem64Unsupported(dbg *Debug, addr, n uint) ([]uint64, error) {
 func pbRdMem(dbg *Debug, width, addr, n uint) ([]uint, error) {
 	switch width {
 	case 8:
+		return dbg.pbRdMem8(addr, n)
 	case 16:
+		return dbg.pbRdMem16(addr, n)
 	case 32:
+		return dbg.pbRdMem32(addr, n)
 	case 64:
+		return dbg.pbRdMem64(addr, n)
 	}
 	return nil, fmt.Errorf("%d-bit memory reads are not supported", width)
 }
@@ -435,30 +444,30 @@ func (dbg *Debug) pbWrMemRV32(addr uint, val, pb []uint32) error {
 }
 
 // pbWrMem8 writes n x 8-bit values to memory using program buffer operations.
-func pbWrMem8(dbg *Debug, addr uint, val []uint8) error {
+func (dbg *Debug) pbWrMem8(addr uint, val []uint) error {
 	// 8-bit writes
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSB(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 1)
-	return dbg.pbWrMemRV32(addr, util.Cast8to32(val), pb)
+	return dbg.pbWrMemRV32(addr, util.CastUintto32(val), pb)
 }
 
 // pbWrMem16 writes n x 16-bit values to memory using program buffer operations.
-func pbWrMem16(dbg *Debug, addr uint, val []uint16) error {
+func (dbg *Debug) pbWrMem16(addr uint, val []uint) error {
 	// 16-bit writes
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSH(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 2)
-	return dbg.pbWrMemRV32(addr, util.Cast16to32(val), pb)
+	return dbg.pbWrMemRV32(addr, util.CastUintto32(val), pb)
 }
 
 // pbWrMem32 writes n x 32-bit values to memory using program buffer operations.
-func pbWrMem32(dbg *Debug, addr uint, val []uint32) error {
+func (dbg *Debug) pbWrMem32(addr uint, val []uint) error {
 	// 32-bit writes
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSW(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 4)
-	return dbg.pbWrMemRV32(addr, val, pb)
+	return dbg.pbWrMemRV32(addr, util.CastUintto32(val), pb)
 }
 
 //-----------------------------------------------------------------------------
@@ -510,17 +519,12 @@ func (dbg *Debug) pbWrMemRV64(addr uint, val []uint64, pb []uint32) error {
 }
 
 // pbWrMem64 writes n x 64-bit values to memory using program buffer operations.
-func pbWrMem64(dbg *Debug, addr uint, val []uint64) error {
+func (dbg *Debug) pbWrMem64(addr uint, val []uint) error {
 	// 64-bit writes
 	pb := dbg.newProgramBuffer(3)
 	pb[0] = rv.InsSD(rv.RegS1, 0, rv.RegS0)
 	pb[1] = rv.InsADDI(rv.RegS0, rv.RegS0, 8)
-	return dbg.pbWrMemRV64(addr, val, pb)
-}
-
-// pbWrMem64Unsupported
-func pbWrMem64Unsupported(dbg *Debug, addr uint, val []uint64) error {
-	return errors.New("64-bit memory writes are not supported")
+	return dbg.pbWrMemRV64(addr, util.CastUintto64(val), pb)
 }
 
 //-----------------------------------------------------------------------------
@@ -528,9 +532,14 @@ func pbWrMem64Unsupported(dbg *Debug, addr uint, val []uint64) error {
 func pbWrMem(dbg *Debug, width, addr uint, val []uint) error {
 	switch width {
 	case 8:
+		return dbg.pbWrMem8(addr, val)
 	case 16:
+		return dbg.pbWrMem16(addr, val)
 	case 32:
+		return dbg.pbWrMem32(addr, val)
 	case 64:
+		return dbg.pbWrMem64(addr, val)
+
 	}
 	return fmt.Errorf("%d-bit memory writes are not supported", width)
 }

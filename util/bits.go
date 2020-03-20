@@ -10,6 +10,13 @@ package util
 
 //-----------------------------------------------------------------------------
 
+const Mask8 = (1 << 8) - 1
+const Mask16 = (1 << 16) - 1
+const Mask32 = (1 << 32) - 1
+const Mask64 = (1 << 64) - 1
+
+//-----------------------------------------------------------------------------
+
 // BitMask returns a bit mask from the msb to lsb bits.
 func BitMask(msb, lsb uint) uint {
 	n := msb - lsb + 1

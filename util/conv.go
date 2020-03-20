@@ -52,38 +52,20 @@ func Cast8to32(x []uint8) []uint32 {
 //-----------------------------------------------------------------------------
 // 1-1 conversion of []uintX to []uint
 
-// Cast8toUint one-to-one converts an 8-bit slice to a uint slice.
-func Cast8toUint(x []uint8) []uint {
-	y := make([]uint, len(x))
-	for i := range x {
-		y[i] = uint(x[i])
-	}
-	return y
-}
-
-// Cast16toUint one-to-one converts a 16-bit slice to a uint slice.
-func Cast16toUint(x []uint16) []uint {
-	y := make([]uint, len(x))
-	for i := range x {
-		y[i] = uint(x[i])
-	}
-	return y
-}
-
 // Cast32toUint one-to-one converts a 32-bit slice to a uint slice.
-func Cast32toUint(x []uint32) []uint {
+func Cast32toUint(x []uint32, mask uint32) []uint {
 	y := make([]uint, len(x))
 	for i := range x {
-		y[i] = uint(x[i])
+		y[i] = uint(x[i] & mask)
 	}
 	return y
 }
 
 // Cast64toUint one-to-one converts a 64-bit slice to a uint slice.
-func Cast64toUint(x []uint64) []uint {
+func Cast64toUint(x []uint64, mask uint64) []uint {
 	y := make([]uint, len(x))
 	for i := range x {
-		y[i] = uint(x[i])
+		y[i] = uint(x[i] & mask)
 	}
 	return y
 }

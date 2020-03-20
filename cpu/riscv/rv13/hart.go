@@ -169,21 +169,8 @@ func (hi *hartInfo) probeMemory() error {
 	if !supported {
 		return errors.New("unable to support memory access")
 	}
-	// rv32/64/128
-	hi.rdMem8 = pbRdMem8
-	hi.rdMem16 = pbRdMem16
-	hi.rdMem32 = pbRdMem32
-	hi.wrMem8 = pbWrMem8
-	hi.wrMem16 = pbWrMem16
-	hi.wrMem32 = pbWrMem32
-	// rv64/128
-	if hi.info.MXLEN >= 64 {
-		hi.rdMem64 = pbRdMem64
-		hi.wrMem64 = pbWrMem64
-	} else {
-		hi.rdMem64 = pbRdMem64Unsupported
-		hi.wrMem64 = pbWrMem64Unsupported
-	}
+	hi.rdMem = pbRdMem
+	hi.wrMem = pbWrMem
 	return nil
 }
 
@@ -263,14 +250,8 @@ func (dbg *Debug) getDXLEN(hi *hartInfo) (uint, error) {
 
 type rdRegFunc func(dbg *Debug, reg, size uint) (uint64, error)
 type wrRegFunc func(dbg *Debug, reg, size uint, val uint64) error
-type rdMem8Func func(dbg *Debug, addr, n uint) ([]uint8, error)
-type rdMem16Func func(dbg *Debug, addr, n uint) ([]uint16, error)
-type rdMem32Func func(dbg *Debug, addr, n uint) ([]uint32, error)
-type rdMem64Func func(dbg *Debug, addr, n uint) ([]uint64, error)
-type wrMem8Func func(dbg *Debug, addr uint, val []uint8) error
-type wrMem16Func func(dbg *Debug, addr uint, val []uint16) error
-type wrMem32Func func(dbg *Debug, addr uint, val []uint32) error
-type wrMem64Func func(dbg *Debug, addr uint, val []uint64) error
+type rdMemFunc func(dbg *Debug, width, addr, n uint) ([]uint, error)
+type wrMemFunc func(dbg *Debug, width, addr uint, val []uint) error
 
 // hartInfo stores per hart information.
 type hartInfo struct {
@@ -286,14 +267,8 @@ type hartInfo struct {
 	wrGPR      wrRegFunc   // write GPR function
 	wrFPR      wrRegFunc   // write FPR function
 	wrCSR      wrRegFunc   // write CSR function
-	rdMem8     rdMem8Func  // read 8-bit memory buffer
-	rdMem16    rdMem16Func // read 16-bit memory buffer
-	rdMem32    rdMem32Func // read 32-bit memory buffer
-	rdMem64    rdMem64Func // read 64-bit memory buffer
-	wrMem8     wrMem8Func  // write 8-bit memory buffer
-	wrMem16    wrMem16Func // write 16-bit memory buffer
-	wrMem32    wrMem32Func // write 32-bit memory buffer
-	wrMem64    wrMem64Func // write 64-bit memory buffer
+	rdMem      rdMemFunc   // read memory buffer
+	wrMem      wrMemFunc   // write memory buffer
 }
 
 func (hi *hartInfo) String() string {
