@@ -63,7 +63,10 @@ type Target struct {
 	jtagDevice *jtag.Device
 	rvDebug    rv.Debug
 	socDevice  *soc.Device
+	csrDevice  *soc.Device
 	memDriver  *memDriver
+	csrDriver  *csrDriver
+	socDriver  *socDriver
 }
 
 // New returns a new gd32v target.
@@ -105,14 +108,22 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 	// create the SoC device
 	socDevice := gd32vf103.NewSoC(gd32vf103.VB).Setup()
 
+	// create the CSR device
+	csrDevice := rv.NewCsr().Setup()
+
 	return &Target{
 		jtagDevice: jtagDevice,
 		rvDebug:    rvDebug,
 		socDevice:  socDevice,
+		csrDevice:  csrDevice,
 		memDriver:  newMemDriver(rvDebug, socDevice),
+		socDriver:  newSocDriver(rvDebug),
+		csrDriver:  newCsrDriver(rvDebug),
 	}, nil
 
 }
+
+//-----------------------------------------------------------------------------
 
 // GetPrompt returns the target prompt string.
 func (t *Target) GetPrompt() string {
@@ -133,6 +144,8 @@ func (t *Target) Put(s string) {
 	os.Stdout.WriteString(s)
 }
 
+//-----------------------------------------------------------------------------
+
 // GetMemoryDriver returns a memory driver for this target.
 func (t *Target) GetMemoryDriver() mem.Driver {
 	return t.memDriver
@@ -145,7 +158,12 @@ func (t *Target) GetRiscvDebug() rv.Debug {
 
 // GetSoC returns the SoC device and driver.
 func (t *Target) GetSoC() (*soc.Device, soc.Driver) {
-	return t.socDevice, t.rvDebug
+	return t.socDevice, t.socDriver
+}
+
+// GetCSR returns the CSR device and driver.
+func (t *Target) GetCSR() (*soc.Device, soc.Driver) {
+	return t.csrDevice, t.csrDriver
 }
 
 // GetJtagDevice returns the JTAG device.

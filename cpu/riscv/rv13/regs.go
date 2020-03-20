@@ -24,7 +24,7 @@ func (dbg *Debug) RdCSR(reg, size uint) (uint64, error) {
 		return 0, fmt.Errorf("csr 0x%x is invalid", reg)
 	}
 	if size == 0 {
-		size = rv.GetCSRLength(reg, &hi.info)
+		size = rv.GetCSRSize(reg, &hi.info)
 	}
 	return hi.rdCSR(dbg, reg, size)
 }
@@ -36,7 +36,7 @@ func (dbg *Debug) WrCSR(reg, size uint, val uint64) error {
 		return fmt.Errorf("csr 0x%x is invalid", reg)
 	}
 	if size == 0 {
-		size = rv.GetCSRLength(reg, &hi.info)
+		size = rv.GetCSRSize(reg, &hi.info)
 	}
 	return hi.wrCSR(dbg, reg, size, val)
 }

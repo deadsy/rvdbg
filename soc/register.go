@@ -54,16 +54,23 @@ func (r *Register) address(base, idx uint) uint {
 	return base + r.Offset + (idx * (r.Size >> 3))
 }
 
+func (r *Register) registerSize(drv Driver) uint {
+	if r.Size != 0 {
+		return r.Size
+	}
+	return drv.GetRegisterSize(r)
+}
+
 // Display returns strings for the decode of a register.
 func (r *Register) Display(drv Driver, fields bool) [][]string {
 
 	// address string
 	addr := r.address(r.parent.Addr, 0)
 	fmtStr := fmt.Sprintf(": %s[%%d:0]", util.UintFormat(drv.GetAddressSize()))
-	addrStr := fmt.Sprintf(fmtStr, addr, r.Size-1)
+	addrStr := fmt.Sprintf(fmtStr, addr, r.registerSize(drv)-1)
 
 	// read the value
-	x, err := drv.RdMem(r.Size, addr, 1)
+	x, err := drv.Rd(r.Size, addr)
 	if err != nil {
 		return [][]string{{r.Name, addrStr, "?", util.RedString(err.Error())}}
 	}

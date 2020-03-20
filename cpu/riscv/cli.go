@@ -15,6 +15,7 @@ import (
 
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
+	"github.com/deadsy/rvdbg/soc"
 )
 
 //-----------------------------------------------------------------------------
@@ -22,6 +23,20 @@ import (
 // target provides a method for getting the CPU debugger driver.
 type target interface {
 	GetRiscvDebug() rv.Debug
+	GetCSR() (*soc.Device, soc.Driver)
+}
+
+//-----------------------------------------------------------------------------
+// display CSR
+
+// cmdCSR displays the control and status registers.
+var cmdCSR = cli.Leaf{
+	Descr: "display control and status registers",
+	F: func(c *cli.CLI, args []string) {
+		csr, drv := c.User.(target).GetCSR()
+		p := csr.GetPeripheral("CSR")
+		c.User.Put(fmt.Sprintf("%s\n", p.Display(drv, nil, false)))
+	},
 }
 
 //-----------------------------------------------------------------------------
@@ -194,6 +209,7 @@ var cmdRiscvTest2 = cli.Leaf{
 
 // Menu submenu items
 var Menu = cli.Menu{
+	{"csr", cmdCSR},
 	{"dmi", cmdDebugInfo},
 	{"test1", cmdRiscvTest1},
 	{"test2", cmdRiscvTest2},
