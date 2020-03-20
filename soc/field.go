@@ -64,10 +64,11 @@ func (f *Field) Display(val uint) []string {
 	// has the value changed?
 	changed := ""
 	if val != f.cacheVal && f.cacheValid {
-		f.cacheVal = val
-		f.cacheValid = true
 		changed = " *"
 	}
+	f.cacheVal = val
+	f.cacheValid = true
+
 	// field name
 	var nameStr string
 	if f.Msb == f.Lsb {

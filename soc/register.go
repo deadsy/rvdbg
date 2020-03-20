@@ -70,19 +70,18 @@ func (r *Register) Display(drv Driver, fields bool) [][]string {
 	addrStr := fmt.Sprintf(fmtStr, addr, r.registerSize(drv)-1)
 
 	// read the value
-	x, err := drv.Rd(r.Size, addr)
+	val, err := drv.Rd(r.Size, addr)
 	if err != nil {
 		return [][]string{{r.Name, addrStr, "?", util.RedString(err.Error())}}
 	}
-	val := x[0]
 
 	// has the value changed?
 	changed := ""
 	if val != r.cacheVal && r.cacheValid {
-		r.cacheVal = val
-		r.cacheValid = true
 		changed = " *"
 	}
+	r.cacheVal = val
+	r.cacheValid = true
 
 	// value string
 	var valStr string

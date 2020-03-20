@@ -36,8 +36,9 @@ func (drv *csrDriver) GetRegisterSize(r *soc.Register) uint {
 	return rv.GetCSRSize(r.Offset, drv.dbg.GetCurrentHart())
 }
 
-func (drv *csrDriver) Rd(width, addr uint) ([]uint, error) {
-	return []uint{0}, nil
+func (drv *csrDriver) Rd(width, addr uint) (uint, error) {
+	val, err := drv.dbg.RdCSR(addr, width)
+	return uint(val), err
 }
 
 //-----------------------------------------------------------------------------

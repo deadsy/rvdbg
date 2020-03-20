@@ -286,6 +286,9 @@ func NewCsr() *soc.Device {
 
 // CSR register addresses.
 const (
+	FFLAGS    = 0x001
+	FRM       = 0x002
+	FCSR      = 0x003
 	MSTATUS   = 0x300
 	MISA      = 0x301
 	DCSR      = 0x7b0
@@ -376,6 +379,11 @@ func GetCSRSize(reg uint, hi *HartInfo) uint {
 	switch reg {
 	case MVENDORID, DCSR:
 		return 32
+	case FFLAGS, FRM, FCSR:
+		if hi.FLEN != 0 {
+			return 32
+		}
+		return 0
 	case DPC:
 		return hi.DXLEN
 	}

@@ -35,8 +35,12 @@ func (drv *socDriver) GetRegisterSize(r *soc.Register) uint {
 	return 32
 }
 
-func (drv *socDriver) Rd(width, addr uint) ([]uint, error) {
-	return drv.dbg.RdMem(width, addr, 1)
+func (drv *socDriver) Rd(width, addr uint) (uint, error) {
+	x, err := drv.dbg.RdMem(width, addr, 1)
+	if err != nil {
+		return 0, err
+	}
+	return x[0], nil
 }
 
 //-----------------------------------------------------------------------------

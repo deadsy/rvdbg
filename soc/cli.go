@@ -19,9 +19,9 @@ import (
 
 // Driver is the SoC driver api.
 type Driver interface {
-	GetAddressSize() uint                // get address size in bits
-	GetRegisterSize(r *Register) uint    // get the register bit size
-	Rd(width, addr uint) ([]uint, error) // read width-bit memory buffer
+	GetAddressSize() uint              // get address size in bits
+	GetRegisterSize(r *Register) uint  // get the register bit size
+	Rd(width, addr uint) (uint, error) // read width-bit memory buffer
 }
 
 // target provides a method for getting the SoC device and driver.
