@@ -80,21 +80,34 @@ var abiXName = [32]string{
 	"s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6",
 }
 
-func gprString(reg []uint64, pc uint64, xlen uint) string {
+var regCache []uint64
+
+func gprString(reg []uint64, xlen uint) string {
 	fmtx := "%08x"
 	if xlen == 64 {
 		fmtx = "%016x"
 	}
-	s := make([]string, len(reg)+1)
-	for i := 0; i < len(reg); i++ {
-		regStr := fmt.Sprintf("x%d", i)
-		valStr := "0"
-		if reg[i] != 0 {
-			valStr = fmt.Sprintf(fmtx, reg[i])
-		}
-		s[i] = fmt.Sprintf("%-4s %-4s %s", regStr, abiXName[i], valStr)
+	if regCache == nil {
+		regCache = reg
 	}
-	s[len(reg)] = fmt.Sprintf("%-9s "+fmtx, "pc", pc)
+	s := make([]string, len(reg))
+	for i := 0; i < len(reg); i++ {
+		delta := ""
+		if reg[i] != regCache[i] {
+			delta = " *"
+		}
+		if i == len(reg)-1 {
+			s[i] = fmt.Sprintf("%-9s "+fmtx+"%s", "pc", reg[i], delta)
+		} else {
+			regStr := fmt.Sprintf("x%d", i)
+			valStr := "0"
+			if reg[i] != 0 {
+				valStr = fmt.Sprintf(fmtx, reg[i])
+			}
+			s[i] = fmt.Sprintf("%-4s %-4s %s%s", regStr, abiXName[i], valStr, delta)
+		}
+	}
+	regCache = reg
 	return strings.Join(s, "\n")
 }
 
@@ -109,9 +122,10 @@ var CmdGpr = cli.Leaf{
 			c.User.Put(fmt.Sprintf("unable to halt hart%d: %v\n", hi.ID, err))
 			return
 		}
-		reg := make([]uint64, hi.Nregs)
+		// slice of register values, +1 for the pc
+		reg := make([]uint64, hi.Nregs+1)
 		// read the GPRs
-		for i := range reg {
+		for i := 0; i < hi.Nregs; i++ {
 			var err error
 			reg[i], err = dbg.RdGPR(uint(i), 0)
 			if err != nil {
@@ -125,7 +139,8 @@ var CmdGpr = cli.Leaf{
 			c.User.Put(fmt.Sprintf("unable to read pc: %v\n", err))
 			return
 		}
-		c.User.Put(fmt.Sprintf("%s\n", gprString(reg, uint64(pc), hi.MXLEN)))
+		reg[len(reg)-1] = pc
+		c.User.Put(fmt.Sprintf("%s\n", gprString(reg, hi.MXLEN)))
 	},
 }
 
