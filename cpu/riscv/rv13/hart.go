@@ -253,10 +253,10 @@ type wrRegFunc func(dbg *Debug, reg, size uint, val uint64) error
 type rdMemFunc func(dbg *Debug, width, addr, n uint) ([]uint, error)
 type wrMemFunc func(dbg *Debug, width, addr uint, val []uint) error
 
-// hartInfo stores per hart information.
+// hartInfo stores generic/rv13 hart information.
 type hartInfo struct {
 	dbg        *Debug      // pointer back to parent debugger
-	info       rv.HartInfo // public information
+	info       rv.HartInfo // generic information
 	nscratch   uint        // number of dscratch registers
 	datasize   uint        // number of data registers in csr/memory
 	dataaccess uint        // data registers in csr(0)/memory(1)
@@ -419,6 +419,9 @@ func (hi *hartInfo) examine() error {
 	log.Info.Printf(fmt.Sprintf("hart%d: datasize %d %s", hi.info.ID, hi.datasize, []string{"csr", "words"}[hi.dataaccess]))
 	log.Info.Printf(fmt.Sprintf("hart%d: dataaccess %s(%d)", hi.info.ID, []string{"csr", "memory"}[hi.dataaccess], hi.dataaccess))
 	log.Info.Printf(fmt.Sprintf("hart%d: dataaddr 0x%x", hi.info.ID, hi.dataaddr))
+
+	// Now that we have the register lengths we can create the per-hart CSR decodes.
+	hi.info.NewCsr().Setup()
 
 	if !wasHalted {
 		// resume the hart

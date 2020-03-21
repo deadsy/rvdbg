@@ -35,7 +35,7 @@ var cmdCSR = cli.Leaf{
 	F: func(c *cli.CLI, args []string) {
 		csr, drv := c.User.(target).GetCSR()
 		p := csr.GetPeripheral("CSR")
-		c.User.Put(fmt.Sprintf("%s\n", p.Display(drv, nil, false)))
+		c.User.Put(fmt.Sprintf("%s\n", p.Display(drv, nil, true)))
 	},
 }
 

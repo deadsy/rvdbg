@@ -49,6 +49,22 @@ func (a RegisterSet) Less(i, j int) bool {
 
 //-----------------------------------------------------------------------------
 
+// GetField returns the named field if it exists.
+func (r *Register) GetField(name string) *Field {
+	if r == nil {
+		return nil
+	}
+	for i := range r.Fields {
+		f := &r.Fields[i]
+		if r.Name == name {
+			return f
+		}
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+
 // address returns the absolute address of an indexed register.
 func (r *Register) address(base, idx uint) uint {
 	return base + r.Offset + (idx * (r.Size >> 3))

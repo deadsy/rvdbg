@@ -47,6 +47,9 @@ func (a PeripheralSet) Less(i, j int) bool {
 
 // GetRegister returns the named register if it exists.
 func (p *Peripheral) GetRegister(name string) *Register {
+	if p == nil {
+		return nil
+	}
 	for i := range p.Registers {
 		r := &p.Registers[i]
 		if r.Name == name {

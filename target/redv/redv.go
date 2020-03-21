@@ -63,7 +63,6 @@ type Target struct {
 	jtagDevice *jtag.Device
 	rvDebug    rv.Debug
 	socDevice  *soc.Device
-	csrDevice  *soc.Device
 	memDriver  *memDriver
 	csrDriver  *csrDriver
 	socDriver  *socDriver
@@ -109,14 +108,10 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 	// create the SoC device
 	socDevice := fe310.NewSoC(fe310.G002).Setup()
 
-	// create the CSR device
-	csrDevice := rv.NewCsr().Setup()
-
 	return &Target{
 		jtagDevice: jtagDevice,
 		rvDebug:    rvDebug,
 		socDevice:  socDevice,
-		csrDevice:  csrDevice,
 		memDriver:  newMemDriver(rvDebug, socDevice),
 		socDriver:  newSocDriver(rvDebug),
 		csrDriver:  newCsrDriver(rvDebug),
@@ -164,7 +159,7 @@ func (t *Target) GetSoC() (*soc.Device, soc.Driver) {
 
 // GetCSR returns the CSR device and driver.
 func (t *Target) GetCSR() (*soc.Device, soc.Driver) {
-	return t.csrDevice, t.csrDriver
+	return t.rvDebug.GetCurrentHart().CSR, t.csrDriver
 }
 
 // GetJtagDevice returns the JTAG device.

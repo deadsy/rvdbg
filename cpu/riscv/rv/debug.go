@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/soc"
 )
 
 //-----------------------------------------------------------------------------
@@ -38,19 +39,20 @@ func (s HartState) String() string {
 	return "unknown"
 }
 
-// HartInfo stores hart information.
+// HartInfo stores generic hart information.
 type HartInfo struct {
-	ID      int       // hart identifier
-	State   HartState // hart state
-	Nregs   int       // number of GPRs (normally 32, 16 for rv32e)
-	MXLEN   uint      // machine XLEN
-	SXLEN   uint      // supervisor XLEN (0 == no S-mode)
-	UXLEN   uint      // user XLEN (0 == no U-mode)
-	HXLEN   uint      // hypervisor XLEN (0 == no H-mode)
-	DXLEN   uint      // debug XLEN
-	FLEN    uint      // foating point register width (0 == no floating point)
-	MISA    uint      // MISA value
-	MHARTID uint      // MHARTID value
+	ID      int         // hart identifier
+	State   HartState   // hart state
+	Nregs   int         // number of GPRs (normally 32, 16 for rv32e)
+	MXLEN   uint        // machine XLEN
+	SXLEN   uint        // supervisor XLEN (0 == no S-mode)
+	UXLEN   uint        // user XLEN (0 == no U-mode)
+	HXLEN   uint        // hypervisor XLEN (0 == no H-mode)
+	DXLEN   uint        // debug XLEN
+	FLEN    uint        // foating point register width (0 == no floating point)
+	MISA    uint        // MISA value
+	MHARTID uint        // MHARTID value
+	CSR     *soc.Device // CSR registers/fields
 }
 
 func xlenString(n uint, msg string) string {
@@ -63,8 +65,6 @@ func xlenString(n uint, msg string) string {
 func (hi *HartInfo) String() string {
 	s := make([][]string, 0)
 	s = append(s, []string{fmt.Sprintf("hart%d", hi.ID), fmt.Sprintf("%s", hi.State)})
-	s = append(s, []string{"mhartid", fmt.Sprintf("%d", hi.MHARTID)})
-	s = append(s, []string{"misa", fmt.Sprintf("%s", DisplayMISA(hi.MISA, uint(hi.MXLEN)))})
 	s = append(s, []string{"nregs", fmt.Sprintf("%d", hi.Nregs)})
 	s = append(s, []string{"mxlen", fmt.Sprintf("%d", hi.MXLEN)})
 	s = append(s, []string{"sxlen", xlenString(hi.SXLEN, "s-mode")})

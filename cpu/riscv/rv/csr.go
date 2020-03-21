@@ -17,8 +17,8 @@ import (
 
 //-----------------------------------------------------------------------------
 
-func NewCsr() *soc.Device {
-	return &soc.Device{
+func (hi *HartInfo) NewCsr() *soc.Device {
+	csr := &soc.Device{
 		Name: "CSR",
 		Peripherals: []soc.Peripheral{
 			{
@@ -123,7 +123,13 @@ func NewCsr() *soc.Device {
 					{Offset: 0xf14, Name: "mhartid"},
 					// Machine CSRs 0x300 - 0x3ff (read/write)
 					{Offset: 0x300, Name: "mstatus"},
-					{Offset: 0x301, Name: "misa"},
+					{Offset: 0x301,
+						Name: "misa",
+						Fields: []soc.Field{
+							{Name: "mxl", Msb: hi.MXLEN - 1, Lsb: hi.MXLEN - 2, Fmt: fmtMXL},
+							{Name: "extensions", Msb: 25, Lsb: 0, Fmt: fmtExtensions},
+						},
+					},
 					{Offset: 0x302, Name: "medeleg"},
 					{Offset: 0x303, Name: "mideleg"},
 					{Offset: 0x304, Name: "mie"},
@@ -280,6 +286,8 @@ func NewCsr() *soc.Device {
 			},
 		},
 	}
+	hi.CSR = csr
+	return csr
 }
 
 //-----------------------------------------------------------------------------
@@ -301,6 +309,7 @@ const (
 	MHARTID   = 0xf14
 )
 
+// CSR address modes.
 const modeMask = (3 << 8)
 const modeUser = (0 << 8)
 const modeSupervisor = (1 << 8)
@@ -308,29 +317,10 @@ const modeHypervisor = (2 << 8)
 const modeMachine = (3 << 8)
 
 //-----------------------------------------------------------------------------
-
-/*
-
-var csrRegs = decode.RegisterSet{
-	{"mstatus", MSTATUS, 0, nil, ""},
-	{"misa", MISA, 0, nil, ""},
-	{"dcsr", DCSR, 0, nil, ""},
-	{"dpc", DPC, 0, nil, ""},
-	{"dcratch0", DCRATCH0, 0, nil, ""},
-	{"dcratch1", DCRATCH1, 0, nil, ""},
-	{"mvendorid", MVENDORID, 0, nil, ""},
-	{"marchid", MARCHID, 0, nil, ""},
-	{"mimpid", MIMPID, 0, nil, ""},
-	{"mhartid", MHARTID, 0, nil, ""},
-}
-
-*/
-
-//-----------------------------------------------------------------------------
 // MISA
 
 func fmtMXL(x uint) string {
-	return []string{"?", "32", "64", "128"}[x]
+	return []string{"?", "32-bits", "64-bits", "128-bits"}[x]
 }
 
 func fmtExtensions(x uint) string {
@@ -345,15 +335,6 @@ func fmtExtensions(x uint) string {
 		return fmt.Sprintf("\"%s\"", string(s))
 	}
 	return "none"
-}
-
-// DisplayMISA returns a string decoding a MISA value.
-func DisplayMISA(misa, mxlen uint) string {
-	fs := []soc.Field{
-		{Name: "mxl", Msb: mxlen - 1, Lsb: mxlen - 2, Fmt: fmtMXL},
-		{Name: "extensions", Msb: 25, Lsb: 0, Fmt: fmtExtensions},
-	}
-	return soc.DisplayH(fs, misa)
 }
 
 // GetMxlMISA returns the bit length in the MISA.mxl field.

@@ -33,6 +33,9 @@ type Device struct {
 
 // GetPeripheral returns the named peripheral if it exists.
 func (dev *Device) GetPeripheral(name string) *Peripheral {
+	if dev == nil {
+		return nil
+	}
 	for i := range dev.Peripherals {
 		p := &dev.Peripherals[i]
 		if p.Name == name {
