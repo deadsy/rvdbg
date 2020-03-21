@@ -65,6 +65,7 @@ func xlenString(n uint, msg string) string {
 func (hi *HartInfo) String() string {
 	s := make([][]string, 0)
 	s = append(s, []string{fmt.Sprintf("hart%d", hi.ID), fmt.Sprintf("%s", hi.State)})
+	s = append(s, []string{"mhartid", fmt.Sprintf("%d", hi.MHARTID)})
 	s = append(s, []string{"nregs", fmt.Sprintf("%d", hi.Nregs)})
 	s = append(s, []string{"mxlen", fmt.Sprintf("%d", hi.MXLEN)})
 	s = append(s, []string{"sxlen", xlenString(hi.SXLEN, "s-mode")})

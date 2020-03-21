@@ -29,13 +29,44 @@ type target interface {
 //-----------------------------------------------------------------------------
 // display CSR
 
+// csrHelp is help information for the "csr" command.
+var csrHelp = []cli.Help{
+	{"[register]", "register (string) - register name (or *)"},
+	{"<cr>", "display all registers"},
+}
+
 // cmdCSR displays the control and status registers.
 var cmdCSR = cli.Leaf{
 	Descr: "display control and status registers",
 	F: func(c *cli.CLI, args []string) {
+
+		err := cli.CheckArgc(args, []int{0, 1})
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
+
 		csr, drv := c.User.(target).GetCSR()
+
 		p := csr.GetPeripheral("CSR")
-		c.User.Put(fmt.Sprintf("%s\n", p.Display(drv, nil, true)))
+
+		if len(args) == 0 {
+			c.User.Put(fmt.Sprintf("%s\n", p.Display(drv, nil, false)))
+			return
+		}
+
+		if args[0] == "*" {
+			c.User.Put(fmt.Sprintf("%s\n", p.Display(drv, nil, true)))
+			return
+		}
+
+		r := p.GetRegister(args[0])
+		if r == nil {
+			c.User.Put(fmt.Sprintf("no register \"%s\" (run \"csr\" for the names)\n", args[0]))
+			return
+		}
+
+		c.User.Put(fmt.Sprintf("%s\n", p.Display(drv, r, true)))
 	},
 }
 
@@ -209,7 +240,7 @@ var cmdRiscvTest2 = cli.Leaf{
 
 // Menu submenu items
 var Menu = cli.Menu{
-	{"csr", cmdCSR},
+	{"csr", cmdCSR, csrHelp},
 	{"dmi", cmdDebugInfo},
 	{"test1", cmdRiscvTest1},
 	{"test2", cmdRiscvTest2},

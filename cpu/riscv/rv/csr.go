@@ -122,7 +122,28 @@ func (hi *HartInfo) NewCsr() *soc.Device {
 					{Offset: 0xf13, Name: "mimpid"},
 					{Offset: 0xf14, Name: "mhartid"},
 					// Machine CSRs 0x300 - 0x3ff (read/write)
-					{Offset: 0x300, Name: "mstatus"},
+					{Offset: 0x300,
+						Name: "mstatus",
+						Fields: []soc.Field{
+							{Name: "sd", Msb: hi.MXLEN - 1, Lsb: hi.MXLEN - 1},
+							{Name: "tsr", Msb: 22, Lsb: 22},
+							{Name: "tw", Msb: 21, Lsb: 21},
+							{Name: "tvm", Msb: 20, Lsb: 20},
+							{Name: "mxr", Msb: 19, Lsb: 19},
+							{Name: "sum", Msb: 18, Lsb: 18},
+							{Name: "mprv", Msb: 17, Lsb: 17},
+							{Name: "xs", Msb: 16, Lsb: 15},
+							{Name: "fs", Msb: 14, Lsb: 13},
+							{Name: "mpp", Msb: 12, Lsb: 11},
+							{Name: "spp", Msb: 8, Lsb: 8},
+							{Name: "mpie", Msb: 7, Lsb: 7},
+							{Name: "spie", Msb: 5, Lsb: 5},
+							{Name: "upie", Msb: 4, Lsb: 4},
+							{Name: "mie", Msb: 3, Lsb: 3},
+							{Name: "sie", Msb: 1, Lsb: 1},
+							{Name: "uie", Msb: 0, Lsb: 0},
+						},
+					},
 					{Offset: 0x301,
 						Name: "misa",
 						Fields: []soc.Field{
@@ -134,10 +155,43 @@ func (hi *HartInfo) NewCsr() *soc.Device {
 					{Offset: 0x303, Name: "mideleg"},
 					{Offset: 0x304, Name: "mie"},
 					{Offset: 0x305, Name: "mtvec"},
-					{Offset: 0x306, Name: "mcounteren"},
-					{Offset: 0x320, Name: "mucounteren"},
-					{Offset: 0x321, Name: "mscounteren"},
-					{Offset: 0x322, Name: "mhcounteren"},
+
+					{Offset: 0x306,
+						Name: "mcounteren",
+						Fields: []soc.Field{
+							{Name: "hpm", Msb: 31, Lsb: 3},
+							{Name: "ir", Msb: 2, Lsb: 2},
+							{Name: "tm", Msb: 1, Lsb: 1},
+							{Name: "cy", Msb: 0, Lsb: 03},
+						},
+					},
+					{Offset: 0x320,
+						Name: "mucounteren",
+						Fields: []soc.Field{
+							{Name: "hpm", Msb: 31, Lsb: 3},
+							{Name: "ir", Msb: 2, Lsb: 2},
+							{Name: "tm", Msb: 1, Lsb: 1},
+							{Name: "cy", Msb: 0, Lsb: 03},
+						},
+					},
+					{Offset: 0x321,
+						Name: "mscounteren",
+						Fields: []soc.Field{
+							{Name: "hpm", Msb: 31, Lsb: 3},
+							{Name: "ir", Msb: 2, Lsb: 2},
+							{Name: "tm", Msb: 1, Lsb: 1},
+							{Name: "cy", Msb: 0, Lsb: 03},
+						},
+					},
+					{Offset: 0x322,
+						Name: "mhcounteren",
+						Fields: []soc.Field{
+							{Name: "hpm", Msb: 31, Lsb: 3},
+							{Name: "ir", Msb: 2, Lsb: 2},
+							{Name: "tm", Msb: 1, Lsb: 1},
+							{Name: "cy", Msb: 0, Lsb: 03},
+						},
+					},
 					{Offset: 0x323, Name: "mhpmevent3"},
 					{Offset: 0x324, Name: "mhpmevent4"},
 					{Offset: 0x325, Name: "mhpmevent5"},
@@ -169,7 +223,13 @@ func (hi *HartInfo) NewCsr() *soc.Device {
 					{Offset: 0x33f, Name: "mhpmevent31"},
 					{Offset: 0x340, Name: "mscratch"},
 					{Offset: 0x341, Name: "mepc"},
-					{Offset: 0x342, Name: "mcause"},
+					{Offset: 0x342,
+						Name: "mcause",
+						Fields: []soc.Field{
+							{Name: "interrupt", Msb: hi.MXLEN - 1, Lsb: hi.MXLEN - 1},
+							{Name: "exception code", Msb: hi.MXLEN - 2, Lsb: 0},
+						},
+					},
 					{Offset: 0x343, Name: "mtval"},
 					{Offset: 0x344, Name: "mip"},
 					{Offset: 0x380, Name: "mbase"},
@@ -286,6 +346,14 @@ func (hi *HartInfo) NewCsr() *soc.Device {
 			},
 		},
 	}
+
+	// additional decodes for RV64
+	if hi.MXLEN == 64 {
+		r := csr.GetPeripheral("CSR").GetRegister("mstatus")
+		r.Fields = append(r.Fields, soc.Field{Name: "sxl", Msb: 35, Lsb: 34})
+		r.Fields = append(r.Fields, soc.Field{Name: "uxl", Msb: 33, Lsb: 32})
+	}
+
 	hi.CSR = csr
 	return csr
 }
