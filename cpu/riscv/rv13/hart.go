@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deadsy/rvda"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/util"
 	"github.com/deadsy/rvdbg/util/log"
@@ -422,6 +423,13 @@ func (hi *hartInfo) examine() error {
 
 	// Now that we have the register lengths we can create the per-hart CSR decodes.
 	hi.info.NewCsr().Setup()
+
+	// Using the MISA extension bits setup the disassembler.
+	hi.info.ISA, err = rvda.New(hi.info.MXLEN, hi.info.MISA)
+	if err != nil {
+		return err
+	}
+	log.Info.Printf(fmt.Sprintf("hart%d: ISA %s", hi.info.ID, hi.info.ISA))
 
 	if !wasHalted {
 		// resume the hart

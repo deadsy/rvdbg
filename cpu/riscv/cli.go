@@ -229,6 +229,48 @@ var CmdHart = cli.Leaf{
 
 //-----------------------------------------------------------------------------
 
+var DisassembleHelp = []cli.Help{
+	{"<addr/name> [len]", "memory region"},
+	{"  addr", "address (hex), default is current pc"},
+	{"  name", "symbol name (string), see \"symbol\" command"},
+	{"  len", "length (hex), defaults to 0x100"},
+}
+
+// CmdDisassemble disassembles a region of memory.
+var CmdDisassemble = cli.Leaf{
+	Descr: "disassemble memory",
+	F: func(c *cli.CLI, args []string) {
+
+		dbg := c.User.(target).GetRiscvDebug()
+		hi := dbg.GetCurrentHart()
+
+		// read the PC
+		pc, err := dbg.RdCSR(rv.DPC, 0)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("unable to read pc: %v\n", err))
+			return
+		}
+
+		addr := uint(pc)
+		n := 0x100
+
+		for n >= 0 {
+			ins, err := dbg.RdMem(32, addr, 1)
+			if err != nil {
+				c.User.Put(fmt.Sprintf("unable to read memory at %x\n", addr))
+				return
+			}
+			da, k := hi.ISA.Disassemble(ins[0], addr)
+			c.User.Put(fmt.Sprintf("%s\n", da))
+			addr += k
+			n -= int(k)
+		}
+
+	},
+}
+
+//-----------------------------------------------------------------------------
+
 var cmdDebugInfo = cli.Leaf{
 	Descr: "debug module information",
 	F: func(c *cli.CLI, args []string) {

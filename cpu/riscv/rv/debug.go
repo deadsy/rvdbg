@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvda"
 	"github.com/deadsy/rvdbg/soc"
 )
 
@@ -53,6 +54,7 @@ type HartInfo struct {
 	MISA    uint        // MISA value
 	MHARTID uint        // MHARTID value
 	CSR     *soc.Device // CSR registers/fields
+	ISA     *rvda.ISA   // ISA for the disassembler
 }
 
 func xlenString(n uint, msg string) string {
