@@ -236,23 +236,59 @@ var DisassembleHelp = []cli.Help{
 	{"  len", "length (hex), defaults to 0x100"},
 }
 
-// CmdDisassemble disassembles a region of memory.
-var CmdDisassemble = cli.Leaf{
-	Descr: "disassemble memory",
-	F: func(c *cli.CLI, args []string) {
+const defSize = 0x80
 
-		dbg := c.User.(target).GetRiscvDebug()
-		hi := dbg.GetCurrentHart()
+// disassembleArg converts disassemble arguments to an (address, n) tuple.
+func disassembleArg(dbg rv.Debug, args []string) (uint, int, error) {
+
+	err := cli.CheckArgc(args, []int{0, 1, 2})
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if len(args) == 0 {
 
 		// read the PC
 		pc, err := dbg.RdCSR(rv.DPC, 0)
 		if err != nil {
-			c.User.Put(fmt.Sprintf("unable to read pc: %v\n", err))
-			return
+			return 0, 0, fmt.Errorf("unable to read pc: %v\n", err)
 		}
 
-		addr := uint(pc)
-		n := 0x100
+		return uint(pc), defSize, nil
+	}
+
+	// get the address
+	maxAddr := uint((1 << dbg.GetAddressSize()) - 1)
+	addr, err := cli.UintArg(args[0], [2]uint{0, maxAddr}, 16)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if len(args) == 1 {
+		return addr, defSize, nil
+	}
+
+	// get the size
+	n, err := cli.UintArg(args[1], [2]uint{1, 0x100000000}, 16)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return addr, int(n), nil
+}
+
+// CmdDisassemble disassembles a region of memory.
+var CmdDisassemble = cli.Leaf{
+	Descr: "disassemble memory",
+	F: func(c *cli.CLI, args []string) {
+		dbg := c.User.(target).GetRiscvDebug()
+		hi := dbg.GetCurrentHart()
+
+		addr, n, err := disassembleArg(dbg, args)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
 
 		for n >= 0 {
 			ins, err := dbg.RdMem(32, addr, 1)
@@ -260,10 +296,10 @@ var CmdDisassemble = cli.Leaf{
 				c.User.Put(fmt.Sprintf("unable to read memory at %x\n", addr))
 				return
 			}
-			da, k := hi.ISA.Disassemble(ins[0], addr)
+			da := hi.ISA.Disassemble(addr, ins[0])
 			c.User.Put(fmt.Sprintf("%s\n", da))
-			addr += k
-			n -= int(k)
+			addr += da.InsLength
+			n -= int(da.InsLength)
 		}
 
 	},
