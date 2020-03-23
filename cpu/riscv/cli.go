@@ -247,13 +247,11 @@ func disassembleArg(dbg rv.Debug, args []string) (uint, int, error) {
 	}
 
 	if len(args) == 0 {
-
 		// read the PC
 		pc, err := dbg.RdCSR(rv.DPC, 0)
 		if err != nil {
-			return 0, 0, fmt.Errorf("unable to read pc: %v\n", err)
+			return 0, 0, fmt.Errorf("unable to read pc: %s", err)
 		}
-
 		return uint(pc), defSize, nil
 	}
 
@@ -263,6 +261,8 @@ func disassembleArg(dbg rv.Debug, args []string) (uint, int, error) {
 	if err != nil {
 		return 0, 0, err
 	}
+
+	// TODO - check alignment
 
 	if len(args) == 1 {
 		return addr, defSize, nil
@@ -283,20 +283,23 @@ var CmdDisassemble = cli.Leaf{
 	F: func(c *cli.CLI, args []string) {
 		dbg := c.User.(target).GetRiscvDebug()
 		hi := dbg.GetCurrentHart()
-
+		// get the arguments
 		addr, n, err := disassembleArg(dbg, args)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
 		}
-
+		// disassemble
 		for n >= 0 {
-			ins, err := dbg.RdMem(32, addr, 1)
+			// For a compressed instruction stream we may be reading 32-bit
+			// values with 16-bit alignment. Some chips don't allow this for
+			// data read access, so we always read 2 x 16-bit values.
+			ins, err := dbg.RdMem(16, addr, 2)
 			if err != nil {
 				c.User.Put(fmt.Sprintf("unable to read memory at %x\n", addr))
 				return
 			}
-			da := hi.ISA.Disassemble(addr, ins[0])
+			da := hi.ISA.Disassemble(addr, (ins[1]<<16)|ins[0])
 			c.User.Put(fmt.Sprintf("%s\n", da))
 			addr += da.InsLength
 			n -= int(da.InsLength)

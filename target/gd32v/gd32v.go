@@ -42,8 +42,8 @@ var Info = target.Info{
 
 // menuRoot is the root menu.
 var menuRoot = cli.Menu{
-	{"da", riscv.CmdDisassemble, riscv.DisassembleHelp},
 	{"cpu", riscv.Menu, "cpu functions"},
+	{"da", riscv.CmdDisassemble, riscv.DisassembleHelp},
 	{"exit", target.CmdExit},
 	{"gpr", riscv.CmdGpr},
 	{"halt", riscv.CmdHalt},
