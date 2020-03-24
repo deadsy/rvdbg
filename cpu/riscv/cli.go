@@ -9,6 +9,7 @@ RISC-V CPU Menu Items
 package riscv
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"strings"
@@ -262,7 +263,19 @@ func disassembleArg(dbg rv.Debug, args []string) (uint, int, error) {
 		return 0, 0, err
 	}
 
-	// TODO - check alignment
+	// check address alignment
+	misa := dbg.GetCurrentHart().MISA
+	if rv.CheckExtMISA(misa, 'c') {
+		// 16-bit alignment
+		if addr&1 != 0 {
+			return 0, 0, errors.New("instruction address is not 16-bit aligned")
+		}
+	} else {
+		// 32-bit alignment
+		if addr&3 != 0 {
+			return 0, 0, errors.New("instruction address is not 32-bit aligned")
+		}
+	}
 
 	if len(args) == 1 {
 		return addr, defSize, nil

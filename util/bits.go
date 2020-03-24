@@ -17,32 +17,20 @@ const Mask64 = (1 << 64) - 1
 
 //-----------------------------------------------------------------------------
 
-// BitMask returns a bit mask from the msb to lsb bits.
-func BitMask(msb, lsb uint) uint {
+// Mask returns a bit mask from the msb to lsb bits.
+func Mask(msb, lsb uint) uint {
 	n := msb - lsb + 1
 	return ((1 << n) - 1) << lsb
 }
 
 // Bits reads a bit field from a value.
 func Bits(x, msb, lsb uint) uint {
-	return (x & BitMask(msb, lsb)) >> lsb
+	return (x & Mask(msb, lsb)) >> lsb
 }
 
-// Bit reads a bit from a value.
+// Bit reads a single bit from a value.
 func Bit(x, n uint) uint {
-	return (x & BitMask(n, n)) >> n
-}
-
-// MaskBits masks a bit field within a value.
-func MaskBits(x, msb, lsb uint) uint {
-	return x & BitMask(msb, lsb)
-}
-
-// SetBits writes a bit field within a value.
-func SetBits(x, val, msb, lsb uint) uint {
-	mask := BitMask(msb, lsb)
-	val = (val << lsb) & mask
-	return (x & ^mask) | val
+	return (x >> n) & 1
 }
 
 //-----------------------------------------------------------------------------
