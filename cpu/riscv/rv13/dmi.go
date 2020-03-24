@@ -15,7 +15,6 @@ import (
 	"math/rand"
 	"time"
 
-	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/bitstr"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/soc"
@@ -95,87 +94,136 @@ const sbdata1 = 0x3d // System Bus Data 63:32
 const sbdata2 = 0x3e // System Bus Data 95:64
 const sbdata3 = 0x3f // System Bus Data 127:96
 
-var dmiName = map[uint]string{
-	data0:        "data0",
-	data1:        "data1",
-	data2:        "data2",
-	data3:        "data3",
-	data4:        "data4",
-	data5:        "data5",
-	data6:        "data6",
-	data7:        "data7",
-	data8:        "data8",
-	data9:        "data9",
-	data10:       "data10",
-	data11:       "data11",
-	progbuf0:     "progbuf0",
-	progbuf1:     "progbuf1",
-	progbuf2:     "progbuf2",
-	progbuf3:     "progbuf3",
-	progbuf4:     "progbuf4",
-	progbuf5:     "progbuf5",
-	progbuf6:     "progbuf6",
-	progbuf7:     "progbuf7",
-	progbuf8:     "progbuf8",
-	progbuf9:     "progbuf9",
-	progbuf10:    "progbuf10",
-	progbuf11:    "progbuf11",
-	progbuf12:    "progbuf12",
-	progbuf13:    "progbuf13",
-	progbuf14:    "progbuf14",
-	progbuf15:    "progbuf15",
-	dmcontrol:    "dmcontrol",
-	dmstatus:     "dmstatus",
-	hartinfo:     "hartinfo",
-	hawindowsel:  "hawindowsel",
-	hawindow:     "hawindow",
-	abstractcs:   "abstractcs",
-	command:      "command",
-	abstractauto: "abstractauto",
-	confstrptr0:  "confstrptr0",
-	confstrptr1:  "confstrptr1",
-	confstrptr2:  "confstrptr2",
-	confstrptr3:  "confstrptr3",
-	nextdm:       "nextdm",
-	authdata:     "authdata",
-	haltsum0:     "haltsum0",
-	haltsum1:     "haltsum1",
-	haltsum2:     "haltsum2",
-	haltsum3:     "haltsum3",
-	sbcs:         "sbcs",
-	sbaddress0:   "sbaddress0",
-	sbaddress1:   "sbaddress1",
-	sbaddress2:   "sbaddress2",
-	sbaddress3:   "sbaddress3",
-	sbdata0:      "sbdata0",
-	sbdata1:      "sbdata1",
-	sbdata2:      "sbdata2",
-	sbdata3:      "sbdata3",
-}
+//-----------------------------------------------------------------------------
 
-func dmiNameLookup(addr uint) string {
-	if name, ok := dmiName[addr]; ok {
-		return fmt.Sprintf("%02x %s", addr, name)
+func newDMI() *soc.Device {
+	return &soc.Device{
+		Name: "DMI",
+		Peripherals: []soc.Peripheral{
+			{
+				Name:  "DMI",
+				Descr: "DMI Registers",
+				Registers: []soc.Register{
+					{Offset: data0, Name: "data0", Descr: "abstract data 0"},
+					{Offset: data1, Name: "data1", Descr: "abstract data 1"},
+					{Offset: data2, Name: "data2", Descr: "abstract data 2"},
+					{Offset: data3, Name: "data3", Descr: "abstract data 3"},
+					{Offset: data4, Name: "data4", Descr: "abstract data 4"},
+					{Offset: data5, Name: "data5", Descr: "abstract data 5"},
+					{Offset: data6, Name: "data6", Descr: "abstract data 6"},
+					{Offset: data7, Name: "data7", Descr: "abstract data 7"},
+					{Offset: data8, Name: "data8", Descr: "abstract data 8"},
+					{Offset: data9, Name: "data9", Descr: "abstract data 9"},
+					{Offset: data10, Name: "data10", Descr: "abstract data 10"},
+					{Offset: data11, Name: "data11", Descr: "abstract data 11"},
+					{Offset: progbuf0, Name: "progbuf0", Descr: "program buffer 0"},
+					{Offset: progbuf1, Name: "progbuf1", Descr: "program buffer 1"},
+					{Offset: progbuf2, Name: "progbuf2", Descr: "program buffer 2"},
+					{Offset: progbuf3, Name: "progbuf3", Descr: "program buffer 3"},
+					{Offset: progbuf4, Name: "progbuf4", Descr: "program buffer 4"},
+					{Offset: progbuf5, Name: "progbuf5", Descr: "program buffer 5"},
+					{Offset: progbuf6, Name: "progbuf6", Descr: "program buffer 6"},
+					{Offset: progbuf7, Name: "progbuf7", Descr: "program buffer 7"},
+					{Offset: progbuf8, Name: "progbuf8", Descr: "program buffer 8"},
+					{Offset: progbuf9, Name: "progbuf9", Descr: "program buffer 9"},
+					{Offset: progbuf10, Name: "progbuf10", Descr: "program buffer 10"},
+					{Offset: progbuf11, Name: "progbuf11", Descr: "program buffer 11"},
+					{Offset: progbuf12, Name: "progbuf12", Descr: "program buffer 12"},
+					{Offset: progbuf13, Name: "progbuf13", Descr: "program buffer 13"},
+					{Offset: progbuf14, Name: "progbuf14", Descr: "program buffer 14"},
+					{Offset: progbuf15, Name: "progbuf15", Descr: "program buffer 15"},
+					{Offset: dmcontrol,
+						Name:  "dmcontrol",
+						Descr: "debug module control",
+						Fields: []soc.Field{
+							{Name: "haltreq", Msb: 31, Lsb: 31},
+							{Name: "resumereq", Msb: 30, Lsb: 30},
+							{Name: "hartreset", Msb: 29, Lsb: 29},
+							{Name: "ackhavereset", Msb: 28, Lsb: 28},
+							{Name: "hasel", Msb: 26, Lsb: 26},
+							{Name: "hartsello", Msb: 25, Lsb: 16},
+							{Name: "hartselhi", Msb: 15, Lsb: 6},
+							{Name: "setresethaltreq", Msb: 3, Lsb: 3},
+							{Name: "clrresethaltreq", Msb: 2, Lsb: 2},
+							{Name: "ndmreset", Msb: 1, Lsb: 1},
+							{Name: "dmactive", Msb: 0, Lsb: 0},
+						},
+					},
+					{Offset: dmstatus,
+						Name:  "dmstatus",
+						Descr: "debug module status",
+						Fields: []soc.Field{
+							{Name: "impebreak", Msb: 22, Lsb: 22},
+							{Name: "allhavereset", Msb: 19, Lsb: 19},
+							{Name: "anyhavereset", Msb: 18, Lsb: 18},
+							{Name: "allresumeack", Msb: 17, Lsb: 17},
+							{Name: "anyresumeack", Msb: 16, Lsb: 16},
+							{Name: "allnonexistent", Msb: 15, Lsb: 15},
+							{Name: "anynonexistent", Msb: 14, Lsb: 14},
+							{Name: "allunavail", Msb: 13, Lsb: 13},
+							{Name: "anyunavail", Msb: 12, Lsb: 12},
+							{Name: "allrunning", Msb: 11, Lsb: 11},
+							{Name: "anyrunning", Msb: 10, Lsb: 10},
+							{Name: "allhalted", Msb: 9, Lsb: 9},
+							{Name: "anyhalted", Msb: 8, Lsb: 8},
+							{Name: "authenticated", Msb: 7, Lsb: 7},
+							{Name: "authbusy", Msb: 6, Lsb: 6},
+							{Name: "hasresethaltreq", Msb: 5, Lsb: 5},
+							{Name: "confstrptrvalid", Msb: 4, Lsb: 4},
+							{Name: "version", Msb: 3, Lsb: 0},
+						},
+					},
+					{Offset: hartinfo,
+						Name:  "hartinfo",
+						Descr: "hart info",
+						Fields: []soc.Field{
+							{Name: "nscratch", Msb: 23, Lsb: 20},
+							{Name: "dataaccess", Msb: 16, Lsb: 16},
+							{Name: "datasize", Msb: 15, Lsb: 12},
+							{Name: "dataaddr", Msb: 11, Lsb: 0},
+						},
+					},
+					{Offset: hawindowsel, Name: "hawindowsel", Descr: "hart array window select"},
+					{Offset: hawindow, Name: "hawindow", Descr: "hart array window"},
+					{Offset: abstractcs,
+						Name:  "abstractcs",
+						Descr: "abstract control and status",
+						Fields: []soc.Field{
+							{Name: "progbufsize", Msb: 28, Lsb: 24},
+							{Name: "busy", Msb: 12, Lsb: 12},
+							{Name: "cmderr", Msb: 10, Lsb: 8},
+							{Name: "datacount", Msb: 3, Lsb: 0},
+						},
+					},
+					{Offset: command, Name: "command", Descr: "abstract command"},
+					{Offset: abstractauto, Name: "abstractauto", Descr: "abstract command autoexec"},
+					{Offset: confstrptr0, Name: "confstrptr0", Descr: "configuration string pointer 0"},
+					{Offset: confstrptr1, Name: "confstrptr1", Descr: "configuration string pointer 1"},
+					{Offset: confstrptr2, Name: "confstrptr2", Descr: "configuration string pointer 2"},
+					{Offset: confstrptr3, Name: "confstrptr3", Descr: "configuration string pointer 3"},
+					{Offset: nextdm, Name: "nextdm", Descr: "next debug module"},
+					{Offset: authdata, Name: "authdata", Descr: "authentication data"},
+					{Offset: haltsum0, Name: "haltsum0", Descr: "halt summary 0"},
+					{Offset: haltsum1, Name: "haltsum1", Descr: "halt summary 1"},
+					{Offset: haltsum2, Name: "haltsum2", Descr: "halt summary 2"},
+					{Offset: haltsum3, Name: "haltsum3", Descr: "halt summary 3"},
+					{Offset: sbcs, Name: "sbcs", Descr: "system bus access control and status"},
+					{Offset: sbaddress0, Name: "sbaddress0", Descr: "system bus address 31:0"},
+					{Offset: sbaddress1, Name: "sbaddress1", Descr: "system bus address 63:32"},
+					{Offset: sbaddress2, Name: "sbaddress2", Descr: "system bus address 95:64"},
+					{Offset: sbaddress3, Name: "sbaddress3", Descr: "system bus address 127:96"},
+					{Offset: sbdata0, Name: "sbdata0", Descr: "system bus data 31:0"},
+					{Offset: sbdata1, Name: "sbdata1", Descr: "system bus data 63:32"},
+					{Offset: sbdata2, Name: "sbdata2", Descr: "system bus data 95:64"},
+					{Offset: sbdata3, Name: "sbdata3", Descr: "system bus data 127:96"},
+				},
+			},
+		},
 	}
-	return fmt.Sprintf("%02x ?", addr)
 }
 
 //-----------------------------------------------------------------------------
 // DM control
-
-var dmcontrolFields = soc.FieldSet{
-	{Name: "haltreq", Msb: 31, Lsb: 31, Fmt: soc.FmtDec},
-	{Name: "resumereq", Msb: 30, Lsb: 30, Fmt: soc.FmtDec},
-	{Name: "hartreset", Msb: 29, Lsb: 29, Fmt: soc.FmtDec},
-	{Name: "ackhavereset", Msb: 28, Lsb: 28, Fmt: soc.FmtDec},
-	{Name: "hasel", Msb: 26, Lsb: 26, Fmt: soc.FmtDec},
-	{Name: "hartsello", Msb: 25, Lsb: 16, Fmt: soc.FmtDec},
-	{Name: "hartselhi", Msb: 15, Lsb: 6, Fmt: soc.FmtDec},
-	{Name: "setresethaltreq", Msb: 3, Lsb: 3, Fmt: soc.FmtDec},
-	{Name: "clrresethaltreq", Msb: 2, Lsb: 2, Fmt: soc.FmtDec},
-	{Name: "ndmreset", Msb: 1, Lsb: 1, Fmt: soc.FmtDec},
-	{Name: "dmactive", Msb: 0, Lsb: 0, Fmt: soc.FmtDec},
-}
 
 const haltreq = (1 << 31)
 const resumereq = (1 << 30)
@@ -234,27 +282,6 @@ func (dbg *Debug) selectHart(id int) error {
 //-----------------------------------------------------------------------------
 // DM status
 
-var dmstatusFields = []soc.Field{
-	{Name: "impebreak", Msb: 22, Lsb: 22, Fmt: soc.FmtDec},
-	{Name: "allhavereset", Msb: 19, Lsb: 19, Fmt: soc.FmtDec},
-	{Name: "anyhavereset", Msb: 18, Lsb: 18, Fmt: soc.FmtDec},
-	{Name: "allresumeack", Msb: 17, Lsb: 17, Fmt: soc.FmtDec},
-	{Name: "anyresumeack", Msb: 16, Lsb: 16, Fmt: soc.FmtDec},
-	{Name: "allnonexistent", Msb: 15, Lsb: 15, Fmt: soc.FmtDec},
-	{Name: "anynonexistent", Msb: 14, Lsb: 14, Fmt: soc.FmtDec},
-	{Name: "allunavail", Msb: 13, Lsb: 13, Fmt: soc.FmtDec},
-	{Name: "anyunavail", Msb: 12, Lsb: 12, Fmt: soc.FmtDec},
-	{Name: "allrunning", Msb: 11, Lsb: 11, Fmt: soc.FmtDec},
-	{Name: "anyrunning", Msb: 10, Lsb: 10, Fmt: soc.FmtDec},
-	{Name: "allhalted", Msb: 9, Lsb: 9, Fmt: soc.FmtDec},
-	{Name: "anyhalted", Msb: 8, Lsb: 8, Fmt: soc.FmtDec},
-	{Name: "authenticated", Msb: 7, Lsb: 7, Fmt: soc.FmtDec},
-	{Name: "authbusy", Msb: 6, Lsb: 6, Fmt: soc.FmtDec},
-	{Name: "hasresethaltreq", Msb: 5, Lsb: 5, Fmt: soc.FmtDec},
-	{Name: "confstrptrvalid", Msb: 4, Lsb: 4, Fmt: soc.FmtDec},
-	{Name: "version", Msb: 3, Lsb: 0, Fmt: soc.FmtDec},
-}
-
 const anyhavereset = (1 << 18)
 const allresumeack = (1 << 17)
 const anyresumeack = (1 << 16)
@@ -270,15 +297,6 @@ func (dbg *Debug) checkStatus(flag uint32) (bool, error) {
 		return false, err
 	}
 	return x&flag != 0, nil
-}
-
-//-----------------------------------------------------------------------------
-
-var hartinfoFields = soc.FieldSet{
-	{Name: "nscratch", Msb: 23, Lsb: 20, Fmt: soc.FmtDec},
-	{Name: "dataaccess", Msb: 16, Lsb: 16, Fmt: soc.FmtDec},
-	{Name: "datasize", Msb: 15, Lsb: 12, Fmt: soc.FmtDec},
-	{Name: "dataaddr", Msb: 11, Lsb: 0, Fmt: soc.FmtHex},
 }
 
 //-----------------------------------------------------------------------------
@@ -361,13 +379,6 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 
 //-----------------------------------------------------------------------------
 // abstract commands
-
-var abstractcsFields = soc.FieldSet{
-	{Name: "progbufsize", Msb: 28, Lsb: 24, Fmt: soc.FmtDec},
-	{Name: "busy", Msb: 12, Lsb: 12, Fmt: soc.FmtDec},
-	{Name: "cmderr", Msb: 10, Lsb: 8, Fmt: soc.FmtDec},
-	{Name: "datacount", Msb: 3, Lsb: 0, Fmt: soc.FmtDec},
-}
 
 // command error
 type cmdErr uint
@@ -640,35 +651,32 @@ func (dbg *Debug) rdData128() (uint64, uint64, error) {
 }
 
 //-----------------------------------------------------------------------------
+// decode/display dmi registers
 
-const dmiStartAddr = 0x4
-const dmiEndAddr = 0x40
+type dmiDriver struct {
+	dbg *Debug
+}
 
-var dmiCache []uint32
+func (drv *dmiDriver) GetAddressSize() uint {
+	return drv.dbg.abits
+}
+
+func (drv *dmiDriver) GetRegisterSize(r *soc.Register) uint {
+	return 32
+}
+
+func (drv *dmiDriver) Rd(width, addr uint) (uint, error) {
+	x, err := drv.dbg.rdDmi(addr)
+	if err != nil {
+		return 0, err
+	}
+	return uint(x), nil
+}
 
 func (dbg *Debug) dmiDump() (string, error) {
-	ops := []dmiOp{}
-	for addr := uint(dmiStartAddr); addr <= dmiEndAddr; addr++ {
-		ops = append(ops, dmiRd(addr))
-	}
-	ops = append(ops, dmiEnd())
-	data, err := dbg.dmiOps(ops)
-	if err != nil {
-		return "", err
-	}
-	if dmiCache == nil {
-		dmiCache = data
-	}
-	s := make([][]string, len(data))
-	for i, v := range data {
-		delta := ""
-		if data[i] != dmiCache[i] {
-			delta = "*"
-		}
-		s[i] = []string{dmiNameLookup(uint(i) + dmiStartAddr), fmt.Sprintf("%08x", v), delta}
-	}
-	dmiCache = data
-	return cli.TableString(s, []int{0, 0, 0}, 1), nil
+	p := dbg.dmiDevice.GetPeripheral("DMI")
+	drv := &dmiDriver{dbg}
+	return p.Display(drv, nil, false), nil
 }
 
 //-----------------------------------------------------------------------------

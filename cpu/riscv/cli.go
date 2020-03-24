@@ -30,14 +30,14 @@ type target interface {
 //-----------------------------------------------------------------------------
 // display CSR
 
-// csrHelp is help information for the "csr" command.
-var csrHelp = []cli.Help{
+// CsrHelp is help information for the "csr" command.
+var CsrHelp = []cli.Help{
 	{"[register]", "register (string) - register name (or *)"},
 	{"<cr>", "display all registers"},
 }
 
-// cmdCSR displays the control and status registers.
-var cmdCSR = cli.Leaf{
+// CmdCSR displays the control and status registers.
+var CmdCSR = cli.Leaf{
 	Descr: "display control and status registers",
 	F: func(c *cli.CLI, args []string) {
 
@@ -323,13 +323,15 @@ var CmdDisassemble = cli.Leaf{
 
 //-----------------------------------------------------------------------------
 
-var cmdDebugInfo = cli.Leaf{
+var CmdDebugInfo = cli.Leaf{
 	Descr: "debug module information",
 	F: func(c *cli.CLI, args []string) {
 		dbg := c.User.(target).GetRiscvDebug()
 		c.User.Put(fmt.Sprintf("%s\n", dbg.GetInfo()))
 	},
 }
+
+//-----------------------------------------------------------------------------
 
 var cmdRiscvTest1 = cli.Leaf{
 	Descr: "test routine",
@@ -349,8 +351,6 @@ var cmdRiscvTest2 = cli.Leaf{
 
 // Menu submenu items
 var Menu = cli.Menu{
-	{"csr", cmdCSR, csrHelp},
-	{"dmi", cmdDebugInfo},
 	{"test1", cmdRiscvTest1},
 	{"test2", cmdRiscvTest2},
 }

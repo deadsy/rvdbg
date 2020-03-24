@@ -34,6 +34,8 @@ func MemSize(x uint) string {
 
 // UintFormat returns a format string for the bit size.
 func UintFormat(size uint) string {
+	// round size up to a multiple of 4 bits
+	size = (size + 3) & ^uint(3)
 	switch size {
 	case 8:
 		return "%02x"

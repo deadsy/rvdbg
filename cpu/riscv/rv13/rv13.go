@@ -36,6 +36,7 @@ const drDtmcsLength = 32
 type Debug struct {
 	dev             *jtag.Device
 	hart            []*hartInfo // implemented harts
+	dmiDevice       *soc.Device // dmi device for decode/display
 	hartid          int         // currently selected hart
 	ir              uint        // cache of ir value
 	irlen           int         // IR length
@@ -67,8 +68,9 @@ func (dbg *Debug) String() string {
 func New(dev *jtag.Device) (*Debug, error) {
 
 	dbg := &Debug{
-		dev:   dev,
-		irlen: dev.GetIRLength(),
+		dev:       dev,
+		irlen:     dev.GetIRLength(),
+		dmiDevice: newDMI().Setup(),
 	}
 
 	// get dtmcs
