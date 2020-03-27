@@ -159,6 +159,13 @@ func (j *Jtag) GetState() (*jtag.State, error) {
 	}, nil
 }
 
+// HasCapability returns true if this driver has the indicated capability.
+func (j *Jtag) HasCapability(capability jtag.Capability) bool {
+	switch capability {
+	}
+	return false
+}
+
 // TestReset pulses the test reset line.
 func (j *Jtag) TestReset(delay time.Duration) error {
 	err := j.dev.setPins(pinTRST)

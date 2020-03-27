@@ -24,6 +24,13 @@ const flushSize = maxDevices * 32
 const idcodeLength = 32
 
 //-----------------------------------------------------------------------------
+// JTAG driver interface
+
+type Capability int
+
+const (
+	TargetVoltage Capability = iota // is the target voltage provided in state structure?
+)
 
 // State is the current JTAG interface state
 type State struct {
@@ -44,6 +51,7 @@ type Driver interface {
 	ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error)
 	ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error)
 	GetState() (*State, error)
+	HasCapability(capability Capability) bool
 	Close() error
 }
 
@@ -103,53 +111,38 @@ func NewChain(drv Driver, info ChainInfo) (*Chain, error) {
 		drv:  drv,
 		info: info,
 	}
-	err := ch.scan()
-	return ch, err
-}
-
-func (ch *Chain) String() string {
-	s := []string{}
-	s = append(s, fmt.Sprintf("chain: irlen %d devices %d", ch.irlen, len(ch.dev)))
-	for i := range ch.dev {
-		s = append(s, ch.dev[i].String())
-	}
-	return strings.Join(s, "\n")
-}
-
-// Scan and validate the JTAG chain. Setup the devices.
-func (ch *Chain) scan() error {
 	// reset the TAP state machine for all devices
 	err := ch.drv.TapReset()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// how many devices are on the chain?
 	ch.n, err = ch.numDevices()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// sanity check the number of devices
 	if len(ch.info) != ch.n {
-		return fmt.Errorf("jtag chain: expecting %d device(s), found %d", len(ch.info), ch.n)
+		return nil, fmt.Errorf("jtag chain: expecting %d device(s), found %d", len(ch.info), ch.n)
 	}
 	// get the total IR length
 	ch.irlen, err = ch.irLength()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// sanity check the total IR length
 	irlen := ch.info.irLengthTotal()
 	if irlen != ch.irlen {
-		return fmt.Errorf("jtag chain: expecting irlen %d bits, found %d bits", irlen, ch.irlen)
+		return nil, fmt.Errorf("jtag chain: expecting irlen %d bits, found %d bits", irlen, ch.irlen)
 	}
 	// sanity check the device id codes
 	code, err := ch.readIDCodes()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for i, d := range ch.info {
 		if uint(d.ID) != code[i] {
-			return fmt.Errorf("jtag chain: expecting idcode 0x%08x at position %d, found 0x%08x", uint(d.ID), i, code[i])
+			return nil, fmt.Errorf("jtag chain: expecting idcode 0x%08x at position %d, found 0x%08x", uint(d.ID), i, code[i])
 		}
 	}
 	// build the devices
@@ -161,13 +154,23 @@ func (ch *Chain) scan() error {
 	for _, d := range ch.dev {
 		good, err := d.testIRCapture()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !good {
-			return fmt.Errorf("jtag chain: failed ir capture for idcode 0x%08x at position %d", d.idcode, d.idx)
+			return nil, fmt.Errorf("jtag chain: failed ir capture for idcode 0x%08x at position %d", d.idcode, d.idx)
 		}
 	}
-	return nil
+	// done
+	return ch, nil
+}
+
+func (ch *Chain) String() string {
+	s := []string{}
+	s = append(s, fmt.Sprintf("chain: irlen %d devices %d", ch.irlen, len(ch.dev)))
+	for i := range ch.dev {
+		s = append(s, ch.dev[i].String())
+	}
+	return strings.Join(s, "\n")
 }
 
 // readIDcodes returns a slice of idcodes for the JTAG chain.

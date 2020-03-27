@@ -147,6 +147,15 @@ func (j *Jtag) GetState() (*jtag.State, error) {
 	}, nil
 }
 
+// HasCapability returns true if this driver has the indicated capability.
+func (j *Jtag) HasCapability(capability jtag.Capability) bool {
+	switch capability {
+	case jtag.TargetVoltage:
+		return true
+	}
+	return false
+}
+
 // jtagIO performs jtag IO operations.
 func (j *Jtag) jtagIO(tms, tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
 	tdo, err := j.hdl.JtagIO(tms.GetBytes(), tdi.GetBytes(), uint16(tdi.Len()), j.version)

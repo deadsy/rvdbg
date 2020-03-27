@@ -80,8 +80,10 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 	}
 
 	// check the voltage
-	if float32(state.TargetVoltage) < 0.9*float32(Info.Volts) {
-		return nil, fmt.Errorf("target voltage is too low (%dmV), is the target connected and powered?", state.TargetVoltage)
+	if jtagDriver.HasCapability(jtag.TargetVoltage) {
+		if float32(state.TargetVoltage) < 0.9*float32(Info.Volts) {
+			return nil, fmt.Errorf("target voltage is too low (%dmV), is the target connected and powered?", state.TargetVoltage)
+		}
 	}
 
 	// check the ~SRST state
