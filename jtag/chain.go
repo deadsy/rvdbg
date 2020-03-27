@@ -130,7 +130,7 @@ func (ch *Chain) scan() error {
 	}
 	// sanity check the number of devices
 	if len(ch.info) != ch.n {
-		return fmt.Errorf("expecting %d devices, found %d", len(ch.info), ch.n)
+		return fmt.Errorf("jtag chain: expecting %d device(s), found %d", len(ch.info), ch.n)
 	}
 	// get the total IR length
 	ch.irlen, err = ch.irLength()
@@ -140,7 +140,7 @@ func (ch *Chain) scan() error {
 	// sanity check the total IR length
 	irlen := ch.info.irLengthTotal()
 	if irlen != ch.irlen {
-		return fmt.Errorf("expecting irlen %d bits, found %d bits", irlen, ch.irlen)
+		return fmt.Errorf("jtag chain: expecting irlen %d bits, found %d bits", irlen, ch.irlen)
 	}
 	// sanity check the device id codes
 	code, err := ch.readIDCodes()
@@ -149,7 +149,7 @@ func (ch *Chain) scan() error {
 	}
 	for i, d := range ch.info {
 		if uint(d.ID) != code[i] {
-			return fmt.Errorf("expecting idcode 0x%08x at position %d, found 0x%08x", uint(d.ID), i, code[i])
+			return fmt.Errorf("jtag chain: expecting idcode 0x%08x at position %d, found 0x%08x", uint(d.ID), i, code[i])
 		}
 	}
 	// build the devices
@@ -164,7 +164,7 @@ func (ch *Chain) scan() error {
 			return err
 		}
 		if !good {
-			return fmt.Errorf("failed ir capture for idcode 0x%08x at position %d", d.idcode, d.idx)
+			return fmt.Errorf("jtag chain: failed ir capture for idcode 0x%08x at position %d", d.idcode, d.idx)
 		}
 	}
 	return nil

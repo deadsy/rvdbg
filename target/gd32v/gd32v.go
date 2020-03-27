@@ -32,7 +32,6 @@ import (
 var Info = target.Info{
 	Name:     "gd32v",
 	Descr:    "GD32V Board (GigaDevice GD32VF103VBT6 RISC-V RV32)",
-	DbgType:  itf.TypeJlink,
 	DbgMode:  itf.ModeJtag,
 	DbgSpeed: 4000,
 	Volts:    3300,

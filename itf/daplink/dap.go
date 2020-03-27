@@ -8,7 +8,7 @@ This package implements CMSIS-DAP JTAG/SWD drivers using the hidapi library.
 */
 //-----------------------------------------------------------------------------
 
-package dap
+package daplink
 
 import (
 	"encoding/binary"

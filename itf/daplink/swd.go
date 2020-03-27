@@ -6,7 +6,7 @@ CMSIS-DAP SWD Driver
 */
 //-----------------------------------------------------------------------------
 
-package dap
+package daplink
 
 import (
 	"errors"

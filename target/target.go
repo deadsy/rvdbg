@@ -9,6 +9,8 @@ Common target functions.
 package target
 
 import (
+	"sort"
+
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/itf"
 )
@@ -48,9 +50,16 @@ func Lookup(name string) *Info {
 
 // List all the supported targets
 func List() string {
-	s := make([][]string, 0, len(targetDb))
-	for k, v := range targetDb {
-		s = append(s, []string{"", k, v.Descr})
+	// sort the target names
+	names := make([]string, 0, len(targetDb))
+	for k, _ := range targetDb {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+	// create the ordered target list
+	s := make([][]string, 0, len(names))
+	for _, k := range names {
+		s = append(s, []string{"", k, targetDb[k].Descr})
 	}
 	return cli.TableString(s, []int{8, 12, 0}, 1)
 }

@@ -6,7 +6,7 @@ CMSIS-DAP JTAG Driver
 */
 //-----------------------------------------------------------------------------
 
-package dap
+package daplink
 
 import (
 	"errors"

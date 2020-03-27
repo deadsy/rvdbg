@@ -27,7 +27,7 @@ import (
 var Info = target.Info{
 	Name:     "maixgo",
 	Descr:    "SiPeed MaixGo (Kendryte K210, Dual Core RISC-V RV64)",
-	DbgType:  itf.TypeCmsisDap,
+	DbgType:  itf.TypeDapLink,
 	DbgMode:  itf.ModeJtag,
 	DbgSpeed: 4000,
 	Volts:    3300,

@@ -11,9 +11,10 @@ package itf
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	cli "github.com/deadsy/go-cli"
-	"github.com/deadsy/rvdbg/itf/dap"
+	"github.com/deadsy/rvdbg/itf/daplink"
 	"github.com/deadsy/rvdbg/itf/jlink"
 	"github.com/deadsy/rvdbg/jtag"
 )
@@ -24,9 +25,10 @@ import (
 type Type int
 
 const (
-	TypeCmsisDap Type = iota // ARM CMSIS-DAP
-	TypeJlink                // Segger J-Link
-	TypeStLink               // ST-LinkV2
+	TypeNone    Type = iota // user must specify the debugger interface to use
+	TypeDapLink             // ARM DAPLink
+	TypeJlink               // Segger J-Link
+	TypeStLink              // ST-LinkV2
 )
 
 func (t Type) String() string {
@@ -50,9 +52,16 @@ var interfaceDb = map[string]*Info{}
 
 // List the supported debugger interface types.
 func List() string {
-	s := make([][]string, 0, len(interfaceDb))
-	for k, v := range interfaceDb {
-		s = append(s, []string{"", k, v.Descr})
+	// sort the interface names
+	names := make([]string, 0, len(interfaceDb))
+	for k, _ := range interfaceDb {
+		names = append(names, k)
+	}
+	sort.Strings(names)
+	// create the ordered interface list
+	s := make([][]string, 0, len(names))
+	for _, k := range names {
+		s = append(s, []string{"", k, interfaceDb[k].Descr})
 	}
 	return cli.TableString(s, []int{8, 12, 0}, 1)
 }
@@ -91,9 +100,9 @@ func (m Mode) String() string {
 //-----------------------------------------------------------------------------
 
 func init() {
-	add(&Info{"dap", "CMSIS DAPLink Adapter", TypeCmsisDap})
-	add(&Info{"jlink", "Segger J-Link Adapter", TypeJlink})
-	add(&Info{"stlink", "ST-LinkV2 Adapter", TypeStLink})
+	add(&Info{"daplink", "ARM DAPLink", TypeDapLink})
+	add(&Info{"jlink", "Segger J-Link", TypeJlink})
+	add(&Info{"stlink", "ST-LinkV2", TypeStLink})
 }
 
 //-----------------------------------------------------------------------------
@@ -123,21 +132,21 @@ func NewJtagDriver(typ Type, speed int) (jtag.Driver, error) {
 			return nil, err
 		}
 
-	case TypeCmsisDap:
-		dapLibrary, err := dap.Init()
+	case TypeDapLink:
+		dapLibrary, err := daplink.Init()
 		if err != nil {
 			return nil, err
 		}
 		if dapLibrary.NumDevices() == 0 {
 			dapLibrary.Shutdown()
-			return nil, errors.New("no CMSIS-DAP devices found")
+			return nil, errors.New("no DAPLink devices found")
 		}
 		devInfo, err := dapLibrary.DeviceByIndex(0)
 		if err != nil {
 			dapLibrary.Shutdown()
 			return nil, err
 		}
-		jtagDriver, err = dap.NewJtag(devInfo, speed)
+		jtagDriver, err = daplink.NewJtag(devInfo, speed)
 		if err != nil {
 			dapLibrary.Shutdown()
 			return nil, err

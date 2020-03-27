@@ -92,13 +92,12 @@ func main() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\ntargets:\n%s\n", target.List())
 		fmt.Fprintf(os.Stderr, "\ndebug interfaces:\n%s\n", itf.List())
+		fmt.Fprintf(os.Stderr, "\ntargets:\n%s\n", target.List())
 	}
 
 	targetName := flag.String("t", "", "target name")
 	interfaceName := flag.String("i", "", "debug interface name")
-
 	flag.Parse()
 
 	if *targetName == "" {
@@ -117,6 +116,11 @@ func main() {
 	// work out the debugger interface type
 	info := *infoPtr
 	if *interfaceName == "" {
+		if info.DbgType == itf.TypeNone {
+			fmt.Fprintf(os.Stderr, "use -i to specify an interface name\n")
+			fmt.Fprintf(os.Stderr, "\ndebug interfaces:\n%s\n", itf.List())
+			os.Exit(1)
+		}
 		log.Info.Printf(fmt.Sprintf("using default debug interface: %s", info.DbgType))
 	} else {
 		x := itf.Lookup(*interfaceName)
