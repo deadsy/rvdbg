@@ -66,7 +66,7 @@ func (dbg *Debug) String() string {
 
 // New returns a RISC-V 0.13 debugger.
 func New(dev *jtag.Device) (*Debug, error) {
-
+	log.Info.Printf("0.13 debug module")
 	dbg := &Debug{
 		dev:       dev,
 		irlen:     dev.GetIRLength(),

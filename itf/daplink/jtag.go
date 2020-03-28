@@ -117,7 +117,7 @@ type Jtag struct {
 }
 
 func (j *Jtag) String() string {
-	return fmt.Sprintf("%s", j.dev)
+	return j.dev.String()
 }
 
 // NewJtag returns a new CMSIS-DAP JTAG driver.

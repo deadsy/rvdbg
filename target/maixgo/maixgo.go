@@ -16,8 +16,12 @@ import (
 	"kendryte/k210"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/cpu/riscv"
+	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
+	"github.com/deadsy/rvdbg/mem"
+	"github.com/deadsy/rvdbg/soc"
 	"github.com/deadsy/rvdbg/target"
 )
 
@@ -47,9 +51,12 @@ var menuRoot = cli.Menu{
 
 // Target is the application structure for the target.
 type Target struct {
-	jtagDriver jtag.Driver
-	jtagChain  *jtag.Chain
 	jtagDevice *jtag.Device
+	rvDebug    rv.Debug
+	socDevice  *soc.Device
+	memDriver  *memDriver
+	csrDriver  *csrDriver
+	socDriver  *socDriver
 }
 
 // New returns a new maixgo target.
@@ -67,13 +74,26 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 		return nil, err
 	}
 
+	rvDebug, err := riscv.NewDebug(jtagDevice)
+	if err != nil {
+		return nil, err
+	}
+
+	// create the SoC device
+	socDevice := k210.NewSoC().Setup()
+
 	return &Target{
-		jtagDriver: jtagDriver,
-		jtagChain:  jtagChain,
 		jtagDevice: jtagDevice,
+		rvDebug:    rvDebug,
+		socDevice:  socDevice,
+		memDriver:  newMemDriver(rvDebug, socDevice),
+		socDriver:  newSocDriver(rvDebug),
+		csrDriver:  newCsrDriver(rvDebug),
 	}, nil
 
 }
+
+//-----------------------------------------------------------------------------
 
 // GetPrompt returns the target prompt string.
 func (t *Target) GetPrompt() string {
@@ -85,21 +105,6 @@ func (t *Target) GetMenuRoot() []cli.MenuItem {
 	return menuRoot
 }
 
-// GetJtagDevice returns the JTAG device.
-func (t *Target) GetJtagDevice() *jtag.Device {
-	return t.jtagDevice
-}
-
-// GetJtagChain returns the JTAG chain.
-func (t *Target) GetJtagChain() *jtag.Chain {
-	return t.jtagChain
-}
-
-// GetJtagDriver returns the JTAG driver.
-func (t *Target) GetJtagDriver() jtag.Driver {
-	return t.jtagDriver
-}
-
 // Shutdown shuts down the target application.
 func (t *Target) Shutdown() {
 }
@@ -107,6 +112,33 @@ func (t *Target) Shutdown() {
 // Put outputs a string to the user application.
 func (t *Target) Put(s string) {
 	os.Stdout.WriteString(s)
+}
+
+//-----------------------------------------------------------------------------
+
+// GetMemoryDriver returns a memory driver for this target.
+func (t *Target) GetMemoryDriver() mem.Driver {
+	return t.memDriver
+}
+
+// GetRiscvDebug returns a RISC-V debug driver for this target.
+func (t *Target) GetRiscvDebug() rv.Debug {
+	return t.rvDebug
+}
+
+// GetSoC returns the SoC device and driver.
+func (t *Target) GetSoC() (*soc.Device, soc.Driver) {
+	return t.socDevice, t.socDriver
+}
+
+// GetCSR returns the CSR device and driver.
+func (t *Target) GetCSR() (*soc.Device, soc.Driver) {
+	return t.rvDebug.GetCurrentHart().CSR, t.csrDriver
+}
+
+// GetJtagDevice returns the JTAG device.
+func (t *Target) GetJtagDevice() *jtag.Device {
+	return t.jtagDevice
 }
 
 //-----------------------------------------------------------------------------

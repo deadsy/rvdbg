@@ -136,6 +136,7 @@ type device struct {
 	caps    capabilities   // capabilities bitmap
 	version string         // firmware version
 	pktSize int            // usb packet size
+	speed   int            // clock frequency (in kHz)
 }
 
 func (dev *device) String() string {
@@ -144,6 +145,7 @@ func (dev *device) String() string {
 	s = append(s, fmt.Sprintf("capabilities: %s", dev.caps))
 	s = append(s, fmt.Sprintf("firmware: %s", dev.version))
 	s = append(s, fmt.Sprintf("pktSize: %d bytes", dev.pktSize))
+	s = append(s, fmt.Sprintf("speed: %d kHz", dev.speed))
 	return strings.Join(s, "\n")
 }
 
@@ -252,6 +254,7 @@ func (dev *device) cmdSwjClock(speed int) error {
 	if rx[1] != statusOk {
 		return errors.New("cmdSwjClock failed")
 	}
+	dev.speed = speed
 	return nil
 }
 

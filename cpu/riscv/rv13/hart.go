@@ -429,7 +429,7 @@ func (hi *hartInfo) examine() error {
 	if err != nil {
 		return err
 	}
-	log.Info.Printf("hart%d: ISA %s", hi.info.ID, hi.info.ISA)
+	log.Info.Printf("hart%d: disassembler ISA %s", hi.info.ID, hi.info.ISA)
 
 	if !wasHalted {
 		// resume the hart
