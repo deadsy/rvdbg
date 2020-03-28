@@ -332,10 +332,11 @@ func (dev *device) getPins() (byte, error) {
 //-----------------------------------------------------------------------------
 
 // cmdJtagSequence generates a clocked TDI/TMS sequence with optional TDO capture.
-func (dev *device) cmdJtagSequence(sequence []jtagSeq) ([]byte, error) {
+func (dev *device) cmdJtagSequence(seq []jtagSeq) ([]byte, error) {
 	nTdo := 0
-	buf := []byte{dapReport, cmdJtagSequence, byte(len(sequence))}
-	for _, s := range sequence {
+	buf := []byte{dapReport, cmdJtagSequence, byte(len(seq))}
+	for i := range seq {
+		s := &seq[i]
 		nTdo += s.nTdoBytes()
 		// sanity check
 		if len(s.tdi) != s.nTdiBytes() {

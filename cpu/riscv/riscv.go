@@ -21,10 +21,12 @@ import (
 
 const irLength = 5
 
-const irIDCode = 0x01 // ID code
-const irDtm = 0x10    // dtm register (for version)
-
+// ID Code
+const irIDCode = 0x01
 const drIDCodeLength = 32
+
+// DTM register (for version)
+const irDtm = 0x10
 const drDtmLength = 32
 
 //-----------------------------------------------------------------------------
@@ -51,8 +53,9 @@ func NewDebug(dev *jtag.Device) (rv.Debug, error) {
 	if err != nil {
 		return nil, err
 	}
-	version &= 15
 
+	// create a debug object based on version
+	version &= 15
 	switch version {
 	case 0:
 		return rv11.New(dev)

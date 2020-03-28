@@ -11,11 +11,13 @@ package daplink
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/deadsy/hidapi"
 	"github.com/deadsy/rvdbg/bitstr"
 	"github.com/deadsy/rvdbg/jtag"
+	"github.com/deadsy/rvdbg/util"
 )
 
 //-----------------------------------------------------------------------------
@@ -29,6 +31,15 @@ type jtagSeq struct {
 const infoBits = (63 << 0)
 const infoTms = (1 << 6)
 const infoTdo = (1 << 7)
+
+func (s *jtagSeq) String() string {
+	x := []string{}
+	x = append(x, fmt.Sprintf("tdo %d", util.BoolToInt(s.info&infoTdo != 0)))
+	x = append(x, fmt.Sprintf("tms %d", util.BoolToInt(s.info&infoTms != 0)))
+	x = append(x, fmt.Sprintf("bits %d", s.nBits()))
+	x = append(x, fmt.Sprintf("%v", s.tdi))
+	return strings.Join(x, " ")
+}
 
 // nBits returns the number of bits for a JTAG sequence element.
 func (s *jtagSeq) nBits() int {
@@ -60,8 +71,21 @@ func min(a, b int) int {
 	return b
 }
 
+// finalTdiBit creates the JTAG sequence for a final TDI bit with TMS=1.
+func finalTdiBit(val byte, needTdo bool) jtagSeq {
+	info := infoTms | 1
+	if needTdo {
+		info |= infoTdo
+	}
+	return jtagSeq{byte(info), []byte{val & 1}}
+}
+
 // bitStringToJtagSeq converts a bit string to a JTAG sequence.
 func bitStringToJtagSeq(bs *bitstr.BitString, needTdo bool) []jtagSeq {
+
+	// remove the tail bit for special treatment
+	lastBit := bs.GetTail()
+	bs = bs.DropTail(1)
 
 	data := bs.GetBytes()
 	n := bs.Len()
@@ -80,6 +104,11 @@ func bitStringToJtagSeq(bs *bitstr.BitString, needTdo bool) []jtagSeq {
 		n -= k
 	}
 
+	// add the last TDI bit with TMS = 1
+	seq = append(seq, finalTdiBit(lastBit, needTdo))
+	// One more TCK cycle with TMS=0 to get into the PAUSE state.
+	//seq = append(seq, jtagSeq{1, []byte{lastBit & 1}})
+	seq = append(seq, jtagSeq{1, []byte{0}})
 	return seq
 }
 
@@ -198,27 +227,35 @@ func (j *Jtag) scanXR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.B
 	if !needTdo {
 		return nil, nil
 	}
-	return bitstr.FromBytes(rx, tdi.Len()), nil
+	return bitstr.FromBytes(rx, tdi.Len()+1), nil
 }
 
 // ScanIR scans bits through the JTAG IR chain
 func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
-	//log.Info.Printf("%s", tdi)
+	//log.Info.Printf("tdi: %s", tdi.LenBits())
 	err := j.dev.cmdSwjSequence(jtag.IdleToIRshift)
 	if err != nil {
 		return nil, err
 	}
-	return j.scanXR(tdi, 0, needTdo)
+	tdo, err := j.scanXR(tdi, 0, needTdo)
+	//if needTdo {
+	//	log.Info.Printf("tdo: %s", tdo.LenBits())
+	//}
+	return tdo, err
 }
 
 // ScanDR scans bits through the JTAG DR chain
 func (j *Jtag) ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
-	//log.Info.Printf("%s", tdi)
+	//log.Info.Printf("tdi: %s", tdi.LenBits())
 	err := j.dev.cmdSwjSequence(jtag.IdleToDRshift)
 	if err != nil {
 		return nil, err
 	}
-	return j.scanXR(tdi, idle, needTdo)
+	tdo, err := j.scanXR(tdi, 0, needTdo)
+	//if needTdo {
+	//	log.Info.Printf("tdo: %s", tdo.LenBits())
+	//}
+	return tdo, err
 }
 
 //-----------------------------------------------------------------------------

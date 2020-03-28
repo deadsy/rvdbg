@@ -326,6 +326,19 @@ func (b *BitString) Split(in []int) []uint {
 	return x
 }
 
+// GetTail returns the value of the last bit in a bit string.
+func (b *BitString) GetTail() byte {
+	if b.n == 0 {
+		panic("0-length bit string")
+	}
+	for i := len(b.set) - 1; i >= 0; i-- {
+		if b.set[i].n > 0 {
+			return byte((b.set[i].val >> (b.set[i].n - 1)) & 1)
+		}
+	}
+	return 0
+}
+
 func (b *BitString) String() string {
 	s := []string{}
 	for i := len(b.set) - 1; i >= 0; i-- {

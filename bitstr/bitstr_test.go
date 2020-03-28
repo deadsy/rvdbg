@@ -281,6 +281,16 @@ func Test_BitString(t *testing.T) {
 		}
 	}
 
+	// tail bit
+	b = Random(1200).Tail(Ones(1))
+	if b.GetTail() != 1 {
+		t.Error("FAIL")
+	}
+	b = Random(12).Tail(Zeros(1))
+	if b.GetTail() != 0 {
+		t.Error("FAIL")
+	}
+
 }
 
 //-----------------------------------------------------------------------------
