@@ -26,12 +26,6 @@ const idcodeLength = 32
 //-----------------------------------------------------------------------------
 // JTAG driver interface
 
-type Capability int
-
-const (
-	TargetVoltage Capability = iota // is the target voltage provided in state structure?
-)
-
 // State is the current JTAG interface state
 type State struct {
 	TargetVoltage int  // Target reference voltage in mV
@@ -51,7 +45,6 @@ type Driver interface {
 	ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error)
 	ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error)
 	GetState() (*State, error)
-	HasCapability(capability Capability) bool
 	Close() error
 }
 

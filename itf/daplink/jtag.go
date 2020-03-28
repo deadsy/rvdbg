@@ -150,20 +150,14 @@ func (j *Jtag) GetState() (*jtag.State, error) {
 		return nil, err
 	}
 	return &jtag.State{
-		Tck:  pins&pinTCK != 0,
-		Tdi:  pins&pinTDI != 0,
-		Tdo:  pins&pinTDO != 0,
-		Tms:  pins&pinTMS != 0,
-		Trst: pins&pinTRST != 0,
-		Srst: pins&pinSRST != 0,
+		TargetVoltage: -1, // not supported
+		Tck:           pins&pinTCK != 0,
+		Tdi:           pins&pinTDI != 0,
+		Tdo:           pins&pinTDO != 0,
+		Tms:           pins&pinTMS != 0,
+		Trst:          pins&pinTRST != 0,
+		Srst:          pins&pinSRST != 0,
 	}, nil
-}
-
-// HasCapability returns true if this driver has the indicated capability.
-func (j *Jtag) HasCapability(capability jtag.Capability) bool {
-	switch capability {
-	}
-	return false
 }
 
 // TestReset pulses the test reset line.
