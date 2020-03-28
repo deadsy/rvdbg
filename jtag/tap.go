@@ -46,4 +46,25 @@ var ShiftToIdle = [MaxIdle + 1]*bitstr.BitString{
 	bitstr.FromString("0000000000000000011"), // + 16 cycles
 }
 
+// ExitToIdle : exit-x -> run-test/idle
+var ExitToIdle = [MaxIdle + 1]*bitstr.BitString{
+	bitstr.FromString("01"),                 // + 0 cycles
+	bitstr.FromString("001"),                // + 1 cycles
+	bitstr.FromString("0001"),               // + 2 cycles
+	bitstr.FromString("00001"),              // + 3 cycles
+	bitstr.FromString("000001"),             // + 4 cycles
+	bitstr.FromString("0000001"),            // + 5 cycles
+	bitstr.FromString("00000001"),           // + 6 cycles
+	bitstr.FromString("000000001"),          // + 7 cycles
+	bitstr.FromString("0000000001"),         // + 8 cycles
+	bitstr.FromString("00000000001"),        // + 9 cycles
+	bitstr.FromString("000000000001"),       // + 10 cycles
+	bitstr.FromString("0000000000001"),      // + 11 cycles
+	bitstr.FromString("00000000000001"),     // + 12 cycles
+	bitstr.FromString("000000000000001"),    // + 13 cycles
+	bitstr.FromString("0000000000000001"),   // + 14 cycles
+	bitstr.FromString("00000000000000001"),  // + 15 cycles
+	bitstr.FromString("000000000000000001"), // + 16 cycles
+}
+
 //-----------------------------------------------------------------------------

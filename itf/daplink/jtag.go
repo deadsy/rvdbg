@@ -104,11 +104,8 @@ func bitStringToJtagSeq(bs *bitstr.BitString, needTdo bool) []jtagSeq {
 		n -= k
 	}
 
-	// add the last TDI bit with TMS = 1
+	// add the last TDI bit with TMS = 1, shift-x -> exit-x
 	seq = append(seq, finalTdiBit(lastBit, needTdo))
-	// One more TCK cycle with TMS=0 to get into the PAUSE state.
-	//seq = append(seq, jtagSeq{1, []byte{lastBit & 1}})
-	seq = append(seq, jtagSeq{1, []byte{0}})
 	return seq
 }
 
@@ -220,7 +217,7 @@ func (j *Jtag) scanXR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.B
 	if err != nil {
 		return nil, err
 	}
-	err = j.dev.cmdSwjSequence(jtag.ShiftToIdle[idle])
+	err = j.dev.cmdSwjSequence(jtag.ExitToIdle[idle])
 	if err != nil {
 		return nil, err
 	}
@@ -232,30 +229,20 @@ func (j *Jtag) scanXR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.B
 
 // ScanIR scans bits through the JTAG IR chain
 func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
-	//log.Info.Printf("tdi: %s", tdi.LenBits())
 	err := j.dev.cmdSwjSequence(jtag.IdleToIRshift)
 	if err != nil {
 		return nil, err
 	}
-	tdo, err := j.scanXR(tdi, 0, needTdo)
-	//if needTdo {
-	//	log.Info.Printf("tdo: %s", tdo.LenBits())
-	//}
-	return tdo, err
+	return j.scanXR(tdi, 0, needTdo)
 }
 
 // ScanDR scans bits through the JTAG DR chain
 func (j *Jtag) ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
-	//log.Info.Printf("tdi: %s", tdi.LenBits())
 	err := j.dev.cmdSwjSequence(jtag.IdleToDRshift)
 	if err != nil {
 		return nil, err
 	}
-	tdo, err := j.scanXR(tdi, 0, needTdo)
-	//if needTdo {
-	//	log.Info.Printf("tdo: %s", tdo.LenBits())
-	//}
-	return tdo, err
+	return j.scanXR(tdi, idle, needTdo)
 }
 
 //-----------------------------------------------------------------------------
