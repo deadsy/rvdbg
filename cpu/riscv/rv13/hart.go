@@ -323,7 +323,7 @@ func (hi *hartInfo) examine() error {
 	if err != nil {
 		return err
 	}
-	log.Info.Printf(fmt.Sprintf("hart%d: MXLEN %d", hi.info.ID, hi.info.MXLEN))
+	log.Info.Printf("hart%d: MXLEN %d", hi.info.ID, hi.info.MXLEN)
 
 	// read the MISA value
 	misa, err := dbg.RdCSR(rv.MISA, 0)
@@ -331,7 +331,7 @@ func (hi *hartInfo) examine() error {
 		return err
 	}
 	hi.info.MISA = uint(misa)
-	log.Info.Printf(fmt.Sprintf("hart%d: MISA 0x%x", hi.info.ID, hi.info.MISA))
+	log.Info.Printf("hart%d: MISA 0x%x", hi.info.ID, hi.info.MISA)
 
 	// does MISA.mxl match our MXLEN?
 	if rv.GetMxlMISA(hi.info.MISA, hi.info.MXLEN) != hi.info.MXLEN {
@@ -380,7 +380,7 @@ func (hi *hartInfo) examine() error {
 	hi.info.FLEN, err = dbg.getFLEN()
 	if err != nil {
 		// ignore errors - we probably don't have floating point support.
-		log.Info.Printf(fmt.Sprintf("hart%d: %v", hi.info.ID, err))
+		log.Info.Printf("hart%d: %v", hi.info.ID, err)
 	}
 
 	// check 32-bit float support
@@ -404,7 +404,7 @@ func (hi *hartInfo) examine() error {
 		return err
 	}
 	hi.info.MHARTID = uint(mhartid)
-	log.Info.Printf(fmt.Sprintf("hart%d: MHARTID %d", hi.info.ID, hi.info.MHARTID))
+	log.Info.Printf("hart%d: MHARTID %d", hi.info.ID, hi.info.MHARTID)
 
 	// get hartinfo parameters
 	x, err = dbg.rdDmi(hartinfo)
@@ -416,10 +416,10 @@ func (hi *hartInfo) examine() error {
 	hi.dataaccess = util.Bit(uint(x), 16)
 	hi.dataaddr = util.Bits(uint(x), 11, 0)
 
-	log.Info.Printf(fmt.Sprintf("hart%d: nscratch %d words", hi.info.ID, hi.nscratch))
-	log.Info.Printf(fmt.Sprintf("hart%d: datasize %d %s", hi.info.ID, hi.datasize, []string{"csr", "words"}[hi.dataaccess]))
-	log.Info.Printf(fmt.Sprintf("hart%d: dataaccess %s(%d)", hi.info.ID, []string{"csr", "memory"}[hi.dataaccess], hi.dataaccess))
-	log.Info.Printf(fmt.Sprintf("hart%d: dataaddr 0x%x", hi.info.ID, hi.dataaddr))
+	log.Info.Printf("hart%d: nscratch %d words", hi.info.ID, hi.nscratch)
+	log.Info.Printf("hart%d: datasize %d %s", hi.info.ID, hi.datasize, []string{"csr", "words"}[hi.dataaccess])
+	log.Info.Printf("hart%d: dataaccess %s(%d)", hi.info.ID, []string{"csr", "memory"}[hi.dataaccess], hi.dataaccess)
+	log.Info.Printf("hart%d: dataaddr 0x%x", hi.info.ID, hi.dataaddr)
 
 	// Now that we have the register lengths we can create the per-hart CSR decodes.
 	hi.info.NewCsr().Setup()
@@ -429,7 +429,7 @@ func (hi *hartInfo) examine() error {
 	if err != nil {
 		return err
 	}
-	log.Info.Printf(fmt.Sprintf("hart%d: ISA %s", hi.info.ID, hi.info.ISA))
+	log.Info.Printf("hart%d: ISA %s", hi.info.ID, hi.info.ISA)
 
 	if !wasHalted {
 		// resume the hart

@@ -121,7 +121,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "\ndebug interfaces:\n%s\n", itf.List())
 			os.Exit(1)
 		}
-		log.Info.Printf(fmt.Sprintf("using default debug interface: %s", info.DbgType))
+		log.Info.Printf("using default debug interface: %s", info.DbgType)
 	} else {
 		x := itf.Lookup(*interfaceName)
 		if x == nil {
@@ -129,7 +129,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "debug interfaces:\n%s\n", itf.List())
 			os.Exit(1)
 		}
-		log.Info.Printf(fmt.Sprintf("using debug interface: %s", x.Type))
+		log.Info.Printf("using debug interface: %s", x.Type)
 		info.DbgType = x.Type
 	}
 

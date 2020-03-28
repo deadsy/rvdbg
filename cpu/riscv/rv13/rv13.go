@@ -131,7 +131,7 @@ func New(dev *jtag.Device) (*Debug, error) {
 		dbg.hartsellen++
 		hartsel >>= 1
 	}
-	log.Info.Printf(fmt.Sprintf("hartsellen %d", dbg.hartsellen))
+	log.Info.Printf("hartsellen %d", dbg.hartsellen)
 
 	// check dmstatus fields
 	x, err = dbg.rdDmi(dmstatus)
@@ -155,7 +155,7 @@ func New(dev *jtag.Device) (*Debug, error) {
 		return nil, err
 	}
 	dbg.sbasize = util.Bits(uint(x), 11, 5)
-	log.Info.Printf(fmt.Sprintf("sbasize %d", dbg.sbasize))
+	log.Info.Printf("sbasize %d", dbg.sbasize)
 
 	// work out how many program and data words we have
 	x, err = dbg.rdDmi(abstractcs)
@@ -191,8 +191,8 @@ func New(dev *jtag.Device) (*Debug, error) {
 		return nil, err
 	}
 
-	log.Info.Printf(fmt.Sprintf("progbufsize %d impebreak %d autoexecprogbuf %t", dbg.progbufsize, dbg.impebreak, dbg.autoexecprogbuf))
-	log.Info.Printf(fmt.Sprintf("datacount %d autoexecdata %t", dbg.datacount, dbg.autoexecdata))
+	log.Info.Printf("progbufsize %d impebreak %d autoexecprogbuf %t", dbg.progbufsize, dbg.impebreak, dbg.autoexecprogbuf)
+	log.Info.Printf("datacount %d autoexecdata %t", dbg.datacount, dbg.autoexecdata)
 
 	// clear any pending command errors
 	err = dbg.cmdErrorClr()

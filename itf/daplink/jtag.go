@@ -203,6 +203,7 @@ func (j *Jtag) scanXR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.B
 
 // ScanIR scans bits through the JTAG IR chain
 func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
+	//log.Info.Printf("%s", tdi)
 	err := j.dev.cmdSwjSequence(jtag.IdleToIRshift)
 	if err != nil {
 		return nil, err
@@ -212,6 +213,7 @@ func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 
 // ScanDR scans bits through the JTAG DR chain
 func (j *Jtag) ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
+	//log.Info.Printf("%s", tdi)
 	err := j.dev.cmdSwjSequence(jtag.IdleToDRshift)
 	if err != nil {
 		return nil, err
