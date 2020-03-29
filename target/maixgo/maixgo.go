@@ -41,7 +41,8 @@ var Info = target.Info{
 
 // menuRoot is the root menu.
 var menuRoot = cli.Menu{
-	{"dmi", riscv.CmdDebugInfo},
+	{"cpu", riscv.Menu, "cpu functions"},
+	{"dbg", riscv.CmdDebugInfo},
 	{"exit", target.CmdExit},
 	{"help", target.CmdHelp},
 	{"history", target.CmdHistory, cli.HistoryHelp},

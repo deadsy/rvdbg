@@ -314,22 +314,27 @@ const opMask = (1 << 2) - 1
 
 type dmiOp uint
 
+// dmiRd returns a dmi read operation.
 func dmiRd(addr uint) dmiOp {
 	return dmiOp((addr << 34) | opRd)
 }
 
+// dmiWr returns a dmi write operation.
 func dmiWr(addr uint, data uint32) dmiOp {
 	return dmiOp((addr << 34) | (uint(data) << 2) | opWr)
 }
 
+// dmiEnd returns a dmi no-op, typically used to clock out a final data value.
 func dmiEnd() dmiOp {
 	return dmiOp(opIgnore)
 }
 
+// isRead returns true if this dmi operation is a read.
 func (x dmiOp) isRead() bool {
 	return (x & opMask) == opRd
 }
 
+// dmiOps runs a set of dmi operations and returns any read data.
 func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 	data := []uint32{}
 
@@ -341,9 +346,9 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 
 	read := false
 	for i := 0; i < len(ops); i++ {
-		dmi := ops[i]
+		op := ops[i]
 		// run the operation
-		tdo, err := dbg.dev.RdWrDR(bitstr.FromUint(uint(dmi), dbg.drDmiLength), dbg.idle)
+		tdo, err := dbg.dev.RdWrDR(bitstr.FromUint(uint(op), dbg.drDmiLength), dbg.idle)
 		if err != nil {
 			return nil, err
 		}
@@ -372,7 +377,7 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 			data = append(data, uint32((x>>2)&util.Mask32))
 		}
 		// setup the next read
-		read = dmi.isRead()
+		read = op.isRead()
 	}
 	return data, nil
 }

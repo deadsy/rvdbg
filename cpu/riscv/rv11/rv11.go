@@ -17,6 +17,7 @@ import (
 	"github.com/deadsy/rvdbg/bitstr"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/jtag"
+	"github.com/deadsy/rvdbg/soc"
 	"github.com/deadsy/rvdbg/util"
 	"github.com/deadsy/rvdbg/util/log"
 )
@@ -33,6 +34,7 @@ const irDbus = 0x11 // debug bus access
 // Debug is a RISC-V 0.11 debugger. It implements the rv.Debug interface.
 type Debug struct {
 	dev          *jtag.Device
+	dbusDevice   *soc.Device // dbus device for decode/display
 	hart         []*hartInfo // implemented harts
 	hartid       int         // currently selected hart
 	ir           uint        // cache of ir value
@@ -57,10 +59,10 @@ func (dbg *Debug) String() string {
 // New returns a RISC-V 0.11 debugger.
 func New(dev *jtag.Device) (*Debug, error) {
 	log.Info.Printf("0.11 debug module")
-
 	dbg := &Debug{
-		dev:   dev,
-		irlen: dev.GetIRLength(),
+		dev:        dev,
+		irlen:      dev.GetIRLength(),
+		dbusDevice: newDBUS().Setup(),
 	}
 
 	// get dtmcontrol
@@ -192,17 +194,13 @@ func (dbg *Debug) ResumeHart() error {
 func (dbg *Debug) GetInfo() string {
 	s := []string{}
 	s = append(s, dbg.String())
-
-	/*
-		  s = append(s, "")
-			dump, err := dbg.dmiDump()
-			if err != nil {
-				s = append(s, fmt.Sprintf("unable to get dmi registers: %v", err))
-			} else {
-				s = append(s, dump)
-			}
-	*/
-
+	s = append(s, "")
+	dump, err := dbg.dbusDump()
+	if err != nil {
+		s = append(s, fmt.Sprintf("unable to get dbus registers: %v", err))
+	} else {
+		s = append(s, dump)
+	}
 	return strings.Join(s, "\n")
 }
 
@@ -220,7 +218,15 @@ func (dbg *Debug) GetPrompt(name string) string {
 
 // Test1 is a test routine.
 func (dbg *Debug) Test1() string {
-	return ""
+	s := []string{}
+	// test debug ram buffers
+	err := dbg.testBuffers(ram0, 16)
+	if err != nil {
+		s = append(s, fmt.Sprintf("debug ram: %v", err))
+	} else {
+		s = append(s, "debug ram: passed")
+	}
+	return strings.Join(s, "\n")
 }
 
 // Test2 is a test routine.
