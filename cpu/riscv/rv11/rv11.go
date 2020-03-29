@@ -35,6 +35,7 @@ const irDbus = 0x11 // debug bus access
 type Debug struct {
 	dev          *jtag.Device
 	dbusDevice   *soc.Device // dbus device for decode/display
+	cache        *ramCache   // cache of debug ram words
 	hart         []*hartInfo // implemented harts
 	hartid       int         // currently selected hart
 	ir           uint        // cache of ir value
@@ -112,6 +113,12 @@ func New(dev *jtag.Device) (*Debug, error) {
 	authtype := util.Bits(x, 3, 2)
 	if authtype != 0 {
 		return nil, fmt.Errorf("dminfo.authtype %d not supported", authtype)
+	}
+
+	// create the debug ram cache
+	dbg.cache, err = dbg.newCache(ram0, dbg.dramsize)
+	if err != nil {
+		return nil, err
 	}
 
 	return dbg, nil
