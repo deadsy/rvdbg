@@ -17,6 +17,7 @@ import (
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/soc"
 	"github.com/deadsy/rvdbg/util"
+	"github.com/deadsy/rvdbg/util/log"
 )
 
 //-----------------------------------------------------------------------------
@@ -105,7 +106,7 @@ func newDBUS() *soc.Device {
 							{Name: "access8", Msb: 16, Lsb: 16},
 							{Name: "dramsize", Msb: 15, Lsb: 10},
 							{Name: "haltsum", Msb: 9, Lsb: 9},
-							{Name: "loversion", Msb: 7, Lsb: 6},
+							{Name: "hiversion", Msb: 7, Lsb: 6},
 							{Name: "authenticated", Msb: 5, Lsb: 5},
 							{Name: "authbusy", Msb: 4, Lsb: 4},
 							{Name: "authtype", Msb: 3, Lsb: 2},
@@ -227,12 +228,14 @@ func (dbg *Debug) dbusOps(ops []dbusOp) ([]uint, error) {
 			dbg.wrIR(irDbus)
 			if result == opBusy {
 				// auto-adjust timing
+				log.Info.Printf("increment idle timing %d->%d cycles", dbg.idle, dbg.idle+1)
 				dbg.idle++
 				if dbg.idle > jtag.MaxIdle {
 					return nil, fmt.Errorf("dbus operation error %d", result)
 				}
 				// redo the operation
 				i--
+				continue
 			} else {
 				return nil, fmt.Errorf("dbus operation error %d", result)
 			}
@@ -319,7 +322,7 @@ func (drv *dbusDriver) Rd(width, addr uint) (uint, error) {
 func (dbg *Debug) dbusDump() (string, error) {
 	p := dbg.dbusDevice.GetPeripheral("DBUS")
 	drv := &dbusDriver{dbg}
-	return p.Display(drv, nil, false), nil
+	return p.Display(drv, nil, true), nil
 }
 
 //-----------------------------------------------------------------------------

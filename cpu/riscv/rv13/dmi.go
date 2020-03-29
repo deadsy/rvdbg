@@ -19,6 +19,7 @@ import (
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/soc"
 	"github.com/deadsy/rvdbg/util"
+	"github.com/deadsy/rvdbg/util/log"
 )
 
 //-----------------------------------------------------------------------------
@@ -362,12 +363,14 @@ func (dbg *Debug) dmiOps(ops []dmiOp) ([]uint32, error) {
 			dbg.wrIR(irDmi)
 			if result == opBusy {
 				// auto-adjust timing
+				log.Info.Printf("increment idle timing %d->%d cycles", dbg.idle, dbg.idle+1)
 				dbg.idle++
 				if dbg.idle > jtag.MaxIdle {
 					return nil, fmt.Errorf("dmi operation error %d", result)
 				}
 				// redo the operation
 				i--
+				continue
 			} else {
 				return nil, fmt.Errorf("dmi operation error %d", result)
 			}

@@ -42,6 +42,7 @@ type Debug struct {
 	drDbusLength int         // DR length for dbus
 	abits        uint        // address bits in dtmcontrol
 	idle         uint        // idle value in dtmcontrol
+	dramsize     uint        // number of debug ram words implemented
 }
 
 func (dbg *Debug) String() string {
@@ -50,7 +51,7 @@ func (dbg *Debug) String() string {
 	s = append(s, []string{"idle cycles", fmt.Sprintf("%d", dbg.idle)})
 	//s = append(s, []string{"sbasize", fmt.Sprintf("%d bits", dbg.sbasize)})
 	//s = append(s, []string{"progbufsize", fmt.Sprintf("%d words", dbg.progbufsize)})
-	//s = append(s, []string{"datacount", fmt.Sprintf("%d words", dbg.datacount)})
+	s = append(s, []string{"dramsize", fmt.Sprintf("%d words", dbg.dramsize)})
 	//s = append(s, []string{"autoexecprogbuf", fmt.Sprintf("%t", dbg.autoexecprogbuf)})
 	//s = append(s, []string{"autoexecdata", fmt.Sprintf("%t", dbg.autoexecdata)})
 	return cli.TableString(s, []int{0, 0}, 1)
@@ -69,6 +70,9 @@ func New(dev *jtag.Device) (*Debug, error) {
 	dtmcontrol, err := dbg.rdDtmcontrol()
 	if err != nil {
 		return nil, err
+	}
+	if dtmcontrol == 0 {
+		return nil, errors.New("bad value for dtmcontrol (0)")
 	}
 	// check the version
 	if util.Bits(dtmcontrol, 3, 0) != 0 {
@@ -90,6 +94,24 @@ func New(dev *jtag.Device) (*Debug, error) {
 	err = dbg.wrDtmcontrol(dbusreset)
 	if err != nil {
 		return nil, err
+	}
+
+	// get dminfo
+	x, err := dbg.rdDbus(dminfo)
+	if err != nil {
+		return nil, err
+	}
+	// check dminfo.version
+	version := (util.Bits(x, 7, 6) << 2) | (util.Bits(x, 1, 0) << 0)
+	if version != 1 {
+		return nil, fmt.Errorf("dminfo.version expected 1, actual %d", version)
+	}
+	// get number of words of debug ram
+	dbg.dramsize = util.Bits(x, 15, 10) + 1
+	// check dminfo.authtype
+	authtype := util.Bits(x, 3, 2)
+	if authtype != 0 {
+		return nil, fmt.Errorf("dminfo.authtype %d not supported", authtype)
 	}
 
 	return dbg, nil
@@ -220,7 +242,7 @@ func (dbg *Debug) GetPrompt(name string) string {
 func (dbg *Debug) Test1() string {
 	s := []string{}
 	// test debug ram buffers
-	err := dbg.testBuffers(ram0, 16)
+	err := dbg.testBuffers(ram0, dbg.dramsize)
 	if err != nil {
 		s = append(s, fmt.Sprintf("debug ram: %v", err))
 	} else {
