@@ -41,6 +41,7 @@ var Info = target.Info{
 
 // menuRoot is the root menu.
 var menuRoot = cli.Menu{
+	{"dmi", riscv.CmdDebugInfo},
 	{"exit", target.CmdExit},
 	{"help", target.CmdHelp},
 	{"history", target.CmdHistory, cli.HistoryHelp},
@@ -97,7 +98,7 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 
 // GetPrompt returns the target prompt string.
 func (t *Target) GetPrompt() string {
-	return "maixgo> "
+	return t.rvDebug.GetPrompt(Info.Name)
 }
 
 // GetMenuRoot returns the target root menu.

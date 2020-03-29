@@ -25,18 +25,17 @@ import (
 //-----------------------------------------------------------------------------
 
 const irDtmcs = 0x10 // debug transport module control and status
-const irDmi = 0x11   // debug module interface access
-
 const drDtmcsLength = 32
+
+const irDmi = 0x11 // debug module interface access
 
 //-----------------------------------------------------------------------------
 
-// Debug is a RISC-V 0.13 debugger.
-// It implements the rv.Debug interface.
+// Debug is a RISC-V 0.13 debugger. It implements the rv.Debug interface.
 type Debug struct {
 	dev             *jtag.Device
-	hart            []*hartInfo // implemented harts
 	dmiDevice       *soc.Device // dmi device for decode/display
+	hart            []*hartInfo // implemented harts
 	hartid          int         // currently selected hart
 	ir              uint        // cache of ir value
 	irlen           int         // IR length
@@ -256,12 +255,12 @@ func (dbg *Debug) wrIR(ir uint) error {
 // dtmcs
 
 var dtmcsFields = []soc.Field{
-	{Name: "dmihardreset", Msb: 17, Lsb: 17, Fmt: soc.FmtDec},
-	{Name: "dmireset", Msb: 16, Lsb: 16, Fmt: soc.FmtDec},
-	{Name: "idle", Msb: 14, Lsb: 12, Fmt: soc.FmtDec},
-	{Name: "dmistat", Msb: 11, Lsb: 10, Fmt: soc.FmtDec},
-	{Name: "abits", Msb: 9, Lsb: 4, Fmt: soc.FmtDec},
-	{Name: "version", Msb: 3, Lsb: 0, Fmt: soc.FmtDec},
+	{Name: "dmihardreset", Msb: 17, Lsb: 17},
+	{Name: "dmireset", Msb: 16, Lsb: 16},
+	{Name: "idle", Msb: 14, Lsb: 12},
+	{Name: "dmistat", Msb: 11, Lsb: 10},
+	{Name: "abits", Msb: 9, Lsb: 4},
+	{Name: "version", Msb: 3, Lsb: 0},
 }
 
 const dmireset = (1 << 16)
