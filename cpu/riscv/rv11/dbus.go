@@ -53,6 +53,14 @@ const sbdata1 = 0x19
 const haltsum = 0x1b
 
 //-----------------------------------------------------------------------------
+// dbus address locations
+
+const debugRomStart = 0x800
+const debugRomResume = debugRomStart + 4
+const debugRomException = debugRomStart + 8
+const debugRamStart = 0x400
+
+//-----------------------------------------------------------------------------
 
 func newDBUS() *soc.Device {
 	return &soc.Device{

@@ -47,6 +47,8 @@ var menuRoot = cli.Menu{
 	{"help", target.CmdHelp},
 	{"history", target.CmdHistory, cli.HistoryHelp},
 	{"jtag", jtag.Menu, "jtag functions"},
+	{"map", soc.CmdMap},
+	{"regs", soc.CmdRegs, soc.RegsHelp},
 }
 
 //-----------------------------------------------------------------------------

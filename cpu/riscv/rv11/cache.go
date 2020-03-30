@@ -8,6 +8,8 @@ RISC-V Debugger 0.11 Debug RAM Cache Functions
 
 package rv11
 
+import "github.com/deadsy/rvdbg/cpu/riscv/rv"
+
 //-----------------------------------------------------------------------------
 
 type cacheEntry struct {
@@ -43,8 +45,8 @@ func (cache *ramCache) allDirty() {
 
 //-----------------------------------------------------------------------------
 
-// flushOps returns dbus write operations for dirty cache entries.
-func (cache *ramCache) flushOps() []dbusOp {
+// wrOps returns dbus write operations for dirty cache entries.
+func (cache *ramCache) wrOps() []dbusOp {
 	op := []dbusOp{}
 	for i := range cache.entry {
 		e := &cache.entry[i]
@@ -55,9 +57,39 @@ func (cache *ramCache) flushOps() []dbusOp {
 	return op
 }
 
+// rdOps returns dbus read operations for invalid cache entries.
+func (cache *ramCache) rdOps() []dbusOp {
+	op := []dbusOp{}
+	for i := range cache.entry {
+		e := &cache.entry[i]
+		if !e.valid {
+			op = append(op, dbusRd(cache.base+uint(i)))
+		}
+	}
+	return op
+}
+
+//-----------------------------------------------------------------------------
+
+// wr writes a value to the cache.
+func (cache *ramCache) wr(i, data uint) {
+	e := &cache.entry[i]
+	if e.data != data {
+		e.data = data
+		e.dirty = true
+	}
+}
+
+// wrResume writes jump to the debugRomResume address.
+func (cache *ramCache) wrResume(i uint) {
+	cache.wr(i, uint(rv.InsJAL(0, debugRomResume-(debugRamStart+(4*i)))))
+}
+
+//-----------------------------------------------------------------------------
+
 // flush dirty cache entries to the debug target.
 func (cache *ramCache) flush() error {
-	ops := cache.flushOps()
+	ops := cache.wrOps()
 	ops = append(ops, dbusEnd())
 	_, err := cache.dbg.dbusOps(ops)
 	// previously dirty entries are now clean and valid

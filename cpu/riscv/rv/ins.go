@@ -95,4 +95,19 @@ func InsCSRW(csr, rs1 uint) uint32 {
 	return uint32((csr << 20) | (rs1 << 15) | (RegZero << 7) | opcodeCSRRW)
 }
 
+// InsJAL returns "jal rd, ofs"
+func InsJAL(rd, ofs uint) uint32 {
+	return 0 // TODO
+}
+
+// InsXORI returns "xori rd, rs1, imm"
+func InsXORI(rd, rs1, imm uint) uint32 {
+	return 0 // TODO
+}
+
+// InsSRLI returns "srli rd, rs1, shamt"
+func InsSRLI(rd, rs1, shamt uint) uint32 {
+	return 0 // TODO
+}
+
 //-----------------------------------------------------------------------------
