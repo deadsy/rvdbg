@@ -21,6 +21,9 @@ const (
 	opcodeSH      = 0x00001023 // sh
 	opcodeSW      = 0x00002023 // sw
 	opcodeSD      = 0x00003023 // sd
+	opcodeJAL     = 0x0000006f // jal
+	opcodeXORI    = 0x00004013 // xori
+	opcodeSRLI    = 0x00005013 // srli
 	opcodeADDI    = 0x00000013 // addi
 	opcodeEBREAK  = 0x00100073 // ebreak
 	opcodeCSRRW   = 0x00001073 // csrrw
@@ -97,17 +100,21 @@ func InsCSRW(csr, rs1 uint) uint32 {
 
 // InsJAL returns "jal rd, ofs"
 func InsJAL(rd, ofs uint) uint32 {
-	return 0 // TODO
+	offset := (util.Bit(ofs, 20) << 19) |
+		(util.Bits(ofs, 10, 1) << 9) |
+		(util.Bit(ofs, 11) << 8) |
+		(util.Bits(ofs, 19, 12) << 0)
+	return uint32((offset << 12) | (rd << 7) | opcodeJAL)
 }
 
 // InsXORI returns "xori rd, rs1, imm"
 func InsXORI(rd, rs1, imm uint) uint32 {
-	return 0 // TODO
+	return uint32((util.Bits(imm, 11, 0) << 20) | (rs1 << 15) | (rd << 7) | opcodeXORI)
 }
 
 // InsSRLI returns "srli rd, rs1, shamt"
 func InsSRLI(rd, rs1, shamt uint) uint32 {
-	return 0 // TODO
+	return uint32((shamt << 20) | (rs1 << 15) | (rd << 7) | opcodeSRLI)
 }
 
 //-----------------------------------------------------------------------------

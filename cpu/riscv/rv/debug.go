@@ -82,7 +82,6 @@ func (hi *HartInfo) String() string {
 
 // Debug is the RISC-V debug interface.
 type Debug interface {
-	GetInfo() string              // get debug module information
 	GetPrompt(name string) string // get the target prompt
 	// hart control
 	GetHartCount() int                        // how many harts for this chip?

@@ -116,10 +116,13 @@ func New(dev *jtag.Device) (*Debug, error) {
 	}
 
 	// create the debug ram cache
-	dbg.cache, err = dbg.newCache(ram0, dbg.dramsize)
+	dbg.cache, err = dbg.newCache(debugRamStart, dbg.dramsize)
 	if err != nil {
 		return nil, err
 	}
+
+	// test
+	dbg.getMXLEN()
 
 	return dbg, nil
 }
@@ -215,22 +218,6 @@ func (dbg *Debug) ResumeHart() error {
 		dbg.hart[dbg.hartid].info.State = rv.Running
 	}
 	return err
-}
-
-//-----------------------------------------------------------------------------
-
-// GetInfo returns a string of debugger information.
-func (dbg *Debug) GetInfo() string {
-	s := []string{}
-	s = append(s, dbg.String())
-	s = append(s, "")
-	dump, err := dbg.dbusDump()
-	if err != nil {
-		s = append(s, fmt.Sprintf("unable to get dbus registers: %v", err))
-	} else {
-		s = append(s, dump)
-	}
-	return strings.Join(s, "\n")
 }
 
 //-----------------------------------------------------------------------------

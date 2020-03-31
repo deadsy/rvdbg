@@ -341,22 +341,6 @@ func (dbg *Debug) ResumeHart() error {
 
 //-----------------------------------------------------------------------------
 
-// GetInfo returns a string of debugger information.
-func (dbg *Debug) GetInfo() string {
-	s := []string{}
-	s = append(s, dbg.String())
-	s = append(s, "")
-	dump, err := dbg.dmiDump()
-	if err != nil {
-		s = append(s, fmt.Sprintf("unable to get dmi registers: %v", err))
-	} else {
-		s = append(s, dump)
-	}
-	return strings.Join(s, "\n")
-}
-
-//-----------------------------------------------------------------------------
-
 // GetPrompt returns a target prompt string.
 func (dbg *Debug) GetPrompt(name string) string {
 	hi := dbg.GetCurrentHart()

@@ -136,12 +136,48 @@ func (dbg *Debug) probeAccess() error {
 // getMXLEN returns the GPR length for the current hart.
 func (dbg *Debug) getMXLEN() (uint, error) {
 
+	// s1 = -1, s1 = 0xffffffff ffffffff ffffffff ffffffff
+	// srli 31, s1 = 0x00000001 ffffffff ffffffff ffffffff
+	// srli 31, s1 = 0x00000000 00000003 ffffffff ffffffff
+
+	// rv32:  ram0 = 0x00000001, ram1 = 0x00000000
+	// rv64:  ram0 = 0xffffffff, ram1 = 0x00000003
+	// rv128: ram0 = 0xffffffff, ram1 = 0xffffffff
+
 	dbg.cache.wr(0, uint(rv.InsXORI(rv.RegS1, rv.RegZero, ^uint(0))))
 	dbg.cache.wr(1, uint(rv.InsSRLI(rv.RegS1, rv.RegS1, 31)))
-	dbg.cache.wr(2, uint(rv.InsSW(rv.RegS1, rv.RegZero, debugRamStart)))
+	dbg.cache.wr(2, uint(rv.InsSW(rv.RegS1, debugRamStart, rv.RegZero)))
 	dbg.cache.wr(3, uint(rv.InsSRLI(rv.RegS1, rv.RegS1, 31)))
-	dbg.cache.wr(4, uint(rv.InsSW(rv.RegS1, rv.RegZero, debugRamStart+4)))
+	dbg.cache.wr(4, uint(rv.InsSW(rv.RegS1, debugRamStart+4, rv.RegZero)))
 	dbg.cache.wrResume(5)
+
+	err := dbg.cache.flush()
+	if err != nil {
+		return 0, err
+	}
+
+	// TODO execute
+
+	// Results are in ram0, ram1. Read them back in.
+	dbg.cache.invalid(ram0)
+	dbg.cache.invalid(ram1)
+	err = dbg.cache.validate()
+	if err != nil {
+		return 0, err
+	}
+
+	x0 := dbg.cache.rd(ram0)
+	x1 := dbg.cache.rd(ram1)
+
+	if x0 == 1 && x1 == 0 {
+		return 32, nil
+	}
+	if x0 == 0xffffffff && x1 == 3 {
+		return 64, nil
+	}
+	if x0 == 0xffffffff && x1 == 0xffffffff {
+		return 128, nil
+	}
 
 	return 0, errors.New("unable to determine MXLEN")
 }

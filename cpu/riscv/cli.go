@@ -317,17 +317,6 @@ var CmdDisassemble = cli.Leaf{
 			addr += da.InsLength
 			n -= int(da.InsLength)
 		}
-
-	},
-}
-
-//-----------------------------------------------------------------------------
-
-var CmdDebugInfo = cli.Leaf{
-	Descr: "debug module information",
-	F: func(c *cli.CLI, args []string) {
-		dbg := c.User.(target).GetRiscvDebug()
-		c.User.Put(fmt.Sprintf("%s\n", dbg.GetInfo()))
 	},
 }
 

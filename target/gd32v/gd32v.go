@@ -19,6 +19,7 @@ import (
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/cpu/riscv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
+	"github.com/deadsy/rvdbg/cpu/riscv/rv13"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/mem"
@@ -44,7 +45,7 @@ var menuRoot = cli.Menu{
 	{"cpu", riscv.Menu, "cpu functions"},
 	{"csr", riscv.CmdCSR, riscv.CsrHelp},
 	{"da", riscv.CmdDisassemble, riscv.DisassembleHelp},
-	{"dbg", riscv.CmdDebugInfo},
+	{"dbg", rv13.Menu, "debugger functions"},
 	{"exit", target.CmdExit},
 	{"gpr", riscv.CmdGpr},
 	{"halt", riscv.CmdHalt},

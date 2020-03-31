@@ -18,6 +18,7 @@ import (
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/cpu/riscv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
+	"github.com/deadsy/rvdbg/cpu/riscv/rv11"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/mem"
@@ -42,7 +43,7 @@ var Info = target.Info{
 // menuRoot is the root menu.
 var menuRoot = cli.Menu{
 	{"cpu", riscv.Menu, "cpu functions"},
-	{"dbg", riscv.CmdDebugInfo},
+	{"dbg", rv11.Menu, "debugger functions"},
 	{"exit", target.CmdExit},
 	{"help", target.CmdHelp},
 	{"history", target.CmdHistory, cli.HistoryHelp},

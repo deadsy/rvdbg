@@ -52,6 +52,10 @@ const sbdata0 = 0x18
 const sbdata1 = 0x19
 const haltsum = 0x1b
 
+// upper bits of each debug ram value (also in dmcontrol)
+const haltNotification = (1 << 32)
+const debugInterrupt = (1 << 33)
+
 //-----------------------------------------------------------------------------
 // dbus address locations
 
@@ -70,22 +74,22 @@ func newDBUS() *soc.Device {
 				Name:  "DBUS",
 				Descr: "DBUS Registers",
 				Registers: []soc.Register{
-					{Offset: ram0, Name: "ram0", Descr: "Debug RAM 0"},
-					{Offset: ram1, Name: "ram1", Descr: "Debug RAM 1"},
-					{Offset: ram2, Name: "ram2", Descr: "Debug RAM 2"},
-					{Offset: ram3, Name: "ram3", Descr: "Debug RAM 3"},
-					{Offset: ram4, Name: "ram4", Descr: "Debug RAM 4"},
-					{Offset: ram5, Name: "ram5", Descr: "Debug RAM 5"},
-					{Offset: ram6, Name: "ram6", Descr: "Debug RAM 6"},
-					{Offset: ram7, Name: "ram7", Descr: "Debug RAM 7"},
-					{Offset: ram8, Name: "ram8", Descr: "Debug RAM 8"},
-					{Offset: ram9, Name: "ram9", Descr: "Debug RAM 9"},
-					{Offset: ram10, Name: "ram10", Descr: "Debug RAM 10"},
-					{Offset: ram11, Name: "ram11", Descr: "Debug RAM 11"},
-					{Offset: ram12, Name: "ram12", Descr: "Debug RAM 12"},
-					{Offset: ram13, Name: "ram13", Descr: "Debug RAM 13"},
-					{Offset: ram14, Name: "ram14", Descr: "Debug RAM 14"},
-					{Offset: ram15, Name: "ram15", Descr: "Debug RAM 15"},
+					{Offset: ram0, Size: 32, Name: "ram0", Descr: "Debug RAM 0"},
+					{Offset: ram1, Size: 32, Name: "ram1", Descr: "Debug RAM 1"},
+					{Offset: ram2, Size: 32, Name: "ram2", Descr: "Debug RAM 2"},
+					{Offset: ram3, Size: 32, Name: "ram3", Descr: "Debug RAM 3"},
+					{Offset: ram4, Size: 32, Name: "ram4", Descr: "Debug RAM 4"},
+					{Offset: ram5, Size: 32, Name: "ram5", Descr: "Debug RAM 5"},
+					{Offset: ram6, Size: 32, Name: "ram6", Descr: "Debug RAM 6"},
+					{Offset: ram7, Size: 32, Name: "ram7", Descr: "Debug RAM 7"},
+					{Offset: ram8, Size: 32, Name: "ram8", Descr: "Debug RAM 8"},
+					{Offset: ram9, Size: 32, Name: "ram9", Descr: "Debug RAM 9"},
+					{Offset: ram10, Size: 32, Name: "ram10", Descr: "Debug RAM 10"},
+					{Offset: ram11, Size: 32, Name: "ram11", Descr: "Debug RAM 11"},
+					{Offset: ram12, Size: 32, Name: "ram12", Descr: "Debug RAM 12"},
+					{Offset: ram13, Size: 32, Name: "ram13", Descr: "Debug RAM 13"},
+					{Offset: ram14, Size: 32, Name: "ram14", Descr: "Debug RAM 14"},
+					{Offset: ram15, Size: 32, Name: "ram15", Descr: "Debug RAM 15"},
 					{Offset: dmcontrol,
 						Name:  "dmcontrol",
 						Descr: "Control",

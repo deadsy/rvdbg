@@ -8,7 +8,13 @@ RISC-V Debugger 0.11 Debug RAM Cache Functions
 
 package rv11
 
-import "github.com/deadsy/rvdbg/cpu/riscv/rv"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/deadsy/rvda"
+	"github.com/deadsy/rvdbg/cpu/riscv/rv"
+)
 
 //-----------------------------------------------------------------------------
 
@@ -20,6 +26,7 @@ type cacheEntry struct {
 
 type ramCache struct {
 	dbg   *Debug       // pointer back to parent debugger
+	isa   *rvda.ISA    // RV32i disassembler
 	base  uint         // base address of debug ram
 	entry []cacheEntry // cache entries
 }
@@ -31,8 +38,15 @@ func (dbg *Debug) newCache(base, entries uint) (*ramCache, error) {
 		base:  base,
 		entry: make([]cacheEntry, entries),
 	}
+	// add a disassembler for decoding instructions in the cache
+	isa, err := rvda.New(32, rvda.ExtI)
+	if err != nil {
+		return nil, err
+	}
+	cache.isa = isa
+	// initialise the cache and debug ram
 	cache.allDirty()
-	err := cache.flush()
+	err = cache.flush()
 	return cache, err
 }
 
@@ -45,13 +59,40 @@ func (cache *ramCache) allDirty() {
 
 //-----------------------------------------------------------------------------
 
+func (cache *ramCache) EntryString(idx int) string {
+	e := &cache.entry[idx]
+
+	flags := []rune{}
+	if e.dirty {
+		flags = append(flags, 'd')
+	}
+	if e.valid {
+		flags = append(flags, 'v')
+	}
+
+	addr := cache.base + (4 * uint(idx))
+	da := cache.isa.Disassemble(addr, e.data)
+
+	return fmt.Sprintf("%03x %09x %s %s", addr, e.data, string(flags), da.Assembly)
+}
+
+func (cache *ramCache) String() string {
+	s := []string{}
+	for i := range cache.entry {
+		s = append(s, cache.EntryString(i))
+	}
+	return strings.Join(s, "\n")
+}
+
+//-----------------------------------------------------------------------------
+
 // wrOps returns dbus write operations for dirty cache entries.
 func (cache *ramCache) wrOps() []dbusOp {
 	op := []dbusOp{}
 	for i := range cache.entry {
 		e := &cache.entry[i]
 		if e.dirty {
-			op = append(op, dbusWr(cache.base+uint(i), e.data))
+			op = append(op, dbusWr(uint(i), e.data))
 		}
 	}
 	return op
@@ -63,7 +104,7 @@ func (cache *ramCache) rdOps() []dbusOp {
 	for i := range cache.entry {
 		e := &cache.entry[i]
 		if !e.valid {
-			op = append(op, dbusRd(cache.base+uint(i)))
+			op = append(op, dbusRd(uint(i)))
 		}
 	}
 	return op
@@ -80,9 +121,43 @@ func (cache *ramCache) wr(i, data uint) {
 	}
 }
 
-// wrResume writes jump to the debugRomResume address.
+// wrResume writes a jump to the debugRomResume address.
 func (cache *ramCache) wrResume(i uint) {
-	cache.wr(i, uint(rv.InsJAL(0, debugRomResume-(debugRamStart+(4*i)))))
+	cache.wr(i, uint(rv.InsJAL(rv.RegZero, debugRomResume-(debugRamStart+(4*i)))))
+}
+
+//-----------------------------------------------------------------------------
+
+// rd reads a value from the cache.
+func (cache *ramCache) rd(i uint) uint {
+	return cache.entry[i].data
+}
+
+// invalid marks a cache entry as invalid.
+func (cache *ramCache) invalid(i uint) {
+	cache.entry[i].valid = false
+}
+
+// validate reads invalid cache entries from the debug target.
+func (cache *ramCache) validate() error {
+	ops := cache.rdOps()
+	ops = append(ops, dbusEnd())
+	data, err := cache.dbg.dbusOps(ops)
+	if err != nil {
+		return err
+	}
+	// previously invalid entries are now valid and clean
+	k := 0
+	for i := range cache.entry {
+		e := &cache.entry[i]
+		if !e.valid {
+			e.data = data[k]
+			k++
+			e.dirty = false
+			e.valid = true
+		}
+	}
+	return nil
 }
 
 //-----------------------------------------------------------------------------
