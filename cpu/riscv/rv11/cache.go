@@ -19,9 +19,9 @@ import (
 //-----------------------------------------------------------------------------
 
 type cacheEntry struct {
-	data  uint // data for a debug ram word
-	valid bool // does the cache data match the debug ram?
-	dirty bool // does the cache data need to be written to the debug ram?
+	data  uint32 // data for a debug ram word
+	valid bool   // does the cache data match the debug ram?
+	dirty bool   // does the cache data need to be written to the debug ram?
 }
 
 type ramCache struct {
@@ -46,7 +46,7 @@ func (dbg *Debug) newCache(base, entries uint) (*ramCache, error) {
 	cache.isa = isa
 	// initialise the cache and debug ram
 	cache.allDirty()
-	err = cache.flush()
+	err = cache.flush(false)
 	return cache, err
 }
 
@@ -71,7 +71,7 @@ func (cache *ramCache) EntryString(idx int) string {
 	}
 
 	addr := cache.base + (4 * uint(idx))
-	da := cache.isa.Disassemble(addr, e.data)
+	da := cache.isa.Disassemble(addr, uint(e.data))
 
 	return fmt.Sprintf("%03x %09x %s %s", addr, e.data, string(flags), da.Assembly)
 }
@@ -92,7 +92,7 @@ func (cache *ramCache) wrOps() []dbusOp {
 	for i := range cache.entry {
 		e := &cache.entry[i]
 		if e.dirty {
-			op = append(op, dbusWr(uint(i), e.data))
+			op = append(op, dbusWr(uint(i), uint(e.data)))
 		}
 	}
 	return op
@@ -112,8 +112,8 @@ func (cache *ramCache) rdOps() []dbusOp {
 
 //-----------------------------------------------------------------------------
 
-// wr writes a value to the cache.
-func (cache *ramCache) wr(i, data uint) {
+// wr writes an instruction word to the cache.
+func (cache *ramCache) wr(i int, data uint32) {
 	e := &cache.entry[i]
 	if e.data != data {
 		e.data = data
@@ -121,15 +121,15 @@ func (cache *ramCache) wr(i, data uint) {
 	}
 }
 
-// wrResume writes a jump to the debugRomResume address.
-func (cache *ramCache) wrResume(i uint) {
-	cache.wr(i, uint(rv.InsJAL(rv.RegZero, debugRomResume-(debugRamStart+(4*i)))))
+// wrResume writes a "jal debugRomResume" to the cache.
+func (cache *ramCache) wrResume(i int) {
+	cache.wr(i, rv.InsJAL(rv.RegZero, uint(debugRomResume-(debugRamStart+(4*i)))))
 }
 
 //-----------------------------------------------------------------------------
 
 // rd reads a value from the cache.
-func (cache *ramCache) rd(i uint) uint {
+func (cache *ramCache) rd(i int) uint32 {
 	return cache.entry[i].data
 }
 
@@ -151,7 +151,7 @@ func (cache *ramCache) validate() error {
 	for i := range cache.entry {
 		e := &cache.entry[i]
 		if !e.valid {
-			e.data = data[k]
+			e.data = uint32(data[k])
 			k++
 			e.dirty = false
 			e.valid = true
@@ -163,7 +163,7 @@ func (cache *ramCache) validate() error {
 //-----------------------------------------------------------------------------
 
 // flush dirty cache entries to the debug target.
-func (cache *ramCache) flush() error {
+func (cache *ramCache) flush(exec bool) error {
 	ops := cache.wrOps()
 	ops = append(ops, dbusEnd())
 	_, err := cache.dbg.dbusOps(ops)

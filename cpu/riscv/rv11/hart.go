@@ -136,27 +136,26 @@ func (dbg *Debug) probeAccess() error {
 // getMXLEN returns the GPR length for the current hart.
 func (dbg *Debug) getMXLEN() (uint, error) {
 
-	// s1 = -1, s1 = 0xffffffff ffffffff ffffffff ffffffff
-	// srli 31, s1 = 0x00000001 ffffffff ffffffff ffffffff
-	// srli 31, s1 = 0x00000000 00000003 ffffffff ffffffff
+	// here's the method:
+	// s1 = -1,   s1 = 0xffffffff ffffffff ffffffff ffffffff
+	// s1 >>= 31, s1 = 0x00000001 ffffffff ffffffff ffffffff -> x0 result
+	// s1 >>= 31, s1 = 0x00000000 00000003 ffffffff ffffffff -> x1 result
+	// looking at the least significant 32-bits:
+	// rv32:  x0 = 0x00000001, x1 = 0x00000000
+	// rv64:  x0 = 0xffffffff, x1 = 0x00000003
+	// rv128: x0 = 0xffffffff, x1 = 0xffffffff
 
-	// rv32:  ram0 = 0x00000001, ram1 = 0x00000000
-	// rv64:  ram0 = 0xffffffff, ram1 = 0x00000003
-	// rv128: ram0 = 0xffffffff, ram1 = 0xffffffff
-
-	dbg.cache.wr(0, uint(rv.InsXORI(rv.RegS1, rv.RegZero, ^uint(0))))
-	dbg.cache.wr(1, uint(rv.InsSRLI(rv.RegS1, rv.RegS1, 31)))
-	dbg.cache.wr(2, uint(rv.InsSW(rv.RegS1, debugRamStart, rv.RegZero)))
-	dbg.cache.wr(3, uint(rv.InsSRLI(rv.RegS1, rv.RegS1, 31)))
-	dbg.cache.wr(4, uint(rv.InsSW(rv.RegS1, debugRamStart+4, rv.RegZero)))
+	dbg.cache.wr(0, rv.InsXORI(rv.RegS1, rv.RegZero, ^uint(0)))
+	dbg.cache.wr(1, rv.InsSRLI(rv.RegS1, rv.RegS1, 31))
+	dbg.cache.wr(2, rv.InsSW(rv.RegS1, debugRamStart, rv.RegZero))
+	dbg.cache.wr(3, rv.InsSRLI(rv.RegS1, rv.RegS1, 31))
+	dbg.cache.wr(4, rv.InsSW(rv.RegS1, debugRamStart+4, rv.RegZero))
 	dbg.cache.wrResume(5)
 
-	err := dbg.cache.flush()
+	err := dbg.cache.flush(false)
 	if err != nil {
 		return 0, err
 	}
-
-	// TODO execute
 
 	// Results are in ram0, ram1. Read them back in.
 	dbg.cache.invalid(ram0)
