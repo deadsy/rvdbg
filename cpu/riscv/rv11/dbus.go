@@ -143,38 +143,26 @@ func newDBUS() *soc.Device {
 //-----------------------------------------------------------------------------
 // hart selection
 
-/*
+const hartid = uint(((1 << 10) - 1) << 2)
 
-// setHartSelect sets the hart select value in a dmcontrol value.
-func setHartSelect(x uint32, id int) uint32 {
-	x &= ^uint32(hartselhi | hartsello)
-	hi := ((id >> 10) << 6) & hartselhi
-	lo := (id << 16) & hartsello
-	return x | uint32(hi) | uint32(lo)
+// setHartSelect sets the hartid field in a dmcontrol value.
+func setHartSelect(x uint, id uint) uint {
+	return (x & ^hartid) | ((id << 2) & hartid)
 }
 
 // getHartSelect gets the hart select value from a dmcontrol value.
-func getHartSelect(x uint32) int {
-	return int((util.Bits(uint(x), 15, 6) << 10) | util.Bits(uint(x), 25, 16))
+func getHartSelect(x uint) uint {
+	return util.Bits(x, 11, 2)
 }
-
-*/
 
 // selectHart sets the dmcontrol hartsel value.
 func (dbg *Debug) selectHart(id int) error {
-
-	/*
-
-		x, err := dbg.rdDmi(dmcontrol)
-		if err != nil {
-			return err
-		}
-		x = setHartSelect(x, id)
-		return dbg.wrDmi(dmcontrol, x)
-
-	*/
-
-	return nil
+	x, err := dbg.rdDbus(dmcontrol)
+	if err != nil {
+		return err
+	}
+	x = setHartSelect(x, uint(id))
+	return dbg.wrDbus(dmcontrol, x)
 }
 
 //-----------------------------------------------------------------------------
@@ -199,12 +187,17 @@ func dbusRd(addr uint) dbusOp {
 
 // dbusWr returns a dbus write operation.
 func dbusWr(addr, data uint) dbusOp {
-	return dbusOp((addr << 36) | (uint(data) << 2) | opWr)
+	return dbusOp((addr << 36) | (data << 2) | opWr)
 }
 
 // dbusEnd returns a dbus no-op, typically used to clock out a final data value.
 func dbusEnd() dbusOp {
 	return dbusOp(opIgnore)
+}
+
+// setInterrupt sets the interrupt and halt notification bits in a dbus operation.
+func (x dbusOp) setInterrupt() dbusOp {
+	return x | ((haltNotification | debugInterrupt) << 2)
 }
 
 // isRead returns true if this dbus operation is a read.

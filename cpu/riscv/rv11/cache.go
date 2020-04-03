@@ -165,7 +165,17 @@ func (cache *ramCache) validate() error {
 // flush dirty cache entries to the debug target.
 func (cache *ramCache) flush(exec bool) error {
 	ops := cache.wrOps()
+	if exec {
+		if len(ops) >= 1 {
+			// set the interrupt for the last operation
+			ops[len(ops)-1] = ops[len(ops)-1].setInterrupt()
+		} else {
+			// no debug ram writes, set the interrupt in dmcontrol
+			ops = append(ops, dbusWr(dmcontrol, haltNotification|debugInterrupt))
+		}
+	}
 	ops = append(ops, dbusEnd())
+	// run the operations
 	_, err := cache.dbg.dbusOps(ops)
 	// previously dirty entries are now clean and valid
 	for i := range cache.entry {

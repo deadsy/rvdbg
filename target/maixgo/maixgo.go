@@ -43,13 +43,20 @@ var Info = target.Info{
 // menuRoot is the root menu.
 var menuRoot = cli.Menu{
 	{"cpu", riscv.Menu, "cpu functions"},
+	{"csr", riscv.CmdCSR, riscv.CsrHelp},
+	{"da", riscv.CmdDisassemble, riscv.DisassembleHelp},
 	{"dbg", rv11.Menu, "debugger functions"},
 	{"exit", target.CmdExit},
+	{"gpr", riscv.CmdGpr},
+	{"halt", riscv.CmdHalt},
+	{"hart", riscv.CmdHart, riscv.HartHelp},
 	{"help", target.CmdHelp},
 	{"history", target.CmdHistory, cli.HistoryHelp},
 	{"jtag", jtag.Menu, "jtag functions"},
 	{"map", soc.CmdMap},
+	{"mem", mem.Menu, "memory functions"},
 	{"regs", soc.CmdRegs, soc.RegsHelp},
+	{"resume", riscv.CmdResume},
 }
 
 //-----------------------------------------------------------------------------

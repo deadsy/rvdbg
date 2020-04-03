@@ -121,8 +121,42 @@ func New(dev *jtag.Device) (*Debug, error) {
 		return nil, err
 	}
 
-	// test
-	dbg.getMXLEN()
+	// 1st pass: enumerate the harts
+	maxHarts := 32
+	for id := 0; id < maxHarts; id++ {
+		// select the hart
+		err := dbg.selectHart(id)
+		if err != nil {
+			return nil, err
+		}
+		// try to get MXLEN
+		_, err = dbg.getMXLEN()
+		if err != nil {
+			// this hart does not exist - we're done
+			break
+		}
+		// add a hart to the list
+		dbg.hart = append(dbg.hart, dbg.newHart(id))
+	}
+
+	if len(dbg.hart) == 0 {
+		return nil, errors.New("no harts found")
+	}
+
+	// 2nd pass: examine each hart
+	log.Info.Printf("%d hart(s) found", len(dbg.hart))
+	for i := range dbg.hart {
+		err := dbg.hart[i].examine()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// select the 0th hart
+	_, err = dbg.SetCurrentHart(0)
+	if err != nil {
+		return nil, err
+	}
 
 	return dbg, nil
 }
@@ -224,10 +258,9 @@ func (dbg *Debug) ResumeHart() error {
 
 // GetPrompt returns a target prompt string.
 func (dbg *Debug) GetPrompt(name string) string {
-	//hi := dbg.GetCurrentHart()
-	//state := []rune{'h', 'r'}[util.BoolToInt(hi.State == rv.Running)]
-	//return fmt.Sprintf("%s.%d%c> ", name, hi.ID, state)
-	return fmt.Sprintf("%s.xx> ", name)
+	hi := dbg.GetCurrentHart()
+	state := []rune{'h', 'r'}[util.BoolToInt(hi.State == rv.Running)]
+	return fmt.Sprintf("%s.%d%c> ", name, hi.ID, state)
 }
 
 //-----------------------------------------------------------------------------

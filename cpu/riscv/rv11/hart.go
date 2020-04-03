@@ -29,7 +29,10 @@ func (dbg *Debug) isHalted() (bool, error) {
 
 // halt the current hart, return true if it was already halted.
 func (dbg *Debug) halt() (bool, error) {
-	return false, errors.New("TODO")
+
+	return false, nil
+
+	//return false, errors.New("TODO")
 }
 
 //-----------------------------------------------------------------------------
@@ -42,7 +45,10 @@ func (dbg *Debug) isRunning() (bool, error) {
 
 // resume the current hart, return true if it was already running.
 func (dbg *Debug) resume() (bool, error) {
-	return false, errors.New("TODO")
+
+	return false, nil
+
+	//return false, errors.New("TODO")
 }
 
 //-----------------------------------------------------------------------------
@@ -151,22 +157,21 @@ func (dbg *Debug) getMXLEN() (uint, error) {
 	dbg.cache.wr(3, rv.InsSRLI(rv.RegS1, rv.RegS1, 31))
 	dbg.cache.wr(4, rv.InsSW(rv.RegS1, debugRamStart+4, rv.RegZero))
 	dbg.cache.wrResume(5)
-
-	err := dbg.cache.flush(false)
+	err := dbg.cache.flush(true)
 	if err != nil {
 		return 0, err
 	}
 
 	// Results are in ram0, ram1. Read them back in.
-	dbg.cache.invalid(ram0)
-	dbg.cache.invalid(ram1)
+	dbg.cache.invalid(0)
+	dbg.cache.invalid(1)
 	err = dbg.cache.validate()
 	if err != nil {
 		return 0, err
 	}
 
-	x0 := dbg.cache.rd(ram0)
-	x1 := dbg.cache.rd(ram1)
+	x0 := dbg.cache.rd(0)
+	x1 := dbg.cache.rd(1)
 
 	if x0 == 1 && x1 == 0 {
 		return 32, nil
