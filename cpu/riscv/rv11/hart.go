@@ -157,19 +157,17 @@ func (dbg *Debug) getMXLEN() (uint, error) {
 	dbg.cache.wr(3, rv.InsSRLI(rv.RegS1, rv.RegS1, 31))
 	dbg.cache.wr(4, rv.InsSW(rv.RegS1, debugRamStart+4, rv.RegZero))
 	dbg.cache.wrResume(5)
+	// results are in ram0, ram1
+	dbg.cache.read(0)
+	dbg.cache.read(1)
+
+	// run the code
 	err := dbg.cache.flush(true)
 	if err != nil {
 		return 0, err
 	}
 
-	// Results are in ram0, ram1. Read them back in.
-	dbg.cache.invalid(0)
-	dbg.cache.invalid(1)
-	err = dbg.cache.validate()
-	if err != nil {
-		return 0, err
-	}
-
+	// get the results
 	x0 := dbg.cache.rd(0)
 	x1 := dbg.cache.rd(1)
 

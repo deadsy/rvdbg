@@ -19,9 +19,9 @@ import (
 //-----------------------------------------------------------------------------
 
 type cacheEntry struct {
-	data  uint32 // data for a debug ram word
-	valid bool   // does the cache data match the debug ram?
-	dirty bool   // does the cache data need to be written to the debug ram?
+	data uint32 // data for a debug ram word
+	wr   bool   // write the data to the debug ram
+	rd   bool   // read this data from the debug ram
 }
 
 type ramCache struct {
@@ -44,69 +44,90 @@ func (dbg *Debug) newCache(base, entries uint) (*ramCache, error) {
 		return nil, err
 	}
 	cache.isa = isa
-	// initialise the cache and debug ram
-	cache.allDirty()
+	// sync the cache and target debug ram
+	cache.writeAll()
 	err = cache.flush(false)
-	return cache, err
+	if err != nil {
+		return nil, err
+	}
+	return cache, nil
 }
 
-// allDirty marks all cache entries as dirty.
-func (cache *ramCache) allDirty() {
+//-----------------------------------------------------------------------------
+
+// clearAll clears wr/rd flags from all cache enties.
+func (cache *ramCache) clearAll() {
 	for i := range cache.entry {
-		cache.entry[i].dirty = true
+		cache.entry[i].wr = false
+		cache.entry[i].rd = false
+	}
+}
+
+// writeAll marks all cache entries for writing.
+func (cache *ramCache) writeAll() {
+	for i := range cache.entry {
+		cache.entry[i].wr = true
 	}
 }
 
 //-----------------------------------------------------------------------------
 
-func (cache *ramCache) EntryString(idx int) string {
+// entryString returns the display string for a cache entry.
+func (cache *ramCache) entryString(idx int) string {
 	e := &cache.entry[idx]
-
-	flags := []rune{}
-	if e.dirty {
-		flags = append(flags, 'd')
+	flags := [2]rune{'.', '.'}
+	if e.wr {
+		flags[0] = 'w'
 	}
-	if e.valid {
-		flags = append(flags, 'v')
+	if e.rd {
+		flags[1] = 'r'
 	}
-
 	addr := cache.base + (4 * uint(idx))
 	da := cache.isa.Disassemble(addr, uint(e.data))
-
-	return fmt.Sprintf("%03x %09x %s %s", addr, e.data, string(flags), da.Assembly)
+	return fmt.Sprintf("%03x %09x %s %s", addr, e.data, string(flags[:]), da.Assembly)
 }
 
 func (cache *ramCache) String() string {
 	s := []string{}
 	for i := range cache.entry {
-		s = append(s, cache.EntryString(i))
+		s = append(s, cache.entryString(i))
 	}
 	return strings.Join(s, "\n")
 }
 
 //-----------------------------------------------------------------------------
 
-// wrOps returns dbus write operations for dirty cache entries.
-func (cache *ramCache) wrOps() []dbusOp {
+// ops returns dbus write/read operations for cache entries.
+func (cache *ramCache) ops(exec bool) []dbusOp {
 	op := []dbusOp{}
+	// writes
+	last := -1
 	for i := range cache.entry {
 		e := &cache.entry[i]
-		if e.dirty {
+		if e.wr {
 			op = append(op, dbusWr(uint(i), uint(e.data)))
+			last = i
 		}
 	}
-	return op
-}
-
-// rdOps returns dbus read operations for invalid cache entries.
-func (cache *ramCache) rdOps() []dbusOp {
-	op := []dbusOp{}
+	// mark the last write to execute instructions
+	if exec {
+		if last >= 0 {
+			// set the interrupt for the last write operation
+			op[last] = op[last].setInterrupt()
+		} else {
+			// no debug ram writes, set the interrupt in dmcontrol
+			op = append(op, dbusWr(dmcontrol, haltNotification|debugInterrupt))
+		}
+	}
+	// reads
 	for i := range cache.entry {
 		e := &cache.entry[i]
-		if !e.valid {
+		if e.rd {
 			op = append(op, dbusRd(uint(i)))
 		}
 	}
+	// final operation to read the last value/status
+	op = append(op, dbusEnd())
 	return op
 }
 
@@ -117,7 +138,7 @@ func (cache *ramCache) wr(i int, data uint32) {
 	e := &cache.entry[i]
 	if e.data != data {
 		e.data = data
-		e.dirty = true
+		e.wr = true
 	}
 }
 
@@ -133,59 +154,32 @@ func (cache *ramCache) rd(i int) uint32 {
 	return cache.entry[i].data
 }
 
-// invalid marks a cache entry as invalid.
-func (cache *ramCache) invalid(i uint) {
-	cache.entry[i].valid = false
-}
-
-// validate reads invalid cache entries from the debug target.
-func (cache *ramCache) validate() error {
-	ops := cache.rdOps()
-	ops = append(ops, dbusEnd())
-	data, err := cache.dbg.dbusOps(ops)
-	if err != nil {
-		return err
-	}
-	// previously invalid entries are now valid and clean
-	k := 0
-	for i := range cache.entry {
-		e := &cache.entry[i]
-		if !e.valid {
-			e.data = uint32(data[k])
-			k++
-			e.dirty = false
-			e.valid = true
-		}
-	}
-	return nil
+// read sets the read flag for the cache entry.
+func (cache *ramCache) read(i uint) {
+	cache.entry[i].rd = true
 }
 
 //-----------------------------------------------------------------------------
 
-// flush dirty cache entries to the debug target.
+// flush runs the current set of write/read operations in the cache.
 func (cache *ramCache) flush(exec bool) error {
-	ops := cache.wrOps()
-	if exec {
-		if len(ops) >= 1 {
-			// set the interrupt for the last operation
-			ops[len(ops)-1] = ops[len(ops)-1].setInterrupt()
-		} else {
-			// no debug ram writes, set the interrupt in dmcontrol
-			ops = append(ops, dbusWr(dmcontrol, haltNotification|debugInterrupt))
-		}
-	}
-	ops = append(ops, dbusEnd())
 	// run the operations
-	_, err := cache.dbg.dbusOps(ops)
-	// previously dirty entries are now clean and valid
+	data, err := cache.dbg.dbusOps(cache.ops(exec))
+	if err != nil {
+		return err
+	}
+	// data[] has the read data
+	k := 0
 	for i := range cache.entry {
 		e := &cache.entry[i]
-		if e.dirty {
-			e.dirty = false
-			e.valid = true
+		if e.rd {
+			e.data = uint32(data[k])
+			k++
 		}
 	}
-	return err
+	// clear all cache flags
+	cache.clearAll()
+	return nil
 }
 
 //-----------------------------------------------------------------------------
