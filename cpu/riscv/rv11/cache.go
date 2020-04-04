@@ -39,14 +39,13 @@ func (dbg *Debug) newCache(base, entries uint) (*ramCache, error) {
 		entry: make([]cacheEntry, entries),
 	}
 	// add a disassembler for decoding instructions in the cache
-	isa, err := rvda.New(32, rvda.ExtI)
+	isa, err := rvda.New(64, rvda.ExtI|rvda.ExtF|rvda.ExtD)
 	if err != nil {
 		return nil, err
 	}
 	cache.isa = isa
 	// sync the cache and target debug ram
-	cache.writeAll()
-	err = cache.flush(false)
+	err = cache.reset()
 	if err != nil {
 		return nil, err
 	}
@@ -60,13 +59,6 @@ func (cache *ramCache) clearAll() {
 	for i := range cache.entry {
 		cache.entry[i].wr = false
 		cache.entry[i].rd = false
-	}
-}
-
-// writeAll marks all cache entries for writing.
-func (cache *ramCache) writeAll() {
-	for i := range cache.entry {
-		cache.entry[i].wr = true
 	}
 }
 
@@ -84,7 +76,7 @@ func (cache *ramCache) entryString(idx int) string {
 	}
 	addr := cache.base + (4 * uint(idx))
 	da := cache.isa.Disassemble(addr, uint(e.data))
-	return fmt.Sprintf("%03x %09x %s %s", addr, e.data, string(flags[:]), da.Assembly)
+	return fmt.Sprintf("%2d: %03x %08x %s %s", idx, addr, e.data, string(flags[:]), da.Assembly)
 }
 
 func (cache *ramCache) String() string {
@@ -180,6 +172,19 @@ func (cache *ramCache) flush(exec bool) error {
 	// clear all cache flags
 	cache.clearAll()
 	return nil
+}
+
+//-----------------------------------------------------------------------------
+
+// reset and sync the cache and debug ram state.
+func (cache *ramCache) reset() error {
+	for i := range cache.entry {
+		e := &cache.entry[i]
+		e.data = 0xdeadbeef
+		e.rd = false
+		e.wr = true
+	}
+	return cache.flush(false)
 }
 
 //-----------------------------------------------------------------------------

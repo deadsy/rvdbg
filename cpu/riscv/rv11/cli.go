@@ -30,7 +30,7 @@ var cmdCache = cli.Leaf{
 	Descr: "display debug ram cache state",
 	F: func(c *cli.CLI, args []string) {
 		dbg := c.User.(target).GetRiscvDebug().(*Debug)
-		c.User.Put(dbg.cache.String())
+		c.User.Put(fmt.Sprintf("%s\n", dbg.cache.String()))
 	},
 }
 
@@ -40,9 +40,9 @@ var cmdDbus = cli.Leaf{
 		dbg := c.User.(target).GetRiscvDebug().(*Debug)
 		dump, err := dbg.dbusDump()
 		if err != nil {
-			c.User.Put(fmt.Sprintf("unable to get dbus registers: %v", err))
+			c.User.Put(fmt.Sprintf("unable to get dbus registers: %v\n", err))
 		}
-		c.User.Put(dump)
+		c.User.Put(fmt.Sprintf("%s\n", dump))
 	},
 }
 
@@ -50,7 +50,7 @@ var cmdInfo = cli.Leaf{
 	Descr: "display debug information",
 	F: func(c *cli.CLI, args []string) {
 		dbg := c.User.(target).GetRiscvDebug().(*Debug)
-		c.User.Put(dbg.String())
+		c.User.Put(fmt.Sprintf("%s\n", dbg.String()))
 	},
 }
 

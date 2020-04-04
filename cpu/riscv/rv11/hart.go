@@ -15,7 +15,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/deadsy/rvda"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
+	"github.com/deadsy/rvdbg/util"
 	"github.com/deadsy/rvdbg/util/log"
 )
 
@@ -56,39 +58,22 @@ func (dbg *Debug) resume() (bool, error) {
 
 // probeGPR works out how we can access GPRs
 func (hi *hartInfo) probeGPR() error {
-	//hi.rdGPR = acRdGPR
-	//hi.wrGPR = acWrGPR
+	hi.rdGPR = rdGPR
+	hi.wrGPR = wrGPR
 	return nil
 }
 
 // probeFPR works out how we can access FPRs
 func (hi *hartInfo) probeFPR() error {
-	//hi.rdFPR = acRdFPR
-	//hi.wrFPR = acWrFPR
+	hi.rdFPR = rdFPR
+	hi.wrFPR = wrFPR
 	return nil
 }
 
 // probeCSR works out how we can access CSRs
 func (hi *hartInfo) probeCSR() error {
-
-	/*
-
-		_, err := acRdCSR(hi.dbg, rv.MISA, 32)
-		if err == nil {
-			hi.rdCSR = acRdCSR
-			hi.wrCSR = acWrCSR
-			return nil
-		}
-		_, err = pbRdCSR(hi.dbg, rv.MISA, 32)
-		if err == nil {
-			hi.rdCSR = pbRdCSR
-			hi.wrCSR = pbWrCSR
-			return nil
-		}
-
-		return errors.New("unable to determine CSR access mode")
-	*/
-
+	hi.rdCSR = rdCSR
+	hi.wrCSR = wrCSR
 	return nil
 }
 
@@ -153,11 +138,10 @@ func (dbg *Debug) getMXLEN() (uint, error) {
 
 	dbg.cache.wr(0, rv.InsXORI(rv.RegS1, rv.RegZero, ^uint(0)))
 	dbg.cache.wr(1, rv.InsSRLI(rv.RegS1, rv.RegS1, 31))
-	dbg.cache.wr(2, rv.InsSW(rv.RegS1, debugRamStart, rv.RegZero))
+	dbg.cache.wr(2, rv.InsSW(rv.RegS1, ramAddr(0), rv.RegZero))
 	dbg.cache.wr(3, rv.InsSRLI(rv.RegS1, rv.RegS1, 31))
-	dbg.cache.wr(4, rv.InsSW(rv.RegS1, debugRamStart+4, rv.RegZero))
+	dbg.cache.wr(4, rv.InsSW(rv.RegS1, ramAddr(1), rv.RegZero))
 	dbg.cache.wrResume(5)
-	// results are in ram0, ram1
 	dbg.cache.read(0)
 	dbg.cache.read(1)
 
@@ -170,7 +154,6 @@ func (dbg *Debug) getMXLEN() (uint, error) {
 	// get the results
 	x0 := dbg.cache.rd(0)
 	x1 := dbg.cache.rd(1)
-
 	if x0 == 1 && x1 == 0 {
 		return 32, nil
 	}
@@ -180,11 +163,50 @@ func (dbg *Debug) getMXLEN() (uint, error) {
 	if x0 == 0xffffffff && x1 == 0xffffffff {
 		return 128, nil
 	}
-
 	return 0, errors.New("unable to determine MXLEN")
 }
 
-/*
+// getSXLEN returns the supervisor mode register length for the current hart.
+func (dbg *Debug) getSXLEN(hi *hartInfo) (uint, error) {
+	if hi.info.MXLEN == 32 {
+		return 32, nil
+	}
+	// read the MSTATUS value
+	mstatus, err := dbg.RdCSR(rv.MSTATUS, 0)
+	if err != nil {
+		return 0, err
+	}
+	sxl := util.Bits(uint(mstatus), 35, 34)
+	if sxl == 0 {
+		log.Error.Printf("hart%d: misa indicates s-mode, but mstatus.sxl = %d", hi.info.ID, sxl)
+	}
+	return []uint{0, 32, 64, 128}[sxl], nil
+}
+
+// getUXLEN returns the user mode register length for the current hart.
+func (dbg *Debug) getUXLEN(hi *hartInfo) (uint, error) {
+	if hi.info.MXLEN == 32 {
+		return 32, nil
+	}
+	// read the MSTATUS value
+	mstatus, err := dbg.RdCSR(rv.MSTATUS, 0)
+	if err != nil {
+		return 0, err
+	}
+	uxl := util.Bits(uint(mstatus), 33, 32)
+	if uxl == 0 {
+		log.Error.Printf("hart%d: misa indicates u-mode, but mstatus.uxl = %d", hi.info.ID, uxl)
+	}
+	return []uint{0, 32, 64, 128}[uxl], nil
+}
+
+// getHXLEN returns the hypervisor mode register length for the current hart.
+func (dbg *Debug) getHXLEN(hi *hartInfo) (uint, error) {
+	if hi.info.MXLEN == 32 {
+		return 32, nil
+	}
+	return 0, errors.New("TODO")
+}
 
 // getFLEN returns the FPR length for the current hart.
 func (dbg *Debug) getFLEN() (uint, error) {
@@ -216,8 +238,6 @@ func (dbg *Debug) getDXLEN(hi *hartInfo) (uint, error) {
 	return 0, errors.New("unable to determine DXLEN")
 }
 
-*/
-
 //-----------------------------------------------------------------------------
 
 type rdRegFunc func(dbg *Debug, reg, size uint) (uint64, error)
@@ -227,26 +247,23 @@ type wrMemFunc func(dbg *Debug, width, addr uint, val []uint) error
 
 // hartInfo stores generic/rv13 hart information.
 type hartInfo struct {
-	dbg  *Debug      // pointer back to parent debugger
-	info rv.HartInfo // generic information
+	dbg   *Debug      // pointer back to parent debugger
+	info  rv.HartInfo // generic information
+	rdGPR rdRegFunc   // read GPR function
+	rdFPR rdRegFunc   // read FPR function
+	rdCSR rdRegFunc   // read CSR function
+	wrGPR wrRegFunc   // write GPR function
+	wrFPR wrRegFunc   // write FPR function
+	wrCSR wrRegFunc   // write CSR function
+	rdMem rdMemFunc   // read memory buffer
+	wrMem wrMemFunc   // write memory buffer
 
 	/*
-
 		nscratch   uint        // number of dscratch registers
 		datasize   uint        // number of data registers in csr/memory
 		dataaccess uint        // data registers in csr(0)/memory(1)
 		dataaddr   uint        // csr/memory address
-		rdGPR      rdRegFunc   // read GPR function
-		rdFPR      rdRegFunc   // read FPR function
-		rdCSR      rdRegFunc   // read CSR function
-		wrGPR      wrRegFunc   // write GPR function
-		wrFPR      wrRegFunc   // write FPR function
-		wrCSR      wrRegFunc   // write CSR function
-		rdMem      rdMemFunc   // read memory buffer
-		wrMem      wrMemFunc   // write memory buffer
-
 	*/
-
 }
 
 func (hi *hartInfo) String() string {
@@ -289,89 +306,87 @@ func (hi *hartInfo) examine() error {
 	}
 	log.Info.Printf("hart%d: MXLEN %d", hi.info.ID, hi.info.MXLEN)
 
+	// read the MISA value
+	misa, err := dbg.RdCSR(rv.MISA, 0)
+	if err != nil {
+		return err
+	}
+	hi.info.MISA = uint(misa)
+	log.Info.Printf("hart%d: MISA 0x%x", hi.info.ID, hi.info.MISA)
+
+	// does MISA.mxl match our MXLEN?
+	if rv.GetMxlMISA(hi.info.MISA, hi.info.MXLEN) != hi.info.MXLEN {
+		return errors.New("MXLEN != misa.mxl")
+	}
+
+	// are we rv32e?
+	if rv.CheckExtMISA(hi.info.MISA, 'e') {
+		hi.info.Nregs = 16
+	}
+
+	// do we have supervisor mode?
+	if rv.CheckExtMISA(hi.info.MISA, 's') {
+		hi.info.SXLEN, err = dbg.getSXLEN(hi)
+		if err != nil {
+			return err
+		}
+	}
+
+	// do we have user mode?
+	if rv.CheckExtMISA(hi.info.MISA, 'u') {
+		hi.info.UXLEN, err = dbg.getUXLEN(hi)
+		if err != nil {
+			return err
+		}
+	}
+
+	// do we have hypervisor mode?
+	if rv.CheckExtMISA(hi.info.MISA, 'h') {
+		hi.info.HXLEN, err = dbg.getHXLEN(hi)
+		if err != nil {
+			return err
+		}
+	}
+
+	// get the DXLEN value
+	hi.info.DXLEN, err = dbg.getDXLEN(hi)
+	if err != nil {
+		return err
+	}
+
+	// get the FLEN value
+	hi.info.FLEN, err = dbg.getFLEN()
+	if err != nil {
+		// ignore errors - we probably don't have floating point support.
+		log.Info.Printf("hart%d: %v", hi.info.ID, err)
+	}
+
+	// check 32-bit float support
+	if rv.CheckExtMISA(hi.info.MISA, 'f') && hi.info.FLEN < 32 {
+		log.Error.Printf("hart%d: misa has 32-bit floating point but FLEN < 32", hi.info.ID)
+	}
+
+	// check 64-bit float support
+	if rv.CheckExtMISA(hi.info.MISA, 'd') && hi.info.FLEN < 64 {
+		log.Error.Printf("hart%d: misa has 64-bit floating point but FLEN < 64", hi.info.ID)
+	}
+
+	// check 128-bit float support
+	if rv.CheckExtMISA(hi.info.MISA, 'q') && hi.info.FLEN < 128 {
+		log.Error.Printf("hart%d: misa has 128-bit floating point but FLEN < 128", hi.info.ID)
+	}
+
+	hi.info.FLEN = 32
+
+	// get the hart id per the CSR
+	mhartid, err := dbg.RdCSR(rv.MHARTID, 0)
+	if err != nil {
+		return err
+	}
+	hi.info.MHARTID = uint(mhartid)
+	log.Info.Printf("hart%d: MHARTID %d", hi.info.ID, hi.info.MHARTID)
+
 	/*
-
-		// read the MISA value
-		misa, err := dbg.RdCSR(rv.MISA, 0)
-		if err != nil {
-			return err
-		}
-		hi.info.MISA = uint(misa)
-		log.Info.Printf("hart%d: MISA 0x%x", hi.info.ID, hi.info.MISA)
-
-		// does MISA.mxl match our MXLEN?
-		if rv.GetMxlMISA(hi.info.MISA, hi.info.MXLEN) != hi.info.MXLEN {
-			return errors.New("MXLEN != misa.mxl")
-		}
-
-		// are we rv32e?
-		if rv.CheckExtMISA(hi.info.MISA, 'e') {
-			hi.info.Nregs = 16
-		}
-
-		// do we have supervisor mode?
-		if rv.CheckExtMISA(hi.info.MISA, 's') {
-			if hi.info.MXLEN == 32 {
-				hi.info.SXLEN = 32
-			} else {
-				log.Debug.Printf("TODO")
-			}
-		}
-
-		// do we have user mode?
-		if rv.CheckExtMISA(hi.info.MISA, 'u') {
-			if hi.info.MXLEN == 32 {
-				hi.info.UXLEN = 32
-			} else {
-				log.Debug.Printf("TODO")
-			}
-		}
-
-		// do we have hypervisor mode?
-		if rv.CheckExtMISA(hi.info.MISA, 'h') {
-			if hi.info.MXLEN == 32 {
-				hi.info.HXLEN = 32
-			} else {
-				log.Debug.Printf("TODO")
-			}
-		}
-
-		// get the DXLEN value
-		hi.info.DXLEN, err = dbg.getDXLEN(hi)
-		if err != nil {
-			return err
-		}
-
-		// get the FLEN value
-		hi.info.FLEN, err = dbg.getFLEN()
-		if err != nil {
-			// ignore errors - we probably don't have floating point support.
-			log.Info.Printf("hart%d: %v", hi.info.ID, err)
-		}
-
-		// check 32-bit float support
-		if rv.CheckExtMISA(hi.info.MISA, 'f') && hi.info.FLEN < 32 {
-			log.Error.Printf("hart%d: misa has 32-bit floating point but FLEN < 32", hi.info.ID)
-		}
-
-		// check 64-bit float support
-		if rv.CheckExtMISA(hi.info.MISA, 'd') && hi.info.FLEN < 64 {
-			log.Error.Printf("hart%d: misa has 64-bit floating point but FLEN < 64", hi.info.ID)
-		}
-
-		// check 128-bit float support
-		if rv.CheckExtMISA(hi.info.MISA, 'q') && hi.info.FLEN < 128 {
-			log.Error.Printf("hart%d: misa has 128-bit floating point but FLEN < 128", hi.info.ID)
-		}
-
-		// get the hart id per the CSR
-		mhartid, err := dbg.RdCSR(rv.MHARTID, 0)
-		if err != nil {
-			return err
-		}
-		hi.info.MHARTID = uint(mhartid)
-		log.Info.Printf("hart%d: MHARTID %d", hi.info.ID, hi.info.MHARTID)
-
 		// get hartinfo parameters
 		x, err = dbg.rdDmi(hartinfo)
 		if err != nil {
@@ -386,18 +401,17 @@ func (hi *hartInfo) examine() error {
 		log.Info.Printf("hart%d: datasize %d %s", hi.info.ID, hi.datasize, []string{"csr", "words"}[hi.dataaccess])
 		log.Info.Printf("hart%d: dataaccess %s(%d)", hi.info.ID, []string{"csr", "memory"}[hi.dataaccess], hi.dataaccess)
 		log.Info.Printf("hart%d: dataaddr 0x%x", hi.info.ID, hi.dataaddr)
-
-		// Now that we have the register lengths we can create the per-hart CSR decodes.
-		hi.info.NewCsr().Setup()
-
-		// Using the MISA extension bits setup the disassembler.
-		hi.info.ISA, err = rvda.New(hi.info.MXLEN, hi.info.MISA)
-		if err != nil {
-			return err
-		}
-		log.Info.Printf("hart%d: disassembler ISA %s", hi.info.ID, hi.info.ISA)
-
 	*/
+
+	// Now that we have the register lengths we can create the per-hart CSR decodes.
+	hi.info.NewCsr().Setup()
+
+	// Using the MISA extension bits setup the disassembler.
+	hi.info.ISA, err = rvda.New(hi.info.MXLEN, hi.info.MISA)
+	if err != nil {
+		return err
+	}
+	log.Info.Printf("hart%d: disassembler ISA %s", hi.info.ID, hi.info.ISA)
 
 	if !wasHalted {
 		// resume the hart

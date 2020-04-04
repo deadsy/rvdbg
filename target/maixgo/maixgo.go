@@ -47,6 +47,7 @@ var menuRoot = cli.Menu{
 	{"da", riscv.CmdDisassemble, riscv.DisassembleHelp},
 	{"dbg", rv11.Menu, "debugger functions"},
 	{"exit", target.CmdExit},
+	{"fpr", riscv.CmdFpr},
 	{"gpr", riscv.CmdGpr},
 	{"halt", riscv.CmdHalt},
 	{"hart", riscv.CmdHart, riscv.HartHelp},

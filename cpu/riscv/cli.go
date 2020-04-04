@@ -155,7 +155,7 @@ var abiFName = [32]string{
 	"fs8", "fs9", "fs10", "fs11", "ft8", "ft9", "ft10", "ft11",
 }
 
-func fprString(reg []uint64, flen int) string {
+func fprString(reg []uint64, flen uint) string {
 	s := make([]string, len(reg))
 	for i := 0; i < len(reg); i++ {
 		regStr := fmt.Sprintf("f%d", i)
@@ -167,6 +167,32 @@ func fprString(reg []uint64, flen int) string {
 		s[i] = fmt.Sprintf("%-4s %-4s %-16s %f", regStr, abiFName[i], valStr, f32)
 	}
 	return strings.Join(s, "\n")
+}
+
+// CmdFpr displays the floating point registers.
+var CmdFpr = cli.Leaf{
+	Descr: "display floating point registers",
+	F: func(c *cli.CLI, args []string) {
+		dbg := c.User.(target).GetRiscvDebug()
+		hi := dbg.GetCurrentHart()
+		err := dbg.HaltHart()
+		if err != nil {
+			c.User.Put(fmt.Sprintf("unable to halt hart%d: %v\n", hi.ID, err))
+			return
+		}
+		// slice of register values
+		reg := make([]uint64, hi.Nregs)
+		// read the FPRs
+		for i := 0; i < hi.Nregs; i++ {
+			var err error
+			reg[i], err = dbg.RdFPR(uint(i), 0)
+			if err != nil {
+				c.User.Put(fmt.Sprintf("unable to read fpr%d: %v\n", i, err))
+				return
+			}
+		}
+		c.User.Put(fmt.Sprintf("%s\n", fprString(reg, hi.FLEN)))
+	},
 }
 
 //-----------------------------------------------------------------------------

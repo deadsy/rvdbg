@@ -41,9 +41,9 @@ var cmdDmi = cli.Leaf{
 		dbg := c.User.(target).GetRiscvDebug().(*Debug)
 		dump, err := dbg.dmiDump()
 		if err != nil {
-			c.User.Put(fmt.Sprintf("unable to get dmi registers: %v", err))
+			c.User.Put(fmt.Sprintf("unable to get dmi registers: %v\n", err))
 		}
-		c.User.Put(dump)
+		c.User.Put(fmt.Sprintf("%s\n", dump))
 	},
 }
 
@@ -51,7 +51,7 @@ var cmdInfo = cli.Leaf{
 	Descr: "display debug information",
 	F: func(c *cli.CLI, args []string) {
 		dbg := c.User.(target).GetRiscvDebug().(*Debug)
-		c.User.Put(dbg.String())
+		c.User.Put(fmt.Sprintf("%s\n", dbg.String()))
 	},
 }
 

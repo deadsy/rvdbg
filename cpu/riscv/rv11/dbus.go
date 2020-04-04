@@ -64,6 +64,11 @@ const debugRomResume = debugRomStart + 4
 const debugRomException = debugRomStart + 8
 const debugRamStart = 0x400
 
+// ramAddr returns the address of the n-th word in the debug ram space.
+func ramAddr(i uint) uint {
+	return debugRamStart + (4 * i)
+}
+
 //-----------------------------------------------------------------------------
 
 func newDBUS() *soc.Device {
@@ -208,6 +213,7 @@ func (x dbusOp) isRead() bool {
 // dbusOps runs a set of dbus operations and returns any read data.
 func (dbg *Debug) dbusOps(ops []dbusOp) ([]uint, error) {
 	data := []uint{}
+	dbg.dbusops += uint(len(ops))
 
 	// select dbus
 	err := dbg.wrIR(irDbus)

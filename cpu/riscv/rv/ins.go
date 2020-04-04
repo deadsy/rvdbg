@@ -32,6 +32,10 @@ const (
 	opcodeFMV_W_X = 0xf0000053 // fmv.w.x
 	opcodeFMV_D_X = 0xf2000053 // fmv.d.x
 	opcodeFMV_X_D = 0xe2000053 // fmv.x.d
+	opcodeFLD     = 0x00003007 // fld
+	opcodeFSD     = 0x00003027 // fsd
+	opcodeFLW     = 0x00002007 // flw
+	opcodeFSW     = 0x00002027 // fsw
 )
 
 //-----------------------------------------------------------------------------
@@ -115,6 +119,26 @@ func InsXORI(rd, rs1, imm uint) uint32 {
 // InsSRLI returns "srli rd, rs1, shamt"
 func InsSRLI(rd, rs1, shamt uint) uint32 {
 	return uint32((shamt << 20) | (rs1 << 15) | (rd << 7) | opcodeSRLI)
+}
+
+// InsFSD returns "fsd rs2, ofs(rs1)"
+func InsFSD(rs2, ofs, rs1 uint) uint32 {
+	return uint32((util.Bits(ofs, 11, 5) << 25) | (rs2 << 20) | (rs1 << 15) | (util.Bits(ofs, 4, 0) << 7) | opcodeFSD)
+}
+
+// InsFSW returns "fsw rs2, ofs(rs1)"
+func InsFSW(rs2, ofs, rs1 uint) uint32 {
+	return uint32((util.Bits(ofs, 11, 5) << 25) | (rs2 << 20) | (rs1 << 15) | (util.Bits(ofs, 4, 0) << 7) | opcodeFSW)
+}
+
+// InsFLD returns "fld rd, ofs(rs1)"
+func InsFLD(rd, ofs, rs1 uint) uint32 {
+	return uint32((util.Bits(ofs, 11, 0) << 20) | (rs1 << 15) | (rd << 7) | opcodeFLD)
+}
+
+// InsFLW returns "flw rd, ofs(rs1)"
+func InsFLW(rd, ofs, rs1 uint) uint32 {
+	return uint32((util.Bits(ofs, 11, 0) << 20) | (rs1 << 15) | (rd << 7) | opcodeFLW)
 }
 
 //-----------------------------------------------------------------------------

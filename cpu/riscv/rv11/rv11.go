@@ -44,17 +44,15 @@ type Debug struct {
 	abits        uint        // address bits in dtmcontrol
 	idle         uint        // idle value in dtmcontrol
 	dramsize     uint        // number of debug ram words implemented
+	dbusops      uint        // running count of total dbus operations
 }
 
 func (dbg *Debug) String() string {
 	s := [][]string{}
 	s = append(s, []string{"version", "0.11"})
 	s = append(s, []string{"idle cycles", fmt.Sprintf("%d", dbg.idle)})
-	//s = append(s, []string{"sbasize", fmt.Sprintf("%d bits", dbg.sbasize)})
-	//s = append(s, []string{"progbufsize", fmt.Sprintf("%d words", dbg.progbufsize)})
 	s = append(s, []string{"dramsize", fmt.Sprintf("%d words", dbg.dramsize)})
-	//s = append(s, []string{"autoexecprogbuf", fmt.Sprintf("%t", dbg.autoexecprogbuf)})
-	//s = append(s, []string{"autoexecdata", fmt.Sprintf("%t", dbg.autoexecdata)})
+	s = append(s, []string{"dbusops", fmt.Sprintf("%d", dbg.dbusops)})
 	return cli.TableString(s, []int{0, 0}, 1)
 }
 
@@ -280,6 +278,10 @@ func (dbg *Debug) Test1() string {
 
 // Test2 is a test routine.
 func (dbg *Debug) Test2() string {
+
+	//dbg.WrFPR(25, 0, 0xdeadbeefcafebabe)
+	dbg.RdFPR(25, 0)
+
 	return ""
 }
 
