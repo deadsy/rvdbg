@@ -31,10 +31,13 @@ func (dbg *Debug) isHalted() (bool, error) {
 
 // halt the current hart, return true if it was already halted.
 func (dbg *Debug) halt() (bool, error) {
-
-	return false, nil
-
-	//return false, errors.New("TODO")
+	dbg.cache.wr32(0, rv.InsCSRSI(rv.DCSR, 1<<3 /*halt*/))
+	dbg.cache.wr32(1, rv.InsCSRR(rv.RegS0, rv.MHARTID))
+	dbg.cache.wr32(2, rv.InsSW(rv.RegS0, debugSetHaltNotification, rv.RegZero))
+	dbg.cache.wrResume(3)
+	// run the code
+	err := dbg.cache.flush(true)
+	return true, err
 }
 
 //-----------------------------------------------------------------------------
@@ -178,7 +181,8 @@ func (dbg *Debug) getSXLEN(hi *hartInfo) (uint, error) {
 	}
 	sxl := util.Bits(uint(mstatus), 35, 34)
 	if sxl == 0 {
-		log.Error.Printf("hart%d: misa indicates s-mode, but mstatus.sxl = %d", hi.info.ID, sxl)
+		log.Info.Printf("hart%d: misa indicates s-mode, but mstatus.sxl = 0", hi.info.ID)
+		return hi.info.MXLEN, nil
 	}
 	return []uint{0, 32, 64, 128}[sxl], nil
 }
@@ -195,7 +199,8 @@ func (dbg *Debug) getUXLEN(hi *hartInfo) (uint, error) {
 	}
 	uxl := util.Bits(uint(mstatus), 33, 32)
 	if uxl == 0 {
-		log.Error.Printf("hart%d: misa indicates u-mode, but mstatus.uxl = %d", hi.info.ID, uxl)
+		log.Info.Printf("hart%d: misa indicates u-mode, but mstatus.uxl = 0", hi.info.ID)
+		return hi.info.MXLEN, nil
 	}
 	return []uint{0, 32, 64, 128}[uxl], nil
 }
@@ -375,8 +380,6 @@ func (hi *hartInfo) examine() error {
 	if rv.CheckExtMISA(hi.info.MISA, 'q') && hi.info.FLEN < 128 {
 		log.Error.Printf("hart%d: misa has 128-bit floating point but FLEN < 128", hi.info.ID)
 	}
-
-	hi.info.FLEN = 32
 
 	// get the hart id per the CSR
 	mhartid, err := dbg.RdCSR(rv.MHARTID, 0)

@@ -28,6 +28,7 @@ const (
 	opcodeEBREAK  = 0x00100073 // ebreak
 	opcodeCSRRW   = 0x00001073 // csrrw
 	opcodeCSRRS   = 0x00002073 // csrrs
+	opcodeCSRRSI  = 0x00006073 // csrrsi
 	opcodeFMV_X_W = 0xe0000053 // fmv.x.w
 	opcodeFMV_W_X = 0xf0000053 // fmv.w.x
 	opcodeFMV_D_X = 0xf2000053 // fmv.d.x
@@ -100,6 +101,12 @@ func InsCSRR(rd, csr uint) uint32 {
 func InsCSRW(csr, rs1 uint) uint32 {
 	// csrrw x0, csr, rs1
 	return uint32((csr << 20) | (rs1 << 15) | (RegZero << 7) | opcodeCSRRW)
+}
+
+// InsCSRSI returns "csrsi csr, imm"
+func InsCSRSI(csr, imm uint) uint32 {
+	// csrrsi x0, csr, imm
+	return uint32((csr << 20) | (util.Bits(imm, 4, 0) << 15) | (RegZero << 7) | opcodeCSRRSI)
 }
 
 // InsJAL returns "jal rd, ofs"

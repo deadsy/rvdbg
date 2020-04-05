@@ -59,6 +59,9 @@ const debugInterrupt = (1 << 33)
 //-----------------------------------------------------------------------------
 // dbus address locations
 
+const debugClearDebugInterrupt = 0x100
+const debugSetHaltNotification = 0x10c
+
 const debugRomStart = 0x800
 const debugRomResume = debugRomStart + 4
 const debugRomException = debugRomStart + 8

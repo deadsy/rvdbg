@@ -21,20 +21,23 @@ import (
 func rdFPR(dbg *Debug, reg, size uint) (uint64, error) {
 
 	if size == 32 {
-		dbg.cache.wr32(0, rv.InsFSW(reg, ramAddr(0), rv.RegZero))
+		dbg.cache.wr32(0, rv.InsFSW(reg, ramAddr(2), rv.RegZero))
 		dbg.cache.wrResume(1)
-		dbg.cache.read(0)
+		dbg.cache.wr32(2, 0xdeadbeef)
+		dbg.cache.read(2)
 		// run the code
 		err := dbg.cache.flush(true)
 		if err != nil {
 			return 0, err
 		}
-		return uint64(dbg.cache.rd32(0)), nil
+		return uint64(dbg.cache.rd32(2)), nil
 	}
 
 	if size == 64 {
 		dbg.cache.wr32(0, rv.InsFSD(reg, ramAddr(2), rv.RegZero))
 		dbg.cache.wrResume(1)
+		dbg.cache.wr32(2, 0xcafebabe)
+		dbg.cache.wr32(3, 0xdeadbeef)
 		dbg.cache.read(2)
 		dbg.cache.read(3)
 		// run the code

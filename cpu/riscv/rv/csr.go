@@ -104,7 +104,21 @@ func (hi *HartInfo) NewCsr() *soc.Device {
 					{Offset: 0xc9e, Name: "hpmcounter30h"},
 					{Offset: 0xc9f, Name: "hpmcounter31h"},
 					// Supervisor CSRs 0x100 - 0x1ff (read/write)
-					{Offset: 0x100, Name: "sstatus"},
+					{Offset: 0x100,
+						Name: "sstatus",
+						Fields: []soc.Field{
+							{Name: "sd", Msb: hi.MXLEN - 1, Lsb: hi.MXLEN - 1},
+							{Name: "mxr", Msb: 19, Lsb: 19},
+							{Name: "sum", Msb: 18, Lsb: 18},
+							{Name: "xs", Msb: 16, Lsb: 15, Enums: soc.Enum{0: "off", 1: "initial", 2: "clean", 3: "dirty"}},
+							{Name: "fs", Msb: 14, Lsb: 13, Enums: soc.Enum{0: "off", 1: "initial", 2: "clean", 3: "dirty"}},
+							{Name: "spp", Msb: 8, Lsb: 8},
+							{Name: "spie", Msb: 5, Lsb: 5},
+							{Name: "upie", Msb: 4, Lsb: 4},
+							{Name: "sie", Msb: 1, Lsb: 1},
+							{Name: "uie", Msb: 0, Lsb: 0},
+						},
+					},
 					{Offset: 0x102, Name: "sedeleg"},
 					{Offset: 0x103, Name: "sideleg"},
 					{Offset: 0x104, Name: "sie"},
@@ -132,8 +146,8 @@ func (hi *HartInfo) NewCsr() *soc.Device {
 							{Name: "mxr", Msb: 19, Lsb: 19},
 							{Name: "sum", Msb: 18, Lsb: 18},
 							{Name: "mprv", Msb: 17, Lsb: 17},
-							{Name: "xs", Msb: 16, Lsb: 15},
-							{Name: "fs", Msb: 14, Lsb: 13},
+							{Name: "xs", Msb: 16, Lsb: 15, Enums: soc.Enum{0: "off", 1: "initial", 2: "clean", 3: "dirty"}},
+							{Name: "fs", Msb: 14, Lsb: 13, Enums: soc.Enum{0: "off", 1: "initial", 2: "clean", 3: "dirty"}},
 							{Name: "mpp", Msb: 12, Lsb: 11},
 							{Name: "spp", Msb: 8, Lsb: 8},
 							{Name: "mpie", Msb: 7, Lsb: 7},
@@ -328,7 +342,25 @@ func (hi *HartInfo) NewCsr() *soc.Device {
 					{Offset: 0x7a2, Name: "tdata2"},
 					{Offset: 0x7a3, Name: "tdata3"},
 					// Machine Debug Mode Only CSRs 0x7b0 - 0x7bf (read/write)
-					{Offset: 0x7b0, Name: "dcsr"},
+					{Offset: 0x7b0,
+						Name: "dcsr",
+						Fields: []soc.Field{
+							{Name: "xdebugver", Msb: 31, Lsb: 30},
+							{Name: "ndreset", Msb: 29, Lsb: 29},
+							{Name: "fullreset", Msb: 28, Lsb: 28},
+							{Name: "ebreakm", Msb: 15, Lsb: 15},
+							{Name: "ebreakh", Msb: 14, Lsb: 14},
+							{Name: "ebreaks", Msb: 13, Lsb: 13},
+							{Name: "ebreaku", Msb: 12, Lsb: 12},
+							{Name: "stopcycle", Msb: 10, Lsb: 10},
+							{Name: "stoptime", Msb: 9, Lsb: 9},
+							{Name: "cause", Msb: 8, Lsb: 6},
+							{Name: "debugint", Msb: 5, Lsb: 5},
+							{Name: "halt", Msb: 3, Lsb: 3},
+							{Name: "step", Msb: 2, Lsb: 2},
+							{Name: "prv", Msb: 1, Lsb: 0},
+						},
+					},
 					{Offset: 0x7b1, Name: "dpc"},
 					{Offset: 0x7b2, Name: "dscratch"},
 					// Hypervisor CSRs 0x200 - 0x2ff (read/write)
@@ -349,10 +381,16 @@ func (hi *HartInfo) NewCsr() *soc.Device {
 
 	// additional decodes for RV64
 	if hi.MXLEN == 64 {
+		// mstatus
 		r := csr.GetPeripheral("CSR").GetRegister("mstatus")
-		r.Fields = append(r.Fields, soc.Field{Name: "sxl", Msb: 35, Lsb: 34})
-		r.Fields = append(r.Fields, soc.Field{Name: "uxl", Msb: 33, Lsb: 32})
+		r.Fields = append(r.Fields, soc.Field{Name: "sxl", Msb: 35, Lsb: 34, Fmt: fmtMXL})
+		r.Fields = append(r.Fields, soc.Field{Name: "uxl", Msb: 33, Lsb: 32, Fmt: fmtMXL})
+		// sstatus
+		r = csr.GetPeripheral("CSR").GetRegister("sstatus")
+		r.Fields = append(r.Fields, soc.Field{Name: "uxl", Msb: 33, Lsb: 32, Fmt: fmtMXL})
 	}
+
+	// TODO differences to DCSR decode based on debugger version
 
 	hi.CSR = csr
 	return csr
@@ -365,8 +403,10 @@ const (
 	FFLAGS    = 0x001
 	FRM       = 0x002
 	FCSR      = 0x003
+	SSCRATCH  = 0x140
 	MSTATUS   = 0x300
 	MISA      = 0x301
+	MSCRATCH  = 0x340
 	DCSR      = 0x7b0
 	DPC       = 0x7b1
 	DSCRATCH0 = 0x7b2
