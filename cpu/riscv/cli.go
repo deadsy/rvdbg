@@ -11,7 +11,6 @@ package riscv
 import (
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 
 	cli "github.com/deadsy/go-cli"
@@ -81,20 +80,20 @@ var abiXName = [32]string{
 	"s8", "s9", "s10", "s11", "t3", "t4", "t5", "t6",
 }
 
-var regCache []uint64
+var gprCache []uint64
 
 func gprString(reg []uint64, xlen uint) string {
 	fmtx := "%08x"
 	if xlen == 64 {
 		fmtx = "%016x"
 	}
-	if regCache == nil {
-		regCache = reg
+	if gprCache == nil {
+		gprCache = reg
 	}
 	s := make([]string, len(reg))
 	for i := 0; i < len(reg); i++ {
 		delta := ""
-		if reg[i] != regCache[i] {
+		if reg[i] != gprCache[i] {
 			delta = " *"
 		}
 		if i == len(reg)-1 {
@@ -108,7 +107,7 @@ func gprString(reg []uint64, xlen uint) string {
 			s[i] = fmt.Sprintf("%-4s %-4s %s%s", regStr, abiXName[i], valStr, delta)
 		}
 	}
-	regCache = reg
+	gprCache = reg
 	return strings.Join(s, "\n")
 }
 
@@ -155,17 +154,30 @@ var abiFName = [32]string{
 	"fs8", "fs9", "fs10", "fs11", "ft8", "ft9", "ft10", "ft11",
 }
 
+var fprCache []uint64
+
 func fprString(reg []uint64, flen uint) string {
+	fmtx := "%08x"
+	if flen == 64 {
+		fmtx = "%016x"
+	}
+	if fprCache == nil {
+		fprCache = reg
+	}
 	s := make([]string, len(reg))
 	for i := 0; i < len(reg); i++ {
+		delta := ""
+		if reg[i] != fprCache[i] {
+			delta = " *"
+		}
 		regStr := fmt.Sprintf("f%d", i)
 		valStr := "0"
 		if reg[i] != 0 {
-			valStr = fmt.Sprintf("%016x", reg[i])
+			valStr = fmt.Sprintf(fmtx, reg[i])
 		}
-		f32 := math.Float32frombits(uint32(reg[i]))
-		s[i] = fmt.Sprintf("%-4s %-4s %-16s %f", regStr, abiFName[i], valStr, f32)
+		s[i] = fmt.Sprintf("%-4s %-4s %s%s", regStr, abiFName[i], valStr, delta)
 	}
+	fprCache = reg
 	return strings.Join(s, "\n")
 }
 

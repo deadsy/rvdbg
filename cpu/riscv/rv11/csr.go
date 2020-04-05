@@ -22,8 +22,8 @@ import (
 func rdCSR(dbg *Debug, reg, size uint) (uint64, error) {
 
 	if size == 32 {
-		dbg.cache.wr(0, rv.InsCSRR(rv.RegS0, reg))
-		dbg.cache.wr(1, rv.InsSW(rv.RegS0, ramAddr(0), rv.RegZero))
+		dbg.cache.wr32(0, rv.InsCSRR(rv.RegS0, reg))
+		dbg.cache.wr32(1, rv.InsSW(rv.RegS0, ramAddr(0), rv.RegZero))
 		dbg.cache.wrResume(2)
 		dbg.cache.read(0)
 		// run the code
@@ -31,12 +31,12 @@ func rdCSR(dbg *Debug, reg, size uint) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		return uint64(dbg.cache.rd(0)), nil
+		return uint64(dbg.cache.rd32(0)), nil
 	}
 
 	if size == 64 {
-		dbg.cache.wr(0, rv.InsCSRR(rv.RegS0, reg))
-		dbg.cache.wr(1, rv.InsSD(rv.RegS0, ramAddr(0), rv.RegZero))
+		dbg.cache.wr32(0, rv.InsCSRR(rv.RegS0, reg))
+		dbg.cache.wr32(1, rv.InsSD(rv.RegS0, ramAddr(0), rv.RegZero))
 		dbg.cache.wrResume(2)
 		dbg.cache.read(0)
 		dbg.cache.read(1)
@@ -45,9 +45,7 @@ func rdCSR(dbg *Debug, reg, size uint) (uint64, error) {
 		if err != nil {
 			return 0, err
 		}
-		lx := uint64(dbg.cache.rd(0))
-		ux := uint64(dbg.cache.rd(1))
-		return (ux << 32) | lx, nil
+		return dbg.cache.rd64(0), nil
 	}
 
 	return 0, fmt.Errorf("%d-bit csr reads are not supported", size)

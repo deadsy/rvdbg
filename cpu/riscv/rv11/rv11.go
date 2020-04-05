@@ -279,8 +279,9 @@ func (dbg *Debug) Test1() string {
 // Test2 is a test routine.
 func (dbg *Debug) Test2() string {
 
-	//dbg.WrFPR(25, 0, 0xdeadbeefcafebabe)
-	dbg.RdFPR(25, 0)
+	//dbg.WrGPR(30, 0, 0x123456789abcdef)
+	dbg.WrFPR(16, 0, 0xdeadbeefcafebabe)
+	//dbg.RdFPR(25, 0)
 
 	return ""
 }

@@ -136,11 +136,11 @@ func (dbg *Debug) getMXLEN() (uint, error) {
 	// rv64:  x0 = 0xffffffff, x1 = 0x00000003
 	// rv128: x0 = 0xffffffff, x1 = 0xffffffff
 
-	dbg.cache.wr(0, rv.InsXORI(rv.RegS1, rv.RegZero, ^uint(0)))
-	dbg.cache.wr(1, rv.InsSRLI(rv.RegS1, rv.RegS1, 31))
-	dbg.cache.wr(2, rv.InsSW(rv.RegS1, ramAddr(0), rv.RegZero))
-	dbg.cache.wr(3, rv.InsSRLI(rv.RegS1, rv.RegS1, 31))
-	dbg.cache.wr(4, rv.InsSW(rv.RegS1, ramAddr(1), rv.RegZero))
+	dbg.cache.wr32(0, rv.InsXORI(rv.RegS1, rv.RegZero, ^uint(0)))
+	dbg.cache.wr32(1, rv.InsSRLI(rv.RegS1, rv.RegS1, 31))
+	dbg.cache.wr32(2, rv.InsSW(rv.RegS1, ramAddr(0), rv.RegZero))
+	dbg.cache.wr32(3, rv.InsSRLI(rv.RegS1, rv.RegS1, 31))
+	dbg.cache.wr32(4, rv.InsSW(rv.RegS1, ramAddr(1), rv.RegZero))
 	dbg.cache.wrResume(5)
 	dbg.cache.read(0)
 	dbg.cache.read(1)
@@ -152,8 +152,8 @@ func (dbg *Debug) getMXLEN() (uint, error) {
 	}
 
 	// get the results
-	x0 := dbg.cache.rd(0)
-	x1 := dbg.cache.rd(1)
+	x0 := dbg.cache.rd32(0)
+	x1 := dbg.cache.rd32(1)
 	if x0 == 1 && x1 == 0 {
 		return 32, nil
 	}

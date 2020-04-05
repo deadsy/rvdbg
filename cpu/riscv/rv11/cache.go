@@ -98,7 +98,7 @@ func (cache *ramCache) ops(exec bool) []dbusOp {
 		e := &cache.entry[i]
 		if e.wr {
 			op = append(op, dbusWr(uint(i), uint(e.data)))
-			last = i
+			last = len(op) - 1
 		}
 	}
 	// mark the last write to execute instructions
@@ -126,7 +126,7 @@ func (cache *ramCache) ops(exec bool) []dbusOp {
 //-----------------------------------------------------------------------------
 
 // wr writes an instruction word to the cache.
-func (cache *ramCache) wr(i int, data uint32) {
+func (cache *ramCache) wr32(i int, data uint32) {
 	e := &cache.entry[i]
 	if e.data != data {
 		e.data = data
@@ -134,16 +134,29 @@ func (cache *ramCache) wr(i int, data uint32) {
 	}
 }
 
+// wr64 writes a 64-bit word to the cache.
+func (cache *ramCache) wr64(i int, data uint64) {
+	cache.wr32(i, uint32(data))
+	cache.wr32(i+1, uint32(data>>32))
+}
+
 // wrResume writes a "jal debugRomResume" to the cache.
 func (cache *ramCache) wrResume(i int) {
-	cache.wr(i, rv.InsJAL(rv.RegZero, uint(debugRomResume-(debugRamStart+(4*i)))))
+	cache.wr32(i, rv.InsJAL(rv.RegZero, uint(debugRomResume-(debugRamStart+(4*i)))))
 }
 
 //-----------------------------------------------------------------------------
 
-// rd reads a value from the cache.
-func (cache *ramCache) rd(i int) uint32 {
+// rd32 reads a 32-bit value from the cache.
+func (cache *ramCache) rd32(i int) uint32 {
 	return cache.entry[i].data
+}
+
+// rd64 reads a 64-bit value from the cache.
+func (cache *ramCache) rd64(i int) uint64 {
+	l := uint64(cache.entry[i].data)
+	h := uint64(cache.entry[i+1].data)
+	return (h << 32) | l
 }
 
 // read sets the read flag for the cache entry.
