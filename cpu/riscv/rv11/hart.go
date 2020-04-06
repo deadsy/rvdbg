@@ -82,22 +82,17 @@ func (hi *hartInfo) probeCSR() error {
 
 // probeMemory works out how we can access memory.
 func (hi *hartInfo) probeMemory() error {
-	/*
-		  // We need 2 instructions + ebreak to r/w memory buffers.
-			supported := false
-			if hi.dbg.progbufsize >= 3 {
-				supported = true
-			}
-			if hi.dbg.progbufsize == 2 && hi.dbg.impebreak != 0 {
-				supported = true
-			}
-			if !supported {
-				return errors.New("unable to support memory access")
-			}
-			hi.rdMem = pbRdMem
-			hi.wrMem = pbWrMem
-	*/
-	return nil
+	if hi.info.MXLEN == 64 {
+		hi.rdMem = rv64RdMem
+		hi.wrMem = rv64WrMem
+		return nil
+	}
+	if hi.info.MXLEN == 32 {
+		hi.rdMem = rv32RdMem
+		hi.wrMem = rv32WrMem
+		return nil
+	}
+	return errors.New("unable to support memory access")
 }
 
 func (dbg *Debug) probeAccess() error {
@@ -298,18 +293,18 @@ func (hi *hartInfo) examine() error {
 	}
 	hi.info.State = rv.Halted
 
-	// probe the access modes
-	err = dbg.probeAccess()
-	if err != nil {
-		return err
-	}
-
 	// get the MXLEN value
 	hi.info.MXLEN, err = dbg.getMXLEN()
 	if err != nil {
 		return err
 	}
 	log.Info.Printf("hart%d: MXLEN %d", hi.info.ID, hi.info.MXLEN)
+
+	// probe the access modes
+	err = dbg.probeAccess()
+	if err != nil {
+		return err
+	}
 
 	// read the MISA value
 	misa, err := dbg.RdCSR(rv.MISA, 0)

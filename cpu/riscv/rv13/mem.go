@@ -20,9 +20,6 @@ func (dbg *Debug) GetAddressSize() uint {
 	return dbg.hart[dbg.hartid].info.MXLEN
 }
 
-//-----------------------------------------------------------------------------
-// read memory
-
 // RdMem reads n x width-bit values from memory.
 func (dbg *Debug) RdMem(width, addr, n uint) ([]uint, error) {
 	if n == 0 {
@@ -34,9 +31,6 @@ func (dbg *Debug) RdMem(width, addr, n uint) ([]uint, error) {
 	}
 	return hi.rdMem(dbg, width, addr, n)
 }
-
-//-----------------------------------------------------------------------------
-// write memory
 
 // WrMem writes n x width-bit values to memory.
 func (dbg *Debug) WrMem(width, addr uint, val []uint) error {
