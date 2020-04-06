@@ -25,6 +25,7 @@ type Register struct {
 	Descr      string
 	Fields     []Field
 	parent     *Peripheral
+	ignore     bool // ignore this register for decodes
 	cacheValid bool // is the cached field value valid?
 	cacheVal   uint // cached field value
 }

@@ -9,6 +9,7 @@ RISC-V Debugger 0.11 Debug RAM Cache Functions
 package rv11
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -168,6 +169,11 @@ func (cache *ramCache) read(i uint) {
 
 // flush runs the current set of write/read operations in the cache.
 func (cache *ramCache) flush(exec bool) error {
+	// The last word of debug ram indicates exceptions.
+	ex := uint(len(cache.entry) - 1)
+	if exec {
+		cache.read(ex)
+	}
 	// run the operations
 	data, err := cache.dbg.dbusOps(cache.ops(exec))
 	if err != nil {
@@ -184,6 +190,10 @@ func (cache *ramCache) flush(exec bool) error {
 	}
 	// clear all cache flags
 	cache.clearAll()
+	// check for exceptions
+	if exec && cache.entry[ex].data != 0 {
+		return errors.New("exception")
+	}
 	return nil
 }
 

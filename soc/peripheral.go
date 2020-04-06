@@ -59,19 +59,33 @@ func (p *Peripheral) GetRegister(name string) *Register {
 	return nil
 }
 
+// RemoveRegister ignores a register within the peripheral.
+func (p *Peripheral) RemoveRegister(name string) {
+	if p == nil {
+		return
+	}
+	for i := range p.Registers {
+		r := &p.Registers[i]
+		if r.Name == name {
+			r.ignore = true
+			return
+		}
+	}
+}
+
 // Display returns a string for the decoded registers of the peripheral.
 func (p *Peripheral) Display(drv Driver, r *Register, fields bool) string {
 	s := [][]string{}
 	if r != nil {
 		// decode a single register
-		if r.registerSize(drv) != 0 {
+		if !r.ignore && r.registerSize(drv) != 0 {
 			s = append(s, r.Display(drv, fields)...)
 		}
 	} else {
 		// decode all registers
 		for i := range p.Registers {
 			r := &p.Registers[i]
-			if r.registerSize(drv) != 0 {
+			if !r.ignore && r.registerSize(drv) != 0 {
 				s = append(s, r.Display(drv, fields)...)
 			}
 		}

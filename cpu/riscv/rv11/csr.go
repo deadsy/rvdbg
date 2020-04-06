@@ -22,24 +22,21 @@ func rdCSR(dbg *Debug, reg, size uint) (uint64, error) {
 
 	if size == 32 {
 		dbg.cache.wr32(0, rv.InsCSRR(rv.RegS0, reg))
-		dbg.cache.wr32(1, rv.InsSW(rv.RegS0, ramAddr(3), rv.RegZero))
+		dbg.cache.wr32(1, rv.InsSW(rv.RegS0, ramAddr(0), rv.RegZero))
 		dbg.cache.wrResume(2)
-		dbg.cache.wr32(3, 0xdeadbeef)
-		dbg.cache.read(3)
+		dbg.cache.read(0)
 		// run the code
 		err := dbg.cache.flush(true)
 		if err != nil {
 			return 0, err
 		}
-		return uint64(dbg.cache.rd32(3)), nil
+		return uint64(dbg.cache.rd32(0)), nil
 	}
 
 	if size == 64 {
 		dbg.cache.wr32(0, rv.InsCSRR(rv.RegS0, reg))
 		dbg.cache.wr32(1, rv.InsSD(rv.RegS0, ramAddr(4), rv.RegZero))
 		dbg.cache.wrResume(2)
-		dbg.cache.wr32(4, 0xcafebabe)
-		dbg.cache.wr32(5, 0xdeadbeef)
 		dbg.cache.read(4)
 		dbg.cache.read(5)
 		// run the code
