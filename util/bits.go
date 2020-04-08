@@ -16,6 +16,8 @@ const Mask32 = (1 << 32) - 1
 const Mask34 = (1 << 34) - 1
 const Mask64 = (1 << 64) - 1
 
+const Upper32 = Mask32 << 32
+
 //-----------------------------------------------------------------------------
 
 // Mask returns a bit mask from the msb to lsb bits.

@@ -15,6 +15,7 @@ import (
 
 	"github.com/deadsy/rvda"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
+	"github.com/deadsy/rvdbg/util"
 )
 
 //-----------------------------------------------------------------------------
@@ -144,6 +145,17 @@ func (cache *ramCache) wr64(i int, data uint64) {
 // wrResume writes a "jal debugRomResume" to the cache.
 func (cache *ramCache) wrResume(i int) {
 	cache.wr32(i, rv.InsJAL(rv.RegZero, uint(debugRomResume-(debugRamStart+(4*i)))))
+}
+
+// rv64Addr adds cache code to setup a 64-bit address in S0
+func (cache *ramCache) rv64Addr(addr uint) {
+	if addr&util.Upper32 == 0 {
+		cache.wr32(0, rv.InsLWU(rv.RegS0, ramAddr(4), rv.RegZero))
+		cache.wr32(4, uint32(addr))
+	} else {
+		cache.wr32(0, rv.InsLD(rv.RegS0, ramAddr(4), rv.RegZero))
+		cache.wr64(4, uint64(addr))
+	}
 }
 
 //-----------------------------------------------------------------------------

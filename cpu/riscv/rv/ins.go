@@ -16,6 +16,7 @@ const (
 	opcodeLB      = 0x00000003 // lb
 	opcodeLH      = 0x00001003 // lh
 	opcodeLW      = 0x00002003 // lw
+	opcodeLWU     = 0x00006003 // lwu
 	opcodeLD      = 0x00003003 // ld
 	opcodeSB      = 0x00000023 // sb
 	opcodeSH      = 0x00001023 // sh
@@ -49,6 +50,11 @@ func InsLD(rd, ofs, rs1 uint) uint32 {
 // InsLW returns "lw rd, ofs(rs1)"
 func InsLW(rd, ofs, rs1 uint) uint32 {
 	return uint32((util.Bits(ofs, 11, 0) << 20) | (rs1 << 15) | (rd << 7) | opcodeLW)
+}
+
+// InsLWU returns "lwu rd, ofs(rs1)"
+func InsLWU(rd, ofs, rs1 uint) uint32 {
+	return uint32((util.Bits(ofs, 11, 0) << 20) | (rs1 << 15) | (rd << 7) | opcodeLWU)
 }
 
 // InsLH returns "lh rd, ofs(rs1)"
