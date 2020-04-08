@@ -11,6 +11,8 @@ package mem
 import (
 	"fmt"
 	"math"
+	"math/rand"
+	"time"
 
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/util"
@@ -75,11 +77,8 @@ func regionArg(drv Driver, args []string) (uint, uint, error) {
 // memory display
 
 func display(c *cli.CLI, args []string, width uint) {
-
 	drv := c.User.(target).GetMemoryDriver()
-
 	addr, n, err := regionArg(drv, args)
-
 	if err != nil {
 		c.User.Put(fmt.Sprintf("%s\n", err))
 		return
@@ -123,27 +122,36 @@ var helpMemRead = []cli.Help{
 	{"  addr", "address (hex)"},
 }
 
+func cmdRead(c *cli.CLI, args []string, width uint) {
+	drv := c.User.(target).GetMemoryDriver()
+	_ = drv
+}
+
 var cmdRead8 = cli.Leaf{
 	Descr: "memory read 8-bit",
 	F: func(c *cli.CLI, args []string) {
+		cmdRead(c, args, 8)
 	},
 }
 
 var cmdRead16 = cli.Leaf{
 	Descr: "memory read 16-bit",
 	F: func(c *cli.CLI, args []string) {
+		cmdRead(c, args, 16)
 	},
 }
 
 var cmdRead32 = cli.Leaf{
 	Descr: "memory read 32-bit",
 	F: func(c *cli.CLI, args []string) {
+		cmdRead(c, args, 32)
 	},
 }
 
 var cmdRead64 = cli.Leaf{
 	Descr: "memory read 64-bit",
 	F: func(c *cli.CLI, args []string) {
+		cmdRead(c, args, 64)
 	},
 }
 
@@ -156,27 +164,36 @@ var helpMemWrite = []cli.Help{
 	{"  val", "value (hex)"},
 }
 
+func cmdWrite(c *cli.CLI, args []string, width uint) {
+	drv := c.User.(target).GetMemoryDriver()
+	_ = drv
+}
+
 var cmdWrite8 = cli.Leaf{
 	Descr: "memory write 8-bit",
 	F: func(c *cli.CLI, args []string) {
+		cmdWrite(c, args, 8)
 	},
 }
 
 var cmdWrite16 = cli.Leaf{
 	Descr: "memory write 16-bit",
 	F: func(c *cli.CLI, args []string) {
+		cmdWrite(c, args, 16)
 	},
 }
 
 var cmdWrite32 = cli.Leaf{
 	Descr: "memory write 32-bit",
 	F: func(c *cli.CLI, args []string) {
+		cmdWrite(c, args, 32)
 	},
 }
 
 var cmdWrite64 = cli.Leaf{
 	Descr: "memory write 64-bit",
 	F: func(c *cli.CLI, args []string) {
+		cmdWrite(c, args, 64)
 	},
 }
 
@@ -314,6 +331,97 @@ var cmdPic = cli.Leaf{
 }
 
 //-----------------------------------------------------------------------------
+// memory test
+
+// randBuf returns a ransom buffer of masked values.
+func randBuf(n, mask uint) []uint {
+	buf := make([]uint, n)
+	for i := range buf {
+		buf[i] = uint(rand.Uint64()) & mask
+	}
+	return buf
+}
+
+// cmpBuf returns true if the buffers are the same.
+func cmpBuf(a, b []uint) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func cmdTest(c *cli.CLI, args []string, width uint) {
+	drv := c.User.(target).GetMemoryDriver()
+	// get the arguments
+	addr, n, err := regionArg(drv, args)
+	if err != nil {
+		c.User.Put(fmt.Sprintf("%s\n", err))
+		return
+	}
+	// round down address to 32-bit byte boundary
+	addr &= ^uint(3)
+	// round up n to an integral multiple of 4 bytes
+	n = (n + 3) & ^uint(3)
+	// build a random buffer of width-bit words
+	nx := n / (width >> 3)
+	mask := uint((1 << width) - 1)
+	wrbuf := randBuf(nx, mask)
+	// TODO halt the cpu
+	// write memory
+	start := time.Now()
+	err = drv.WrMem(width, addr, wrbuf)
+	if err != nil {
+		c.User.Put(fmt.Sprintf("write error: %s\n", err))
+		return
+	}
+	delta := time.Now().Sub(start)
+	c.User.Put(fmt.Sprintf("write %.2f KiB/sec\n", float64(n)/(1024.0*delta.Seconds())))
+	// read memory
+	start = time.Now()
+	rdbuf, err := drv.RdMem(width, addr, nx)
+	if err != nil {
+		c.User.Put(fmt.Sprintf("read error: %s\n", err))
+		return
+	}
+	delta = time.Now().Sub(start)
+	c.User.Put(fmt.Sprintf("read %.2f KiB/sec\n", float64(n)/(1024.0*delta.Seconds())))
+	c.User.Put(fmt.Sprintf("read %s write\n", []string{"!=", "=="}[util.BoolToInt(cmpBuf(rdbuf, wrbuf))]))
+}
+
+var cmdTest8 = cli.Leaf{
+	Descr: "memory test 8-bit write/read",
+	F: func(c *cli.CLI, args []string) {
+		cmdTest(c, args, 8)
+	},
+}
+
+var cmdTest16 = cli.Leaf{
+	Descr: "memory test 16-bit write/read",
+	F: func(c *cli.CLI, args []string) {
+		cmdTest(c, args, 16)
+	},
+}
+
+var cmdTest32 = cli.Leaf{
+	Descr: "memory test 32-bit write/read",
+	F: func(c *cli.CLI, args []string) {
+		cmdTest(c, args, 32)
+	},
+}
+
+var cmdTest64 = cli.Leaf{
+	Descr: "memory test 64-bit write/read",
+	F: func(c *cli.CLI, args []string) {
+		cmdTest(c, args, 64)
+	},
+}
+
+//-----------------------------------------------------------------------------
 
 // Menu memory submenu items
 var Menu = cli.Menu{
@@ -325,6 +433,10 @@ var Menu = cli.Menu{
 	{"rh", cmdRead16, helpMemRead},
 	{"rw", cmdRead32, helpMemRead},
 	{"rd", cmdRead64, helpMemRead},
+	{"tb", cmdTest8, helpMemRegion},
+	{"th", cmdTest16, helpMemRegion},
+	{"tw", cmdTest32, helpMemRegion},
+	{"td", cmdTest64, helpMemRegion},
 	{"wb", cmdWrite8, helpMemWrite},
 	{"wh", cmdWrite16, helpMemWrite},
 	{"ww", cmdWrite32, helpMemWrite},

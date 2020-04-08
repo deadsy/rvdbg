@@ -121,7 +121,20 @@ func (dbg *Debug) rv64WrMem16(addr uint, val []uint) error {
 }
 
 func (dbg *Debug) rv64WrMem32(addr uint, val []uint) error {
-	return errors.New("TODO")
+	for _, v := range val {
+		dbg.cache.rv64Addr(addr)
+		dbg.cache.wr32(1, rv.InsLW(rv.RegS1, ramAddr(6), rv.RegZero))
+		dbg.cache.wr32(2, rv.InsSW(rv.RegS1, 0, rv.RegS0))
+		dbg.cache.wrResume(3)
+		dbg.cache.wr32(6, uint32(v))
+		// run the code
+		err := dbg.cache.flush(true)
+		if err != nil {
+			return err
+		}
+		addr += 4
+	}
+	return nil
 }
 
 func (dbg *Debug) rv64WrMem64(addr uint, val []uint) error {
