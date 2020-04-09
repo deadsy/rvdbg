@@ -8632,7 +8632,7 @@ func baseSoC() *soc.Device {
 							{Name: "txfo", Msb: 5, Lsb: 5, Descr: "Status of data overrun interrupt for the TX channel"},
 							{Name: "txfe", Msb: 4, Lsb: 4, Descr: "Status of transmit empty triger interrupt"},
 							{Name: "rxfo", Msb: 1, Lsb: 1, Descr: "Status of data overrun interrupt for RX channel"},
-							{Name: "rxda", Msb: 0, Lsb: 0, Descr: "Status of receiver data avaliable interrupt"},
+							{Name: "rxda", Msb: 0, Lsb: 0, Descr: "Status of receiver data available interrupt"},
 						},
 					},
 					{
@@ -8653,7 +8653,7 @@ func baseSoC() *soc.Device {
 							{Name: "txfom", Msb: 5, Lsb: 5, Descr: "Mask TX FIFO overrun interrupt"},
 							{Name: "txfem", Msb: 4, Lsb: 4, Descr: "Mask TX FIFO empty interrupt"},
 							{Name: "rxfom", Msb: 1, Lsb: 1, Descr: "Mask RX FIFO overrun interrupt"},
-							{Name: "rxdam", Msb: 0, Lsb: 0, Descr: "Mask RX FIFO data avaliable interrupt"},
+							{Name: "rxdam", Msb: 0, Lsb: 0, Descr: "Mask RX FIFO data available interrupt"},
 						},
 					},
 					{

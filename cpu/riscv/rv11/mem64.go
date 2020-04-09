@@ -9,7 +9,6 @@ RISC-V Debugger 0.11 RV64 (64-bit address) Memory Operations
 package rv11
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
@@ -113,11 +112,37 @@ func rv64RdMem(dbg *Debug, width, addr, n uint) ([]uint, error) {
 // rv64 writes
 
 func (dbg *Debug) rv64WrMem8(addr uint, val []uint) error {
-	return errors.New("TODO")
+	for _, v := range val {
+		dbg.cache.rv64Addr(addr)
+		dbg.cache.wr32(1, rv.InsLW(rv.RegS1, ramAddr(6), rv.RegZero))
+		dbg.cache.wr32(2, rv.InsSB(rv.RegS1, 0, rv.RegS0))
+		dbg.cache.wrResume(3)
+		dbg.cache.wr32(6, uint32(uint8(v)))
+		// run the code
+		err := dbg.cache.flush(true)
+		if err != nil {
+			return err
+		}
+		addr += 1
+	}
+	return nil
 }
 
 func (dbg *Debug) rv64WrMem16(addr uint, val []uint) error {
-	return errors.New("TODO")
+	for _, v := range val {
+		dbg.cache.rv64Addr(addr)
+		dbg.cache.wr32(1, rv.InsLW(rv.RegS1, ramAddr(6), rv.RegZero))
+		dbg.cache.wr32(2, rv.InsSH(rv.RegS1, 0, rv.RegS0))
+		dbg.cache.wrResume(3)
+		dbg.cache.wr32(6, uint32(uint16(v)))
+		// run the code
+		err := dbg.cache.flush(true)
+		if err != nil {
+			return err
+		}
+		addr += 2
+	}
+	return nil
 }
 
 func (dbg *Debug) rv64WrMem32(addr uint, val []uint) error {
@@ -138,7 +163,20 @@ func (dbg *Debug) rv64WrMem32(addr uint, val []uint) error {
 }
 
 func (dbg *Debug) rv64WrMem64(addr uint, val []uint) error {
-	return errors.New("TODO")
+	for _, v := range val {
+		dbg.cache.rv64Addr(addr)
+		dbg.cache.wr32(1, rv.InsLD(rv.RegS1, ramAddr(6), rv.RegZero))
+		dbg.cache.wr32(2, rv.InsSD(rv.RegS1, 0, rv.RegS0))
+		dbg.cache.wrResume(3)
+		dbg.cache.wr64(6, uint64(v))
+		// run the code
+		err := dbg.cache.flush(true)
+		if err != nil {
+			return err
+		}
+		addr += 8
+	}
+	return nil
 }
 
 func rv64WrMem(dbg *Debug, width, addr uint, val []uint) error {
