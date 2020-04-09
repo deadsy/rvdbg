@@ -10,6 +10,7 @@ Debug Bus Access
 package rv11
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 
@@ -337,6 +338,57 @@ func (dbg *Debug) dbusDump() (string, error) {
 	p := dbg.dbusDevice.GetPeripheral("DBUS")
 	drv := &dbusDriver{dbg}
 	return p.Display(drv, nil, true), nil
+}
+
+//-----------------------------------------------------------------------------
+
+// wrOps32 runs a series of 32-bit write operations.
+// Each write triggers the debug program to be run.
+func (dbg *Debug) wrOps32(i int, val []uint) error {
+	op := make([]dbusOp, 0, len(val)+2)
+	// each write triggers program execution
+	for _, v := range val {
+		op = append(op, dbusWr(uint(i), (v&util.Mask32)).setInterrupt())
+	}
+	// read the last ram slot for the exception status
+	op = append(op, dbusRd(dbg.dramsize-1))
+	// final operation to read the last value/status
+	op = append(op, dbusEnd())
+	// run the operations
+	result, err := dbg.dbusOps(op)
+	if err != nil {
+		return err
+	}
+	if result[0] != 0 {
+		return errors.New("exception")
+	}
+	return nil
+}
+
+// wrOps64 runs a series of 64-bit write operations.
+// Each write triggers the debug program to be run.
+func (dbg *Debug) wrOps64(i int, val []uint) error {
+	op := make([]dbusOp, 0, (2*len(val))+2)
+	// each write triggers program execution
+	for _, v := range val {
+		lo := v & util.Mask32
+		hi := (v >> 32) & util.Mask32
+		op = append(op, dbusWr(uint(i), lo))
+		op = append(op, dbusWr(uint(i+1), hi).setInterrupt())
+	}
+	// read the last ram slot for the exception status
+	op = append(op, dbusRd(dbg.dramsize-1))
+	// final operation to read the last value/status
+	op = append(op, dbusEnd())
+	// run the operations
+	result, err := dbg.dbusOps(op)
+	if err != nil {
+		return err
+	}
+	if result[0] != 0 {
+		return errors.New("exception")
+	}
+	return nil
 }
 
 //-----------------------------------------------------------------------------
