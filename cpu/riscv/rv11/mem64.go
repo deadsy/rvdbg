@@ -12,6 +12,7 @@ import (
 	"fmt"
 
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
+	"github.com/deadsy/rvdbg/util"
 )
 
 //-----------------------------------------------------------------------------
@@ -27,83 +28,178 @@ func (dbg *Debug) rwReg(reg uint, val uint64) (uint64, error) {
 }
 
 //-----------------------------------------------------------------------------
+// rv64 single 8/16/32/64-bit reads.
+
+func (dbg *Debug) rv64RdMemSingle8(addr uint) (uint8, error) {
+	dbg.cache.rv64Addr(addr)
+	dbg.cache.wr32(1, rv.InsLB(rv.RegS1, 0, rv.RegS0))
+	dbg.cache.wr32(2, rv.InsSB(rv.RegS1, ramAddr(6), rv.RegZero))
+	dbg.cache.wrResume(3)
+	dbg.cache.read(6)
+	// run the code
+	err := dbg.cache.flush(true)
+	if err != nil {
+		return 0, err
+	}
+	return uint8(dbg.cache.rd32(6)), nil
+}
+
+func (dbg *Debug) rv64RdMemSingle16(addr uint) (uint16, error) {
+	dbg.cache.rv64Addr(addr)
+	dbg.cache.wr32(1, rv.InsLH(rv.RegS1, 0, rv.RegS0))
+	dbg.cache.wr32(2, rv.InsSH(rv.RegS1, ramAddr(6), rv.RegZero))
+	dbg.cache.wrResume(3)
+	dbg.cache.read(6)
+	// run the code
+	err := dbg.cache.flush(true)
+	if err != nil {
+		return 0, err
+	}
+	return uint16(dbg.cache.rd32(6)), nil
+}
+
+func (dbg *Debug) rv64RdMemSingle32(addr uint) (uint32, error) {
+	dbg.cache.rv64Addr(addr)
+	dbg.cache.wr32(1, rv.InsLW(rv.RegS1, 0, rv.RegS0))
+	dbg.cache.wr32(2, rv.InsSW(rv.RegS1, ramAddr(6), rv.RegZero))
+	dbg.cache.wrResume(3)
+	dbg.cache.read(6)
+	// run the code
+	err := dbg.cache.flush(true)
+	if err != nil {
+		return 0, err
+	}
+	return dbg.cache.rd32(6), nil
+}
+
+func (dbg *Debug) rv64RdMemSingle64(addr uint) (uint64, error) {
+	dbg.cache.rv64Addr(addr)
+	dbg.cache.wr32(1, rv.InsLD(rv.RegS1, 0, rv.RegS0))
+	dbg.cache.wr32(2, rv.InsSD(rv.RegS1, ramAddr(6), rv.RegZero))
+	dbg.cache.wrResume(3)
+	dbg.cache.read(6)
+	dbg.cache.read(7)
+	// run the code
+	err := dbg.cache.flush(true)
+	if err != nil {
+		return 0, err
+	}
+	return dbg.cache.rd64(6), nil
+}
+
+//-----------------------------------------------------------------------------
 // rv64 reads
 
 func (dbg *Debug) rv64RdMem8(addr, n uint) ([]uint, error) {
-	data := make([]uint, n)
-	for i := range data {
-		dbg.cache.rv64Addr(addr)
-		dbg.cache.wr32(1, rv.InsLB(rv.RegS1, 0, rv.RegS0))
-		dbg.cache.wr32(2, rv.InsSB(rv.RegS1, ramAddr(6), rv.RegZero))
-		dbg.cache.wrResume(3)
-		dbg.cache.read(6)
-		// run the code
-		err := dbg.cache.flush(true)
-		if err != nil {
-			return nil, err
-		}
-		data[i] = uint(uint8(dbg.cache.rd32(6)))
-		addr += 1
+	if n == 1 {
+		x, err := dbg.rv64RdMemSingle8(addr)
+		return []uint{uint(x)}, err
 	}
-	return data, nil
+	// save t0 and load the address in t0
+	saved, err := dbg.rwReg(rv.RegT0, uint64(addr))
+	if err != nil {
+		return nil, err
+	}
+	// setup the program, do the first read.
+	dbg.cache.wr32(0, rv.InsLB(rv.RegS1, 0, rv.RegT0))
+	dbg.cache.wr32(1, rv.InsSB(rv.RegS1, ramAddr(4), rv.RegZero))
+	dbg.cache.wr32(2, rv.InsADDI(rv.RegT0, rv.RegT0, 1))
+	dbg.cache.wrResume(3)
+	err = dbg.cache.flush(true)
+	if err != nil {
+		return nil, err
+	}
+	// perform the reads
+	data, err := dbg.rdOps32(4, n, util.Mask8)
+	if err != nil {
+		return nil, err
+	}
+	// restore t0
+	return data, dbg.WrGPR(rv.RegT0, 0, saved)
 }
 
 func (dbg *Debug) rv64RdMem16(addr, n uint) ([]uint, error) {
-	data := make([]uint, n)
-	for i := range data {
-		dbg.cache.rv64Addr(addr)
-		dbg.cache.wr32(1, rv.InsLH(rv.RegS1, 0, rv.RegS0))
-		dbg.cache.wr32(2, rv.InsSH(rv.RegS1, ramAddr(6), rv.RegZero))
-		dbg.cache.wrResume(3)
-		dbg.cache.read(6)
-		// run the code
-		err := dbg.cache.flush(true)
-		if err != nil {
-			return nil, err
-		}
-		data[i] = uint(uint16(dbg.cache.rd32(6)))
-		addr += 2
+	if n == 1 {
+		x, err := dbg.rv64RdMemSingle16(addr)
+		return []uint{uint(x)}, err
 	}
-	return data, nil
+	// save t0 and load the address in t0
+	saved, err := dbg.rwReg(rv.RegT0, uint64(addr))
+	if err != nil {
+		return nil, err
+	}
+	// setup the program
+	dbg.cache.wr32(0, rv.InsLH(rv.RegS1, 0, rv.RegT0))
+	dbg.cache.wr32(1, rv.InsSH(rv.RegS1, ramAddr(4), rv.RegZero))
+	dbg.cache.wr32(2, rv.InsADDI(rv.RegT0, rv.RegT0, 2))
+	dbg.cache.wrResume(3)
+	err = dbg.cache.flush(true)
+	if err != nil {
+		return nil, err
+	}
+	// perform the reads, do the first read.
+	data, err := dbg.rdOps32(4, n, util.Mask16)
+	if err != nil {
+		return nil, err
+	}
+	// restore t0
+	return data, dbg.WrGPR(rv.RegT0, 0, saved)
 }
 
 func (dbg *Debug) rv64RdMem32(addr, n uint) ([]uint, error) {
-	data := make([]uint, n)
-	for i := range data {
-		dbg.cache.rv64Addr(addr)
-		dbg.cache.wr32(1, rv.InsLW(rv.RegS1, 0, rv.RegS0))
-		dbg.cache.wr32(2, rv.InsSW(rv.RegS1, ramAddr(6), rv.RegZero))
-		dbg.cache.wrResume(3)
-		dbg.cache.read(6)
-		// run the code
-		err := dbg.cache.flush(true)
-		if err != nil {
-			return nil, err
-		}
-		data[i] = uint(dbg.cache.rd32(6))
-		addr += 4
+	if n == 1 {
+		x, err := dbg.rv64RdMemSingle32(addr)
+		return []uint{uint(x)}, err
 	}
-	return data, nil
+	// save t0 and load the address in t0
+	saved, err := dbg.rwReg(rv.RegT0, uint64(addr))
+	if err != nil {
+		return nil, err
+	}
+	// setup the program, do the first read.
+	dbg.cache.wr32(0, rv.InsLW(rv.RegS1, 0, rv.RegT0))
+	dbg.cache.wr32(1, rv.InsSW(rv.RegS1, ramAddr(4), rv.RegZero))
+	dbg.cache.wr32(2, rv.InsADDI(rv.RegT0, rv.RegT0, 4))
+	dbg.cache.wrResume(3)
+	err = dbg.cache.flush(true)
+	if err != nil {
+		return nil, err
+	}
+	// perform the reads
+	data, err := dbg.rdOps32(4, n, util.Mask32)
+	if err != nil {
+		return nil, err
+	}
+	// restore t0
+	return data, dbg.WrGPR(rv.RegT0, 0, saved)
 }
 
 func (dbg *Debug) rv64RdMem64(addr, n uint) ([]uint, error) {
-	data := make([]uint, n)
-	for i := range data {
-		dbg.cache.rv64Addr(addr)
-		dbg.cache.wr32(1, rv.InsLD(rv.RegS1, 0, rv.RegS0))
-		dbg.cache.wr32(2, rv.InsSD(rv.RegS1, ramAddr(6), rv.RegZero))
-		dbg.cache.wrResume(3)
-		dbg.cache.read(6)
-		dbg.cache.read(7)
-		// run the code
-		err := dbg.cache.flush(true)
-		if err != nil {
-			return nil, err
-		}
-		data[i] = uint(dbg.cache.rd64(6))
-		addr += 8
+	if n == 1 {
+		x, err := dbg.rv64RdMemSingle64(addr)
+		return []uint{uint(x)}, err
 	}
-	return data, nil
+	// save t0 and load the address in t0
+	saved, err := dbg.rwReg(rv.RegT0, uint64(addr))
+	if err != nil {
+		return nil, err
+	}
+	// setup the program, do the first read.
+	dbg.cache.wr32(0, rv.InsLD(rv.RegS1, 0, rv.RegT0))
+	dbg.cache.wr32(1, rv.InsSD(rv.RegS1, ramAddr(4), rv.RegZero))
+	dbg.cache.wr32(2, rv.InsADDI(rv.RegT0, rv.RegT0, 8))
+	dbg.cache.wrResume(3)
+	err = dbg.cache.flush(true)
+	if err != nil {
+		return nil, err
+	}
+	// perform the reads
+	data, err := dbg.rdOps64(4, n)
+	if err != nil {
+		return nil, err
+	}
+	// restore t0
+	return data, dbg.WrGPR(rv.RegT0, 0, saved)
 }
 
 func rv64RdMem(dbg *Debug, width, addr, n uint) ([]uint, error) {

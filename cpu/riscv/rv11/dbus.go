@@ -189,14 +189,19 @@ const opMask = (1 << 2) - 1
 
 type dbusOp uint
 
+// dbusWr returns a dbus write operation.
+func dbusWr(addr, data uint) dbusOp {
+	return dbusOp((addr << 36) | (data << 2) | opWr)
+}
+
 // dbusRd returns a dbus read operation.
 func dbusRd(addr uint) dbusOp {
 	return dbusOp((addr << 36) | opRd)
 }
 
-// dbusWr returns a dbus write operation.
-func dbusWr(addr, data uint) dbusOp {
-	return dbusOp((addr << 36) | (data << 2) | opWr)
+// dbusWrRd returns a dbus write/read operation.
+func dbusWrRd(addr, data uint) dbusOp {
+	return dbusOp((addr << 36) | (data << 2) | opWr | opRd)
 }
 
 // dbusEnd returns a dbus no-op, typically used to clock out a final data value.
@@ -211,7 +216,7 @@ func (x dbusOp) setInterrupt() dbusOp {
 
 // isRead returns true if this dbus operation is a read.
 func (x dbusOp) isRead() bool {
-	return (x & opMask) == opRd
+	return (x & opRd) != 0
 }
 
 // dbusOps runs a set of dbus operations and returns any read data.
@@ -359,6 +364,7 @@ func (dbg *Debug) wrOps32(i int, val []uint) error {
 	if err != nil {
 		return err
 	}
+	// check for exceptions
 	if result[0] != 0 {
 		return errors.New("exception")
 	}
@@ -385,10 +391,72 @@ func (dbg *Debug) wrOps64(i int, val []uint) error {
 	if err != nil {
 		return err
 	}
+	// check for exceptions
 	if result[0] != 0 {
 		return errors.New("exception")
 	}
 	return nil
+}
+
+//-----------------------------------------------------------------------------
+
+// rdOps32 runs a series of 32-bit read operations.
+// Each read triggers the debug program to be run.
+func (dbg *Debug) rdOps32(i int, n, mask uint) ([]uint, error) {
+	op := make([]dbusOp, n, n+2)
+	// each write/read triggers program execution
+	for k := range op {
+		op[k] = dbusWrRd(uint(i), 0).setInterrupt()
+	}
+	// read the last ram slot for the exception status
+	op = append(op, dbusRd(dbg.dramsize-1))
+	// final operation to read the last value/status
+	op = append(op, dbusEnd())
+	// run the operations
+	result, err := dbg.dbusOps(op)
+	if err != nil {
+		return nil, err
+	}
+	// check for exceptions
+	if result[len(result)-1] != 0 {
+		return nil, errors.New("exception")
+	}
+	data := make([]uint, n)
+	for k := range data {
+		data[k] = uint(result[k] & mask)
+	}
+	return data, nil
+}
+
+// rdOps64 runs a series of 64-bit read operations.
+// Each read triggers the debug program to be run.
+func (dbg *Debug) rdOps64(i int, n uint) ([]uint, error) {
+	op := make([]dbusOp, 2*n, (2*n)+2)
+	// each write/read triggers program execution
+	for k := 0; k < int(n); k++ {
+		op[(2*k)+0] = dbusRd(uint(i))
+		op[(2*k)+1] = dbusWrRd(uint(i+1), 0).setInterrupt()
+	}
+	// read the last ram slot for the exception status
+	op = append(op, dbusRd(dbg.dramsize-1))
+	// final operation to read the last value/status
+	op = append(op, dbusEnd())
+	// run the operations
+	result, err := dbg.dbusOps(op)
+	if err != nil {
+		return nil, err
+	}
+	// check for exceptions
+	if result[len(result)-1] != 0 {
+		return nil, errors.New("exception")
+	}
+	data := make([]uint, n)
+	for k := range data {
+		lo := uint32(result[(2*k)+0])
+		hi := uint32(result[(2*k)+1])
+		data[k] = (uint(hi) << 32) | uint(lo)
+	}
+	return data, nil
 }
 
 //-----------------------------------------------------------------------------
