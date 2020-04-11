@@ -147,17 +147,31 @@ func (cache *ramCache) wrResume(i int) {
 	cache.wr32(i, rv.InsJAL(rv.RegZero, uint(debugRomResume-(debugRamStart+(4*i)))))
 }
 
-// rv64Addr adds cache code to setup a 64-bit address in S0.
-func (cache *ramCache) rv64Addr(addr uint) {
-	if addr&util.Upper32 == 0 {
+// setAddr adds cache code to setup a 32/64-bit address in S0.
+func (cache *ramCache) setAddr(addr uint) {
+	hi := cache.dbg.hart[cache.dbg.hartid]
+	// RV32
+	if hi.info.MXLEN == 32 {
 		// use slots 0,4
-		cache.wr32(0, rv.InsLWU(rv.RegS0, ramAddr(4), rv.RegZero))
+		cache.wr32(0, rv.InsLW(rv.RegS0, ramAddr(4), rv.RegZero))
 		cache.wr32(4, uint32(addr))
-	} else {
-		// use slots 0,4,5
-		cache.wr32(0, rv.InsLD(rv.RegS0, ramAddr(4), rv.RegZero))
-		cache.wr64(4, uint64(addr))
+		return
 	}
+	// RV64
+	if hi.info.MXLEN == 64 {
+		// 32-bit addr
+		if addr&util.Upper32 == 0 {
+			// 32-bit address: use slots 0,4
+			cache.wr32(0, rv.InsLWU(rv.RegS0, ramAddr(4), rv.RegZero))
+			cache.wr32(4, uint32(addr))
+		} else {
+			// 64-bit addr: use slots 0,4,5
+			cache.wr32(0, rv.InsLD(rv.RegS0, ramAddr(4), rv.RegZero))
+			cache.wr64(4, uint64(addr))
+		}
+		return
+	}
+	panic(fmt.Sprintf("%d-bit address not supported", hi.info.MXLEN))
 }
 
 //-----------------------------------------------------------------------------

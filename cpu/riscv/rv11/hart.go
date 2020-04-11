@@ -82,17 +82,9 @@ func (hi *hartInfo) probeCSR() error {
 
 // probeMemory works out how we can access memory.
 func (hi *hartInfo) probeMemory() error {
-	if hi.info.MXLEN == 64 {
-		hi.rdMem = rv64RdMem
-		hi.wrMem = rv64WrMem
-		return nil
-	}
-	if hi.info.MXLEN == 32 {
-		hi.rdMem = rv32RdMem
-		hi.wrMem = rv32WrMem
-		return nil
-	}
-	return errors.New("unable to support memory access")
+	hi.rdMem = rdMem
+	hi.wrMem = wrMem
+	return nil
 }
 
 func (dbg *Debug) probeAccess() error {
