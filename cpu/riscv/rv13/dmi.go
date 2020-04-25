@@ -681,6 +681,10 @@ func (drv *dmiDriver) Rd(width, addr uint) (uint, error) {
 	return uint(x), nil
 }
 
+func (drv *dmiDriver) Wr(width, addr, val uint) error {
+	return errors.New("TODO")
+}
+
 func (dbg *Debug) dmiDump() (string, error) {
 	p := dbg.dmiDevice.GetPeripheral("DMI")
 	drv := &dmiDriver{dbg}

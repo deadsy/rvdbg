@@ -43,4 +43,8 @@ func (drv *socDriver) Rd(width, addr uint) (uint, error) {
 	return x[0], nil
 }
 
+func (drv *socDriver) Wr(width, addr, val uint) error {
+	return drv.dbg.WrMem(width, addr, []uint{val})
+}
+
 //-----------------------------------------------------------------------------

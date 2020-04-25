@@ -21,7 +21,8 @@ import (
 type Driver interface {
 	GetAddressSize() uint              // get address size in bits
 	GetRegisterSize(r *Register) uint  // get the register bit size
-	Rd(width, addr uint) (uint, error) // read width-bit memory buffer
+	Rd(width, addr uint) (uint, error) // read width-bit memory location
+	Wr(width, addr, val uint) error    // write width-bit memory location
 }
 
 // target provides a method for getting the SoC device and driver.

@@ -11,6 +11,8 @@ Implements the soc.Driver interface for the CPUs control and status registers.
 package gd32v
 
 import (
+	"errors"
+
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/soc"
 )
@@ -39,6 +41,10 @@ func (drv *csrDriver) GetRegisterSize(r *soc.Register) uint {
 func (drv *csrDriver) Rd(width, addr uint) (uint, error) {
 	val, err := drv.dbg.RdCSR(addr, width)
 	return uint(val), err
+}
+
+func (drv *csrDriver) Wr(width, addr, val uint) error {
+	return errors.New("TODO")
 }
 
 //-----------------------------------------------------------------------------

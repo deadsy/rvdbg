@@ -339,6 +339,10 @@ func (drv *dbusDriver) Rd(width, addr uint) (uint, error) {
 	return drv.dbg.rdDbus(addr)
 }
 
+func (drv *dbusDriver) Wr(width, addr, val uint) error {
+	return errors.New("TODO")
+}
+
 func (dbg *Debug) dbusDump() (string, error) {
 	p := dbg.dbusDevice.GetPeripheral("DBUS")
 	drv := &dbusDriver{dbg}

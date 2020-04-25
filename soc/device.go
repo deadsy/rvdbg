@@ -9,6 +9,7 @@ SoC Device
 package soc
 
 import (
+	"fmt"
 	"sort"
 )
 
@@ -48,6 +49,19 @@ func (dev *Device) GetPeripheral(name string) *Peripheral {
 // AddePeripheral adds periphals to the device.
 func (dev *Device) AddPeripheral(p []Peripheral) {
 	dev.Peripherals = append(dev.Peripherals, p...)
+}
+
+// GetPeripheralRegister looks up a register within a peripheral.
+func (dev *Device) GetPeripheralRegister(pname, rname string) (*Register, error) {
+	p := dev.GetPeripheral(pname)
+	if p == nil {
+		return nil, fmt.Errorf("peripheral \"%s\" not found", pname)
+	}
+	r := p.GetRegister(rname)
+	if r == nil {
+		return nil, fmt.Errorf("register \"%s\" not found", rname)
+	}
+	return r, nil
 }
 
 //-----------------------------------------------------------------------------

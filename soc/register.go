@@ -123,3 +123,13 @@ func (r *Register) Display(drv Driver, fields bool) [][]string {
 }
 
 //-----------------------------------------------------------------------------
+
+func (r *Register) Wr(val uint) error {
+	return nil
+}
+
+func (r *Register) Rd() (uint, error) {
+	return 0, nil
+}
+
+//-----------------------------------------------------------------------------

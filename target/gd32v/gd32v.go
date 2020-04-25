@@ -20,6 +20,7 @@ import (
 	"github.com/deadsy/rvdbg/cpu/riscv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv13"
+	"github.com/deadsy/rvdbg/gpio"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/mem"
@@ -47,6 +48,7 @@ var menuRoot = cli.Menu{
 	{"da", riscv.CmdDisassemble, riscv.DisassembleHelp},
 	{"dbg", rv13.Menu, "debugger functions"},
 	{"exit", target.CmdExit},
+	{"gpio", gpio.Menu, "gpio functions"},
 	{"gpr", riscv.CmdGpr},
 	{"halt", riscv.CmdHalt},
 	{"hart", riscv.CmdHart, riscv.HartHelp},
@@ -60,6 +62,17 @@ var menuRoot = cli.Menu{
 }
 
 //-----------------------------------------------------------------------------
+// GPIO configuration
+
+var gpioCfg = []gd32vf103.GpioConfig{
+	{"PA0", "i", "wkup"},
+	{"PC13", "i", "tamper"},
+	{"PB0", "o", "led_g"},
+	{"PB1", "o", "led_b"},
+	{"PB5", "o", "led_r"},
+}
+
+//-----------------------------------------------------------------------------
 
 // Target is the application structure for the target.
 type Target struct {
@@ -69,6 +82,7 @@ type Target struct {
 	memDriver  *memDriver
 	csrDriver  *csrDriver
 	socDriver  *socDriver
+	gpioDriver *gd32vf103.GpioDriver
 }
 
 // New returns a new gd32v target.
@@ -119,6 +133,7 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 		memDriver:  newMemDriver(rvDebug, socDevice),
 		socDriver:  newSocDriver(rvDebug),
 		csrDriver:  newCsrDriver(rvDebug),
+		gpioDriver: gd32vf103.NewGpioDriver(rvDebug, socDevice, gpioCfg),
 	}, nil
 
 }
@@ -149,6 +164,11 @@ func (t *Target) Put(s string) {
 // GetMemoryDriver returns a memory driver for this target.
 func (t *Target) GetMemoryDriver() mem.Driver {
 	return t.memDriver
+}
+
+// GetGpioDriver returns a GPIO driver for this target.
+func (t *Target) GetGpioDriver() gpio.Driver {
+	return t.gpioDriver
 }
 
 // GetRiscvDebug returns a RISC-V debug driver for this target.
