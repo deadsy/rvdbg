@@ -78,14 +78,14 @@ func (p *Peripheral) Display(drv Driver, r *Register, fields bool) string {
 	s := [][]string{}
 	if r != nil {
 		// decode a single register
-		if !r.ignore && r.registerSize(drv) != 0 {
+		if !r.ignore && r.regSize(drv) != 0 {
 			s = append(s, r.Display(drv, fields)...)
 		}
 	} else {
 		// decode all registers
 		for i := range p.Registers {
 			r := &p.Registers[i]
-			if !r.ignore && r.registerSize(drv) != 0 {
+			if !r.ignore && r.regSize(drv) != 0 {
 				s = append(s, r.Display(drv, fields)...)
 			}
 		}

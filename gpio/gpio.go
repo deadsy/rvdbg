@@ -18,7 +18,6 @@ import (
 
 // Driver is the GPIO driver api.
 type Driver interface {
-	Init() error                           // initialise the GPIO sub-system
 	Status() string                        // return a status string for GPIOs
 	Pin(name string) (string, uint, error) // convert a pin name to a port/bit tuple
 	Set(port string, bit uint) error       // set an output bit
@@ -55,19 +54,9 @@ var cmdClr = cli.Leaf{
 		port, bit, err := gpioArg(drv, args)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
 		}
 		err = drv.Clr(port, bit)
-		if err != nil {
-			c.User.Put(fmt.Sprintf("%s\n", err))
-		}
-	},
-}
-
-var cmdInit = cli.Leaf{
-	Descr: "initialize gpio hardware",
-	F: func(c *cli.CLI, args []string) {
-		drv := c.User.(target).GetGpioDriver()
-		err := drv.Init()
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
 		}
@@ -81,6 +70,7 @@ var cmdSet = cli.Leaf{
 		port, bit, err := gpioArg(drv, args)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
 		}
 		err = drv.Set(port, bit)
 		if err != nil {
@@ -102,7 +92,6 @@ var cmdStatus = cli.Leaf{
 // Menu GPIO submenu items
 var Menu = cli.Menu{
 	{"clr", cmdClr, helpGpio},
-	{"init", cmdInit},
 	{"set", cmdSet, helpGpio},
 	{"status", cmdStatus},
 }

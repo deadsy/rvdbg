@@ -66,25 +66,26 @@ func (r *Register) GetField(name string) *Field {
 
 //-----------------------------------------------------------------------------
 
-// address returns the absolute address of an indexed register.
-func (r *Register) address(base, idx uint) uint {
-	return base + r.Offset + (idx * (r.Size >> 3))
-}
-
-func (r *Register) registerSize(drv Driver) uint {
+// regSize returns the size of the register in bits.
+func (r *Register) regSize(drv Driver) uint {
 	if r.Size != 0 {
 		return r.Size
 	}
 	return drv.GetRegisterSize(r)
 }
 
+// regAddr returns the address of an indexed register.
+func (r *Register) regAddr(drv Driver, idx uint) uint {
+	return r.parent.Addr + r.Offset + (idx * (r.regSize(drv) >> 3))
+}
+
 // Display returns strings for the decode of a register.
 func (r *Register) Display(drv Driver, fields bool) [][]string {
 
 	// address string
-	addr := r.address(r.parent.Addr, 0)
+	addr := r.regAddr(drv, 0)
 	fmtStr := fmt.Sprintf(": %s[%%d:0]", util.UintFormat(drv.GetAddressSize()))
-	addrStr := fmt.Sprintf(fmtStr, addr, r.registerSize(drv)-1)
+	addrStr := fmt.Sprintf(fmtStr, addr, r.regSize(drv)-1)
 
 	// read the value
 	val, err := drv.Rd(r.Size, addr)
@@ -124,12 +125,12 @@ func (r *Register) Display(drv Driver, fields bool) [][]string {
 
 //-----------------------------------------------------------------------------
 
-func (r *Register) Wr(val uint) error {
-	return nil
+func (r *Register) Wr(drv Driver, idx uint, val uint) error {
+	return drv.Wr(r.regSize(drv), r.regAddr(drv, idx), val)
 }
 
-func (r *Register) Rd() (uint, error) {
-	return 0, nil
+func (r *Register) Rd(drv Driver, idx uint) (uint, error) {
+	return drv.Rd(r.regSize(drv), r.regAddr(drv, idx))
 }
 
 //-----------------------------------------------------------------------------

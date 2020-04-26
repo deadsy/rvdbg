@@ -64,6 +64,24 @@ func (dev *Device) GetPeripheralRegister(pname, rname string) (*Register, error)
 	return r, nil
 }
 
+// WrPeripheralRegister writes a register within a peripheral.
+func (dev *Device) WrPeripheralRegister(drv Driver, pname, rname string, val uint) error {
+	r, err := dev.GetPeripheralRegister(pname, rname)
+	if err != nil {
+		return err
+	}
+	return r.Wr(drv, 0, val)
+}
+
+// RdPeripheralRegister reads a register within a peripheral.
+func (dev *Device) RdPeripheralRegister(drv Driver, pname, rname string) (uint, error) {
+	r, err := dev.GetPeripheralRegister(pname, rname)
+	if err != nil {
+		return 0, err
+	}
+	return r.Rd(drv, 0)
+}
+
 //-----------------------------------------------------------------------------
 
 // Setup performs port-creation setup work on the device structure.
