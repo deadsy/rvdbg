@@ -23,6 +23,7 @@ import (
 
 //-----------------------------------------------------------------------------
 
+// GpioDriver is a GPIO driver for the gd32vf103.
 type GpioDriver struct {
 	names map[string]string // standard pin names to target pin names
 	cache map[string]string // cache of pin mode/value strings
@@ -30,6 +31,7 @@ type GpioDriver struct {
 	dev   *soc.Device
 }
 
+// NewGpioDriver retuns a new GPIO driver for the gd32vf103.
 func NewGpioDriver(drv soc.Driver, dev *soc.Device, names map[string]string) *GpioDriver {
 	return &GpioDriver{
 		names: names,
@@ -202,12 +204,12 @@ func (drv *GpioDriver) Pin(name string) (string, uint, error) {
 	return port, uint(bit), nil
 }
 
-// Set an output bit
+// Set sets an output bit
 func (drv *GpioDriver) Set(port string, bit uint) error {
 	return drv.dev.WrPeripheralRegister(drv.drv, port, "BOP", 1<<bit)
 }
 
-// Clear an output bit
+// Clr clears an output bit
 func (drv *GpioDriver) Clr(port string, bit uint) error {
 	return drv.dev.WrPeripheralRegister(drv.drv, port, "BC", 1<<bit)
 }

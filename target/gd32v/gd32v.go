@@ -20,6 +20,7 @@ import (
 	"github.com/deadsy/rvdbg/cpu/riscv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv13"
+	"github.com/deadsy/rvdbg/flash"
 	"github.com/deadsy/rvdbg/gpio"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
@@ -48,6 +49,7 @@ var menuRoot = cli.Menu{
 	{"da", riscv.CmdDisassemble, riscv.DisassembleHelp},
 	{"dbg", rv13.Menu, "debugger functions"},
 	{"exit", target.CmdExit},
+	{"flash", flash.Menu, "flash functions"},
 	{"gpio", gpio.Menu, "gpio functions"},
 	{"gpr", riscv.CmdGpr},
 	{"halt", riscv.CmdHalt},
@@ -163,13 +165,14 @@ var gpioNames = map[string]string{
 
 // Target is the application structure for the target.
 type Target struct {
-	jtagDevice *jtag.Device
-	rvDebug    rv.Debug
-	socDevice  *soc.Device
-	socDriver  *socDriver
-	memDriver  *memDriver
-	csrDriver  *csrDriver
-	gpioDriver *gd32vf103.GpioDriver
+	jtagDevice  *jtag.Device
+	rvDebug     rv.Debug
+	socDevice   *soc.Device
+	socDriver   *socDriver
+	memDriver   *memDriver
+	csrDriver   *csrDriver
+	gpioDriver  *gd32vf103.GpioDriver
+	flashDriver *gd32vf103.FlashDriver
 }
 
 // New returns a new gd32v target.
@@ -215,13 +218,14 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 	socDriver := newSocDriver(rvDebug)
 
 	return &Target{
-		jtagDevice: jtagDevice,
-		rvDebug:    rvDebug,
-		socDevice:  socDevice,
-		socDriver:  socDriver,
-		memDriver:  newMemDriver(rvDebug, socDevice),
-		csrDriver:  newCsrDriver(rvDebug),
-		gpioDriver: gd32vf103.NewGpioDriver(socDriver, socDevice, gpioNames),
+		jtagDevice:  jtagDevice,
+		rvDebug:     rvDebug,
+		socDevice:   socDevice,
+		socDriver:   socDriver,
+		memDriver:   newMemDriver(rvDebug, socDevice),
+		csrDriver:   newCsrDriver(rvDebug),
+		gpioDriver:  gd32vf103.NewGpioDriver(socDriver, socDevice, gpioNames),
+		flashDriver: gd32vf103.NewFlashDriver(socDriver, socDevice),
 	}, nil
 
 }
@@ -257,6 +261,11 @@ func (t *Target) GetMemoryDriver() mem.Driver {
 // GetGpioDriver returns a GPIO driver for this target.
 func (t *Target) GetGpioDriver() gpio.Driver {
 	return t.gpioDriver
+}
+
+// GetFlashDriver returns a Flash driver for this target.s
+func (t *Target) GetFlashDriver() flash.Driver {
+	return t.flashDriver
 }
 
 // GetRiscvDebug returns a RISC-V debug driver for this target.

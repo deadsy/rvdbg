@@ -17,8 +17,10 @@ import (
 
 //-----------------------------------------------------------------------------
 
+// Variant is the gd32vf103 device variant.
 type Variant int
 
+// gd32vf103 device variants.
 const (
 	RB Variant = iota
 	R8
