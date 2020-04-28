@@ -27,63 +27,17 @@ var helpMemRegion = []cli.Help{
 	{"  len", "length (hex), defaults to region size or 0x100"},
 }
 
-const defAddr = 0
-const defSize = 0x100
-
-// regionArg converts memory region arguments to an (address, n) tuple.
-func regionArg(drv Driver, args []string) (uint, uint, error) {
-	err := cli.CheckArgc(args, []int{0, 1, 2})
-	if err != nil {
-		return 0, 0, err
-	}
-
-	if len(args) == 0 {
-		return defAddr, defSize, nil
-	}
-
-	// lookup the first argument as a symbol
-	addr, n, err := drv.LookupSymbol(args[0])
-	if err == nil {
-		if len(args) == 2 {
-			// don't take the symbol size, use the argument
-			n, err = cli.UintArg(args[1], [2]uint{1, 0x100000000}, 16)
-			if err != nil {
-				return 0, 0, err
-			}
-		}
-		return addr, n, nil
-	}
-
-	// get the address
-	maxAddr := uint((1 << drv.GetAddressSize()) - 1)
-	addr, err = cli.UintArg(args[0], [2]uint{0, maxAddr}, 16)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	if len(args) == 1 {
-		return addr, defSize, nil
-	}
-
-	// get the size
-	n, err = cli.UintArg(args[1], [2]uint{1, 0x100000000}, 16)
-	if err != nil {
-		return 0, 0, err
-	}
-	return addr, n, nil
-}
-
 //-----------------------------------------------------------------------------
 // memory display
 
 func display(c *cli.CLI, args []string, width uint) {
 	drv := c.User.(target).GetMemoryDriver()
-	addr, n, err := regionArg(drv, args)
+	r, err := RegionArg(drv, args)
 	if err != nil {
 		c.User.Put(fmt.Sprintf("%s\n", err))
 		return
 	}
-	c.User.Put(fmt.Sprintf("%s\n", displayMem(drv, addr, n, width)))
+	c.User.Put(fmt.Sprintf("%s\n", displayMem(drv, r.addr, r.size, width)))
 }
 
 var cmdDisplay8 = cli.Leaf{
@@ -217,11 +171,11 @@ func fileRegionArg(drv Driver, args []string) (string, uint, uint, error) {
 	// args[0] is the filename
 	name := args[0]
 	// the remaining arguments define the memory region
-	addr, n, err := regionArg(drv, args[1:])
+	r, err := RegionArg(drv, args[1:])
 	if err != nil {
 		return "", 0, 0, err
 	}
-	return name, addr, n, nil
+	return name, r.addr, r.size, nil
 }
 
 var cmdToFile = cli.Leaf{
@@ -279,15 +233,15 @@ var cmdPic = cli.Leaf{
 	F: func(c *cli.CLI, args []string) {
 		drv := c.User.(target).GetMemoryDriver()
 		// get the arguments
-		addr, n, err := regionArg(drv, args)
+		r, err := RegionArg(drv, args)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
 		}
 		// round down address to 32-bit byte boundary
-		addr &= ^uint(3)
+		addr := r.addr & ^uint(3)
 		// round up n to an integral multiple of 4 bytes
-		n = (n + 3) & ^uint(3)
+		n := (r.size + 3) & ^uint(3)
 		// work out how many rows, columns and bytes per symbol we should display
 		colsMax := 70
 		cols := colsMax + 1
@@ -358,15 +312,15 @@ func cmpBuf(a, b []uint) bool {
 func cmdTest(c *cli.CLI, args []string, width uint) {
 	drv := c.User.(target).GetMemoryDriver()
 	// get the arguments
-	addr, n, err := regionArg(drv, args)
+	r, err := RegionArg(drv, args)
 	if err != nil {
 		c.User.Put(fmt.Sprintf("%s\n", err))
 		return
 	}
 	// round down address to 32-bit byte boundary
-	addr &= ^uint(3)
+	addr := r.addr & ^uint(3)
 	// round up n to an integral multiple of 4 bytes
-	n = (n + 3) & ^uint(3)
+	n := (r.size + 3) & ^uint(3)
 	// build a random buffer of width-bit words
 	nx := n / (width >> 3)
 	mask := uint((1 << width) - 1)

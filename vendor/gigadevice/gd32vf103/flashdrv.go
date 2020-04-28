@@ -68,9 +68,38 @@ func NewFlashDriver(drv soc.Driver, dev *soc.Device) *FlashDriver {
 	}
 }
 
+// GetAddressSize returns the address size in bits.
+func (drv *FlashDriver) GetAddressSize() uint {
+	return 32
+}
+
+// GetDefaultRegion returns a default memory region.
+func (drv *FlashDriver) GetDefaultRegion() *mem.Region {
+	return mem.NewRegion("", 0, 1*util.KiB, nil)
+}
+
+// LookupSymbol returns an address and size for a symbol.
+func (drv *FlashDriver) LookupSymbol(name string) *mem.Region {
+	p := drv.dev.GetPeripheral(name)
+	if p != nil {
+		return mem.NewRegion(name, p.Addr, p.Size, nil)
+	}
+	return nil
+}
+
 // GetSectors returns the flash sector memory regions for the gd32vf103.
 func (drv *FlashDriver) GetSectors() []*mem.Region {
 	return drv.sectors
+}
+
+// Erase erases a flash sector.
+func (drv *FlashDriver) Erase(r *mem.Region) error {
+	return nil
+}
+
+// EraseAll erases all of the device flash.
+func (drv *FlashDriver) EraseAll() error {
+	return nil
 }
 
 //-----------------------------------------------------------------------------

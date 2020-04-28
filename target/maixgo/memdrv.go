@@ -11,9 +11,8 @@ This code implements the mem.Driver interface.
 package maixgo
 
 import (
-	"fmt"
-
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
+	"github.com/deadsy/rvdbg/mem"
 	"github.com/deadsy/rvdbg/soc"
 )
 
@@ -36,13 +35,18 @@ func (m *memDriver) GetAddressSize() uint {
 	return m.dbg.GetAddressSize()
 }
 
+// GetDefaultRegion returns a default memory region.
+func (m *memDriver) GetDefaultRegion() *mem.Region {
+	return mem.NewRegion("", 0, 0x100, nil)
+}
+
 // LookupSymbol returns an address and size for a symbol.
-func (m *memDriver) LookupSymbol(name string) (uint, uint, error) {
+func (m *memDriver) LookupSymbol(name string) *mem.Region {
 	p := m.dev.GetPeripheral(name)
 	if p != nil {
-		return p.Addr, p.Size, nil
+		return mem.NewRegion(name, p.Addr, p.Size, nil)
 	}
-	return 0, 0, fmt.Errorf("symbol \"%s\" not found", name)
+	return nil
 }
 
 // RdMem reads n x width-bit values from memory.

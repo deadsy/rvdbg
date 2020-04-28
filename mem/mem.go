@@ -19,10 +19,11 @@ import (
 
 // Driver is the memory driver api.
 type Driver interface {
-	GetAddressSize() uint                         // get address size in bits
-	LookupSymbol(name string) (uint, uint, error) // lookup the address of a symbol
-	RdMem(width, addr, n uint) ([]uint, error)    // read width-bit memory buffer
-	WrMem(width, addr uint, val []uint) error     // write width-bit memory buffer
+	GetAddressSize() uint                      // get address size in bits
+	GetDefaultRegion() *Region                 // get a default region
+	LookupSymbol(name string) *Region          // lookup a symbol
+	RdMem(width, addr, n uint) ([]uint, error) // read width-bit memory buffer
+	WrMem(width, addr uint, val []uint) error  // write width-bit memory buffer
 }
 
 // target provides a method for getting the memory driver.

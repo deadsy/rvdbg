@@ -19,7 +19,12 @@ import (
 
 // Driver is the Flash driver api.
 type Driver interface {
-	GetSectors() []*mem.Region // return the set of flash sectors
+	GetDefaultRegion() *mem.Region        // get a default region
+	GetAddressSize() uint                 // get address size in bits
+	LookupSymbol(name string) *mem.Region // lookup a symbol
+	GetSectors() []*mem.Region            // return the set of flash sectors
+	Erase(r *mem.Region) error            // erase a flash sector
+	EraseAll() error                      // erase all of the flash
 }
 
 // target provides a method for getting the Flash driver.
@@ -30,7 +35,7 @@ type target interface {
 //-----------------------------------------------------------------------------
 
 var helpFlashErase = []cli.Help{
-	{"*", "erase all"},
+	{"all", "erase all"},
 	{"<addr/name> [len]", "erase memory region"},
 	{"  addr", "address (hex), default is 0"},
 	{"  name", "region name (string), see \"map\" command"},
@@ -56,7 +61,46 @@ var cmdErase = cli.Leaf{
 	Descr: "erase flash",
 	F: func(c *cli.CLI, args []string) {
 		drv := c.User.(target).GetFlashDriver()
-		_ = drv
+		// check for erase all
+		if len(args) == 1 && args[0] == "all" {
+			c.User.Put("erase all: ")
+			err := drv.EraseAll()
+			if err != nil {
+				c.User.Put(fmt.Sprintf("%s\n", err))
+			} else {
+				c.User.Put("done\n")
+			}
+			return
+		}
+		// get the memory region
+		r, err := mem.RegionArg(drv, args)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
+		// build a list of the flash sectors to be erased
+		eraseList := []*mem.Region{}
+		for _, s := range drv.GetSectors() {
+			if s.Overlaps(r) {
+				eraseList = append(eraseList, s)
+			}
+		}
+		if len(eraseList) == 0 {
+			c.User.Put("nothing to erase\n")
+			return
+		}
+		// do the erase
+		c.User.Put("erasing: ")
+		nErrors := 0
+		nErased := 0
+		for _, s := range eraseList {
+			err := drv.Erase(s)
+			if err != nil {
+				nErrors += 1
+			}
+			nErased += 1
+		}
+		c.User.Put(fmt.Sprintf("done (%d errors)\n", nErrors))
 	},
 }
 
