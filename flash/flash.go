@@ -13,6 +13,7 @@ import (
 
 	"github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/mem"
+	"github.com/deadsy/rvdbg/util"
 )
 
 //-----------------------------------------------------------------------------
@@ -91,15 +92,18 @@ var cmdErase = cli.Leaf{
 		}
 		// do the erase
 		c.User.Put("erasing: ")
-		nErrors := 0
+		progress := util.NewProgress(c.User, len(eraseList))
 		nErased := 0
+		nErrors := 0
 		for _, s := range eraseList {
 			err := drv.Erase(s)
 			if err != nil {
 				nErrors += 1
 			}
 			nErased += 1
+			progress.Update(nErased)
 		}
+		progress.Erase()
 		c.User.Put(fmt.Sprintf("done (%d errors)\n", nErrors))
 	},
 }

@@ -11,7 +11,9 @@ This code implements the flash.Driver interface.
 package gd32vf103
 
 import (
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/deadsy/rvdbg/mem"
 	"github.com/deadsy/rvdbg/soc"
@@ -94,12 +96,13 @@ func (drv *FlashDriver) GetSectors() []*mem.Region {
 
 // Erase erases a flash sector.
 func (drv *FlashDriver) Erase(r *mem.Region) error {
-	return nil
+	time.Sleep(100 * time.Millisecond)
+	return errors.New("TODO")
 }
 
 // EraseAll erases all of the device flash.
 func (drv *FlashDriver) EraseAll() error {
-	return nil
+	return errors.New("TODO")
 }
 
 //-----------------------------------------------------------------------------
