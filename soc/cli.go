@@ -62,7 +62,7 @@ var RegsHelp = []cli.Help{
 	{"", "register (string) - register name (or *)"},
 }
 
-// CmdRegs displays a register decode for an SoC periperhal.
+// CmdRegs displays a register decode for an SoC peripheral.
 var CmdRegs = cli.Leaf{
 	Descr: "display peripheral registers",
 	F: func(c *cli.CLI, args []string) {

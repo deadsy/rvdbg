@@ -52,7 +52,7 @@ type Region struct {
 	meta     Meta   // target/vendor specific meta data
 }
 
-// NewRegion retuns a new memory region.
+// NewRegion returns a new memory region.
 func NewRegion(name string, addr, size uint, meta Meta) *Region {
 	return &Region{
 		name:     name,

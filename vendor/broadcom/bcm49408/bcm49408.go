@@ -134,10 +134,10 @@ ir 31 drlen 1 # bypass
 
 var ChainInfo = []jtag.DeviceInfo{
 	// irlen, idcode, name
-	jtag.DeviceInfo{4, jtag.IDCode(0x5ba00477), "bcm49408.arm0"}, // ARM core
-	jtag.DeviceInfo{4, jtag.IDCode(0x4ba00477), "bcm49408.arm1"}, // ARM core
-	jtag.DeviceInfo{5, jtag.IDCode(0x0490817f), "bcm49408.dev2"}, // some broadcom device
-	jtag.DeviceInfo{5, jtag.IDCode(0x0490817f), "bcm49408.dev3"}, // some broadcom device
+	{4, jtag.IDCode(0x5ba00477), "bcm49408.arm0"}, // ARM core
+	{4, jtag.IDCode(0x4ba00477), "bcm49408.arm1"}, // ARM core
+	{5, jtag.IDCode(0x0490817f), "bcm49408.dev2"}, // some broadcom device
+	{5, jtag.IDCode(0x0490817f), "bcm49408.dev3"}, // some broadcom device
 }
 
 //-----------------------------------------------------------------------------

@@ -12,9 +12,12 @@ import "fmt"
 
 //-----------------------------------------------------------------------------
 
-const KiB = 1 << 10
-const MiB = 1 << 20
-const GiB = 1 << 30
+// memory size constants
+const (
+	KiB = 1 << 10
+	MiB = 1 << 20
+	GiB = 1 << 30
+)
 
 // MemSize returns a scaled string for the memory size.
 func MemSize(x uint) string {

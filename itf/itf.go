@@ -54,7 +54,7 @@ var interfaceDb = map[string]*Info{}
 func List() string {
 	// sort the interface names
 	names := make([]string, 0, len(interfaceDb))
-	for k, _ := range interfaceDb {
+	for k := range interfaceDb {
 		names = append(names, k)
 	}
 	sort.Strings(names)

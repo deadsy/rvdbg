@@ -58,6 +58,26 @@ var helpFlashProgram = []cli.Help{
 
 //-----------------------------------------------------------------------------
 
+// erase State stores the erase loop state
+type eraseState struct {
+	drv      Driver         // flash driver
+	progress *util.Progress // progress indicator
+	sectors  []*mem.Region  // sectors to be erased
+	errors   []error        // errors for erase
+	idx      int            // index into erase list
+}
+
+// eraseLoop is the looping function for sector erasing
+func eraseLoop(es *eraseState) bool {
+	err := es.drv.Erase(es.sectors[es.idx])
+	if err != nil {
+		es.errors = append(es.errors, err)
+	}
+	es.idx++
+	es.progress.Update(es.idx)
+	return es.idx == len(es.sectors)
+}
+
 var cmdErase = cli.Leaf{
 	Descr: "erase flash",
 	F: func(c *cli.CLI, args []string) {
@@ -91,20 +111,18 @@ var cmdErase = cli.Leaf{
 			return
 		}
 		// do the erase
-		c.User.Put("erasing: ")
-		progress := util.NewProgress(c.User, len(eraseList))
-		nErased := 0
-		nErrors := 0
-		for _, s := range eraseList {
-			err := drv.Erase(s)
-			if err != nil {
-				nErrors += 1
-			}
-			nErased += 1
-			progress.Update(nErased)
+		c.User.Put("erasing (ctrl-d to abort): ")
+		es := &eraseState{
+			drv:      drv,
+			progress: util.NewProgress(c.User, len(eraseList)),
+			sectors:  eraseList,
+			errors:   []error{},
 		}
-		progress.Erase()
-		c.User.Put(fmt.Sprintf("done (%d errors)\n", nErrors))
+		es.progress.Update(0)
+		done := c.Loop(func() bool { return eraseLoop(es) }, cli.KeycodeCtrlD)
+		es.progress.Erase()
+		status := []string{"abort", "done"}[util.BoolToInt(done)]
+		c.User.Put(fmt.Sprintf("%s (%d errors)\n", status, len(es.errors)))
 	},
 }
 

@@ -10,13 +10,15 @@ package util
 
 //-----------------------------------------------------------------------------
 
-const Mask8 = (1 << 8) - 1
-const Mask16 = (1 << 16) - 1
-const Mask32 = (1 << 32) - 1
-const Mask34 = (1 << 34) - 1
-const Mask64 = (1 << 64) - 1
-
-const Upper32 = Mask32 << 32
+// common bit mask values
+const (
+	Mask8   = (1 << 8) - 1
+	Mask16  = (1 << 16) - 1
+	Mask32  = (1 << 32) - 1
+	Mask34  = (1 << 34) - 1
+	Mask64  = (1 << 64) - 1
+	Upper32 = Mask32 << 32
+)
 
 //-----------------------------------------------------------------------------
 
@@ -46,7 +48,7 @@ func BoolToInt(x bool) int {
 	return 0
 }
 
-// BoolToUint converts a boolean to an usnigned int (1 or 0).
+// BoolToUint converts a boolean to an unsigned int (1 or 0).
 func BoolToUint(x bool) uint {
 	if x {
 		return 1

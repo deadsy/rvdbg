@@ -16,25 +16,19 @@ import (
 
 //-----------------------------------------------------------------------------
 
+// Progress contains the state for a progress indicator.
 type Progress struct {
-	ui       cli.USER
-	scale    float32
-	mask     int
+	ui       cli.USER // access to user interface
+	scale    float32  // scaling constant, n to percentage
+	percent  int      // current percentage
 	progress string
 }
 
+// NewProgress returns the state for a new progress indicator.
 func NewProgress(ui cli.USER, nmax int) *Progress {
-	n := nmax / 100
-	p2 := 1
-	mask := 0
-	for p2 <= n {
-		p2 *= 2
-		mask = (mask << 1) | 1
-	}
 	return &Progress{
 		ui:    ui,
 		scale: 100.0 / float32(nmax),
-		mask:  mask,
 	}
 }
 
@@ -55,9 +49,11 @@ func (p *Progress) Erase() {
 
 // Update updates the progress indication.
 func (p *Progress) Update(n int) {
-	if n&p.mask == 0 {
+	percent := int(float32(n) * p.scale)
+	if len(p.progress) == 0 || percent != p.percent {
 		p.Erase()
-		p.progress = fmt.Sprintf("%d%%", int(float32(n)*p.scale))
+		p.progress = fmt.Sprintf("%d%%", percent)
+		p.percent = percent
 		p.ui.Put(p.progress)
 	}
 }

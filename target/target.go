@@ -52,7 +52,7 @@ func Lookup(name string) *Info {
 func List() string {
 	// sort the target names
 	names := make([]string, 0, len(targetDb))
-	for k, _ := range targetDb {
+	for k := range targetDb {
 		names = append(names, k)
 	}
 	sort.Strings(names)

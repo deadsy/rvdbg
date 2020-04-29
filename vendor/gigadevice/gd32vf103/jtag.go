@@ -22,8 +22,8 @@ const CoreIndex = 0
 // Chain is the the JTAG chain description.
 var Chain = []jtag.DeviceInfo{
 	// irlen, idcode, name
-	jtag.DeviceInfo{5, jtag.IDCode(0x1000563d), "gd32v.rv32"},
-	jtag.DeviceInfo{5, jtag.IDCode(0x790007a3), "gd32v.dev1"},
+	{5, jtag.IDCode(0x1000563d), "gd32v.rv32"},
+	{5, jtag.IDCode(0x790007a3), "gd32v.dev1"},
 }
 
 //-----------------------------------------------------------------------------

@@ -20,7 +20,7 @@ const CoreIndex = 0
 // Chain is the the JTAG chain description.
 var Chain = []jtag.DeviceInfo{
 	// irlen, idcode, name
-	jtag.DeviceInfo{5, jtag.IDCode(0x04e4796b), "k210-rv64"},
+	{5, jtag.IDCode(0x04e4796b), "k210-rv64"},
 }
 
 //-----------------------------------------------------------------------------
