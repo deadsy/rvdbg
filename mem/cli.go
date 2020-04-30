@@ -9,9 +9,12 @@ Memory Menu Items
 package mem
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
+	"os"
 	"time"
 
 	cli "github.com/deadsy/go-cli"
@@ -154,6 +157,8 @@ var cmdWrite64 = cli.Leaf{
 //-----------------------------------------------------------------------------
 // memory to file
 
+const readSize = 1 * util.KiB // multiple of 32-bits
+
 var helpMemToFile = []cli.Help{
 	{"<filename> <addr/name> [len]", "read from memory, write to file"},
 	{"  filename", "filename (string)"},
@@ -178,23 +183,97 @@ func fileRegionArg(drv Driver, args []string) (string, uint, uint, error) {
 	return name, r.addr, r.size, nil
 }
 
+type readState struct {
+	drv      Driver         // memory driver
+	addr     uint           // address to read from
+	n        uint           // bytes remaining to read
+	progress *util.Progress // progress indicator
+	writer   io.Writer      // buffered IO to output file
+	err      error          // error state
+	idx      int            // index into read list
+}
+
+// readLoop is the looping function for memory reading
+func readLoop(rs *readState) bool {
+	nread := min(rs.n, readSize)
+	buf, err := rs.drv.RdMem(32, rs.addr, nread>>2)
+	if err != nil {
+		rs.err = err
+		return true
+	}
+	// write to the file
+	_, err = rs.writer.Write(util.CastUintto8(util.ConvertXY(32, 8, buf)))
+	if err != nil {
+		rs.err = err
+		return true
+	}
+	rs.addr += nread
+	rs.n -= nread
+	rs.idx++
+	rs.progress.Update(rs.idx)
+	return rs.n == 0
+}
+
 var cmdToFile = cli.Leaf{
 	Descr: "read from memory, write to file",
 	F: func(c *cli.CLI, args []string) {
 		drv := c.User.(target).GetMemoryDriver()
+		// process the arguments
+		err := cli.CheckArgc(args, []int{2, 3})
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
 		name, addr, n, err := fileRegionArg(drv, args)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
 		}
-
 		// round down address to 32-bit byte boundary
 		addr &= ^uint(3)
 		// round up n to an integral multiple of 4 bytes
 		n = (n + 3) & ^uint(3)
+		if n == 0 {
+			c.User.Put("nothing to read\n")
+			return
+		}
 
-		c.User.Put(fmt.Sprintf("TODO: %s %x %x\n", name, addr, n))
+		// create the output file, use buffered IO
+		f, err := os.Create(name)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("unable to open %s (%s)\n", name, err))
+			return
+		}
+		w := bufio.NewWriter(f)
 
+		// read from memory, write to file
+		c.User.Put(fmt.Sprintf("writing %s (ctrl-d to abort): ", name))
+		nreads := (int(n) + readSize - 1) / readSize
+		rs := &readState{
+			drv:      drv,
+			addr:     addr,
+			n:        n,
+			progress: util.NewProgress(c.User, nreads),
+			writer:   w,
+		}
+		rs.progress.Update(0)
+		done := c.Loop(func() bool { return readLoop(rs) }, cli.KeycodeCtrlD)
+		rs.progress.Erase()
+
+		// flush and close the output file
+		w.Flush()
+		f.Close()
+
+		// report result
+		if !done {
+			c.User.Put("abort\n")
+			return
+		}
+		if rs.err != nil {
+			c.User.Put(fmt.Sprintf("error (%s)\n", rs.err))
+			return
+		}
+		c.User.Put("done\n")
 	},
 }
 
