@@ -278,6 +278,48 @@ var cmdToFile = cli.Leaf{
 }
 
 //-----------------------------------------------------------------------------
+// memory verify
+
+var helpMemVerify = []cli.Help{
+	{"<filename> <addr/name> [len]", "compare file and memory data"},
+	{"  filename", "filename (string)"},
+	{"  addr", "address (hex), default is 0"},
+	{"  name", "region name (string), see \"map\" command"},
+	{"  len", "length (hex), defaults to region size or 0x100"},
+}
+
+var cmdVerify = cli.Leaf{
+	Descr: "compare file and memory data",
+	F: func(c *cli.CLI, args []string) {
+		drv := c.User.(target).GetMemoryDriver()
+		// process the arguments
+		err := cli.CheckArgc(args, []int{2, 3})
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
+		name, addr, n, err := fileRegionArg(drv, args)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
+		// round down address to 32-bit byte boundary
+		addr &= ^uint(3)
+		// round up n to an integral multiple of 4 bytes
+		n = (n + 3) & ^uint(3)
+		if n == 0 {
+			c.User.Put("nothing to read\n")
+			return
+		}
+
+		_ = name
+
+		c.User.Put("TODO\n")
+
+	},
+}
+
+//-----------------------------------------------------------------------------
 // memory picture
 
 // analyze the buffer and return a character to represent it
@@ -366,7 +408,7 @@ var cmdPic = cli.Leaf{
 //-----------------------------------------------------------------------------
 // memory test
 
-// randBuf returns a ransom buffer of masked values.
+// randBuf returns a random buffer of masked values.
 func randBuf(n, mask uint) []uint {
 	buf := make([]uint, n)
 	for i := range buf {
@@ -475,6 +517,7 @@ var Menu = cli.Menu{
 	{"ww", cmdWrite32, helpMemWrite},
 	{"wd", cmdWrite64, helpMemWrite},
 	{">file", cmdToFile, helpMemToFile},
+	{"verify", cmdVerify, helpMemVerify},
 	{"pic", cmdPic, helpMemRegion},
 }
 
