@@ -112,7 +112,7 @@ func newMemDisplay(ui cli.USER, addr, addrWidth, width uint) *memDisplay {
 	addr &= ^align
 	return &memDisplay{
 		ui:       ui,
-		fmtLine:  fmt.Sprintf("%%0%dx  %%s  %%s\n", [2]int{16, 8}[util.BoolToInt(addrWidth == 32)]),
+		fmtLine:  fmt.Sprintf("%%0%dx  %%s  %%s\r\n", [2]int{16, 8}[util.BoolToInt(addrWidth == 32)]),
 		fmtData:  fmt.Sprintf("%%0%dx", width>>2),
 		addrMask: (1 << addrWidth) - 1,
 		addr:     addr,

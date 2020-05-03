@@ -33,6 +33,23 @@ var helpMemRegion = []cli.Help{
 //-----------------------------------------------------------------------------
 // memory display
 
+type displayState struct {
+	mr  *memReader  // read from memory
+	md  *memDisplay // write to display
+	err error       // any terminating error
+}
+
+func displayLoop(ds *displayState) bool {
+	buf := make([]uint, 16)
+	n, err := ds.mr.Read(buf)
+	if err != nil && err != io.EOF {
+		ds.err = err
+		return true
+	}
+	ds.md.Write(buf[0:n])
+	return err == io.EOF
+}
+
 func display(c *cli.CLI, args []string, width uint) {
 	drv := c.User.(target).GetMemoryDriver()
 	r, err := RegionArg(drv, args)
@@ -40,19 +57,13 @@ func display(c *cli.CLI, args []string, width uint) {
 		c.User.Put(fmt.Sprintf("%s\n", err))
 		return
 	}
-	mr := newMemReader(drv, r.addr, r.size, width)
-	md := newMemDisplay(c.User, r.addr, drv.GetAddressSize(), width)
-	buf := make([]uint, 16)
-	for true {
-		n, err := mr.Read(buf)
-		if err != nil && err != io.EOF {
-			c.User.Put(fmt.Sprintf("%s\n", err))
-			break
-		}
-		md.Write(buf[0:n])
-		if err == io.EOF {
-			break
-		}
+	ds := &displayState{
+		mr: newMemReader(drv, r.addr, r.size, width),
+		md: newMemDisplay(c.User, r.addr, drv.GetAddressSize(), width),
+	}
+	c.Loop(func() bool { return displayLoop(ds) }, cli.KeycodeCtrlD)
+	if ds.err != nil {
+		c.User.Put(fmt.Sprintf("%s\n", ds.err))
 	}
 }
 
