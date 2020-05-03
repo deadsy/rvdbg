@@ -40,7 +40,20 @@ func display(c *cli.CLI, args []string, width uint) {
 		c.User.Put(fmt.Sprintf("%s\n", err))
 		return
 	}
-	c.User.Put(fmt.Sprintf("%s\n", displayMem(drv, r.addr, r.size, width)))
+	mr := newMemReader(drv, r.addr, r.size, width)
+	md := newMemDisplay(c.User, r.addr, drv.GetAddressSize(), width)
+	buf := make([]uint, 16)
+	for true {
+		n, err := mr.Read(buf)
+		if err != nil && err != io.EOF {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			break
+		}
+		md.Write(buf[0:n])
+		if err == io.EOF {
+			break
+		}
+	}
 }
 
 var cmdDisplay8 = cli.Leaf{
