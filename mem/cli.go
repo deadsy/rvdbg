@@ -9,12 +9,10 @@ Memory Menu Items
 package mem
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"math"
 	"math/rand"
-	"os"
 	"time"
 
 	cli "github.com/deadsy/go-cli"
@@ -181,8 +179,6 @@ var cmdWrite64 = cli.Leaf{
 //-----------------------------------------------------------------------------
 // memory to file
 
-const readSize = 1 * util.KiB // multiple of 32-bits
-
 var helpMemToFile = []cli.Help{
 	{"<filename> <addr/name> [len]", "read from memory, write to file"},
 	{"  filename", "filename (string)"},
@@ -208,34 +204,32 @@ func fileRegionArg(drv Driver, args []string) (string, uint, uint, error) {
 }
 
 type readState struct {
-	drv      Driver         // memory driver
-	addr     uint           // address to read from
-	n        uint           // bytes remaining to read
+	mr       *memReader     // read from memory
+	fw       *fileWriter    // write to a file
 	progress *util.Progress // progress indicator
-	writer   io.Writer      // buffered IO to output file
-	err      error          // error state
-	idx      int            // index into read list
+	idx      int            // progress index
+	err      error          // stored error
 }
+
+const readSize = 1024
 
 // readLoop is the looping function for memory reading
 func readLoop(rs *readState) bool {
-	nread := min(rs.n, readSize)
-	buf, err := rs.drv.RdMem(32, rs.addr, nread>>2)
+	buf := make([]uint, readSize)
+	n, err := rs.mr.Read(buf)
+	if err != nil && err != io.EOF {
+		rs.err = err
+		return true
+	}
+	done := err == io.EOF
+	_, err = rs.fw.Write(buf[0:n])
 	if err != nil {
 		rs.err = err
 		return true
 	}
-	// write to the file
-	_, err = rs.writer.Write(util.CastUintto8(util.ConvertXY(32, 8, buf)))
-	if err != nil {
-		rs.err = err
-		return true
-	}
-	rs.addr += nread
-	rs.n -= nread
 	rs.idx++
 	rs.progress.Update(rs.idx)
-	return rs.n == 0
+	return done
 }
 
 var cmdToFile = cli.Leaf{
@@ -261,32 +255,26 @@ var cmdToFile = cli.Leaf{
 			c.User.Put("nothing to read\n")
 			return
 		}
-
-		// create the output file, use buffered IO
-		f, err := os.Create(name)
+		// memory reader
+		mr := newMemReader(drv, addr, n, 32)
+		// file writer
+		fw, err := newFileWriter(name, 32)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("unable to open %s (%s)\n", name, err))
 			return
 		}
-		w := bufio.NewWriter(f)
-
 		// read from memory, write to file
-		c.User.Put(fmt.Sprintf("writing %s (ctrl-d to abort): ", name))
-		nreads := (int(n) + readSize - 1) / readSize
 		rs := &readState{
-			drv:      drv,
-			addr:     addr,
-			n:        n,
-			progress: util.NewProgress(c.User, nreads),
-			writer:   w,
+			mr:       mr,
+			fw:       fw,
+			progress: util.NewProgress(c.User, mr.totalReads(readSize)),
 		}
+		c.User.Put(fmt.Sprintf("writing %s (ctrl-d to abort): ", name))
 		rs.progress.Update(0)
 		done := c.Loop(func() bool { return readLoop(rs) }, cli.KeycodeCtrlD)
 		rs.progress.Erase()
-
 		// flush and close the output file
-		w.Flush()
-		f.Close()
+		fw.Close()
 
 		// report result
 		if !done {
@@ -347,7 +335,7 @@ var cmdVerify = cli.Leaf{
 // memory picture
 
 // analyze the buffer and return a character to represent it
-func analyze(data []uint, ofs, n int) rune {
+func analyze(data []uint8, ofs, n int) rune {
 	// are we off the end of the buffer?
 	if ofs >= len(data) {
 		return ' '
@@ -408,7 +396,7 @@ var cmdPic = cli.Leaf{
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
 		}
-		data8 := util.ConvertXY(32, 8, data32)
+		data8 := util.ConvertToUint8(32, data32)
 		// display the summary
 		c.User.Put("'.' all ones, '-' all zeroes, '$' various\n")
 		c.User.Put(fmt.Sprintf("%d (0x%x) bytes per symbol\n", bytesPerSymbol, bytesPerSymbol))

@@ -127,46 +127,45 @@ func Convert32to64(x []uint32) []uint64 {
 
 //-----------------------------------------------------------------------------
 
-// ConvertXY converts x-bit []uint to y-bit []uint (little endian).
-func ConvertXY(x, y uint, in []uint) []uint {
-	if x == y {
-		// no conversion
-		return in
-	}
-	if y == 8 {
-		switch x {
-		case 64:
-			out := make([]uint, len(in)*8)
-			for i := range in {
-				out[(8*i)+0] = (in[i] >> 0) & 0xff
-				out[(8*i)+1] = (in[i] >> 8) & 0xff
-				out[(8*i)+2] = (in[i] >> 16) & 0xff
-				out[(8*i)+3] = (in[i] >> 24) & 0xff
-				out[(8*i)+4] = (in[i] >> 32) & 0xff
-				out[(8*i)+5] = (in[i] >> 40) & 0xff
-				out[(8*i)+6] = (in[i] >> 48) & 0xff
-				out[(8*i)+7] = (in[i] >> 56) & 0xff
-			}
-			return out
-		case 32:
-			out := make([]uint, len(in)*4)
-			for i := range in {
-				out[(4*i)+0] = (in[i] >> 0) & 0xff
-				out[(4*i)+1] = (in[i] >> 8) & 0xff
-				out[(4*i)+2] = (in[i] >> 16) & 0xff
-				out[(4*i)+3] = (in[i] >> 24) & 0xff
-			}
-			return out
-		case 16:
-			out := make([]uint, len(in)*2)
-			for i := range in {
-				out[(2*i)+0] = (in[i] >> 0) & 0xff
-				out[(2*i)+1] = (in[i] >> 8) & 0xff
-			}
-			return out
+func ConvertToUint8(width uint, buf []uint) []uint8 {
+	switch width {
+	case 64:
+		out := make([]uint8, len(buf)*8)
+		for i := range buf {
+			out[(8*i)+0] = uint8(buf[i] >> 0)
+			out[(8*i)+1] = uint8(buf[i] >> 8)
+			out[(8*i)+2] = uint8(buf[i] >> 16)
+			out[(8*i)+3] = uint8(buf[i] >> 24)
+			out[(8*i)+4] = uint8(buf[i] >> 32)
+			out[(8*i)+5] = uint8(buf[i] >> 40)
+			out[(8*i)+6] = uint8(buf[i] >> 48)
+			out[(8*i)+7] = uint8(buf[i] >> 56)
 		}
+		return out
+	case 32:
+		out := make([]uint8, len(buf)*4)
+		for i := range buf {
+			out[(4*i)+0] = uint8(buf[i] >> 0)
+			out[(4*i)+1] = uint8(buf[i] >> 8)
+			out[(4*i)+2] = uint8(buf[i] >> 16)
+			out[(4*i)+3] = uint8(buf[i] >> 24)
+		}
+		return out
+	case 16:
+		out := make([]uint8, len(buf)*2)
+		for i := range buf {
+			out[(2*i)+0] = uint8(buf[i] >> 0)
+			out[(2*i)+1] = uint8(buf[i] >> 8)
+		}
+		return out
+	case 8:
+		out := make([]uint8, len(buf))
+		for i := range buf {
+			out[i] = uint8(buf[i])
+		}
+		return out
 	}
-	panic(fmt.Sprintf("%d to %d conversion not supported", x, y))
+	panic(fmt.Sprintf("%d-bit to uint8 conversion not supported", width))
 	return nil
 }
 

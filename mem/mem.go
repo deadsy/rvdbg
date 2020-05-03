@@ -9,8 +9,10 @@ Memory Display
 package mem
 
 import (
+	"bufio"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	cli "github.com/deadsy/go-cli"
@@ -61,8 +63,8 @@ func newMemReader(drv Driver, addr, n, width uint) *memReader {
 }
 
 // totalReads returns the total number of calls to Read() required.
-func (mr *memReader) totalReads(n uint) int {
-	bytesPerRead := n << mr.shift
+func (mr *memReader) totalReads(size uint) int {
+	bytesPerRead := size << mr.shift
 	return int((mr.n + bytesPerRead - 1) / bytesPerRead)
 }
 
@@ -139,7 +141,7 @@ func (md *memDisplay) Write(buf []uint) (n int, err error) {
 		}
 		dataStr := strings.Join(xStr, " ")
 		// create the ascii string
-		data := util.ConvertXY(md.width, 8, lineBuf)
+		data := util.ConvertToUint8(md.width, lineBuf)
 		var ascii [bytesPerLine]rune
 		for j, val := range data {
 			if val >= 32 && val <= 126 {
@@ -156,6 +158,43 @@ func (md *memDisplay) Write(buf []uint) (n int, err error) {
 		md.addr &= md.addrMask
 	}
 	return len(buf), nil
+}
+
+//-----------------------------------------------------------------------------
+// file writer
+
+type fileWriter struct {
+	f     *os.File
+	w     *bufio.Writer
+	width uint // data has width-bit values
+}
+
+func newFileWriter(name string, width uint) (*fileWriter, error) {
+	f, err := os.Create(name)
+	if err != nil {
+		return nil, err
+	}
+	return &fileWriter{
+		f:     f,
+		w:     bufio.NewWriter(f),
+		width: width,
+	}, nil
+}
+
+func (fw *fileWriter) Write(buf []uint) (n int, err error) {
+	if len(buf) == 0 {
+		return 0, nil
+	}
+	_, err = fw.w.Write(util.ConvertToUint8(fw.width, buf))
+	if err != nil {
+		return 0, err
+	}
+	return len(buf), nil
+}
+
+func (fw *fileWriter) Close() error {
+	fw.w.Flush()
+	return fw.f.Close()
 }
 
 //-----------------------------------------------------------------------------
