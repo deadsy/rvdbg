@@ -10,7 +10,9 @@ package mem
 
 import (
 	"bufio"
+	"crypto/md5"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"strings"
@@ -36,6 +38,10 @@ type target interface {
 }
 
 //-----------------------------------------------------------------------------
+
+var widthToShift = map[uint]int{8: 0, 16: 1, 32: 2, 64: 3}
+
+//-----------------------------------------------------------------------------
 // memory reader
 
 type memReader struct {
@@ -48,7 +54,7 @@ type memReader struct {
 }
 
 func newMemReader(drv Driver, addr, n, width uint) *memReader {
-	shift := map[uint]int{8: 0, 16: 1, 32: 2, 64: 3}[width]
+	shift := widthToShift[width]
 	// round down address, round up n to be width-bit aligned.
 	align := uint((1 << shift) - 1)
 	addr &= ^align
@@ -68,7 +74,7 @@ func (mr *memReader) totalReads(size uint) int {
 	return int((mr.n + bytesPerRead - 1) / bytesPerRead)
 }
 
-func (mr *memReader) Read(buf []uint) (n int, err error) {
+func (mr *memReader) Read(buf []uint) (int, error) {
 	if len(buf) == 0 || mr.err != nil {
 		return 0, mr.err
 	}
@@ -108,7 +114,7 @@ type memDisplay struct {
 }
 
 func newMemDisplay(ui cli.USER, addr, addrWidth, width uint) *memDisplay {
-	shift := map[uint]int{8: 0, 16: 1, 32: 2, 64: 3}[width]
+	shift := widthToShift[width]
 	// round down address to be width-bit aligned.
 	align := uint((1 << shift) - 1)
 	addr &= ^align
@@ -123,7 +129,7 @@ func newMemDisplay(ui cli.USER, addr, addrWidth, width uint) *memDisplay {
 	}
 }
 
-func (md *memDisplay) Write(buf []uint) (n int, err error) {
+func (md *memDisplay) Write(buf []uint) (int, error) {
 	if (len(buf)<<md.shift)&(bytesPerLine-1) != 0 {
 		return 0, fmt.Errorf("write buffer must be a multiple of %d bytes", bytesPerLine)
 	}
@@ -181,11 +187,11 @@ func newFileWriter(name string, width uint) (*fileWriter, error) {
 	}, nil
 }
 
-func (fw *fileWriter) Write(buf []uint) (n int, err error) {
+func (fw *fileWriter) Write(buf []uint) (int, error) {
 	if len(buf) == 0 {
 		return 0, nil
 	}
-	_, err = fw.w.Write(util.ConvertToUint8(fw.width, buf))
+	_, err := fw.w.Write(util.ConvertToUint8(fw.width, buf))
 	if err != nil {
 		return 0, err
 	}
@@ -195,6 +201,98 @@ func (fw *fileWriter) Write(buf []uint) (n int, err error) {
 func (fw *fileWriter) Close() error {
 	fw.w.Flush()
 	return fw.f.Close()
+}
+
+//-----------------------------------------------------------------------------
+// file reader
+
+type fileReader struct {
+	f     *os.File
+	size  int64 // size of file in bytes
+	width uint  // data has width-bit values
+	shift int   // shift for width-bits
+}
+
+func newFileReader(name string, width uint) (*fileReader, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	info, err := f.Stat()
+	if err != nil {
+		f.Close()
+		return nil, err
+	}
+	shift := widthToShift[width]
+	return &fileReader{
+		f:     f,
+		size:  (info.Size() >> shift) << shift,
+		width: width,
+		shift: shift,
+	}, nil
+}
+
+func (fr *fileReader) Read(buf []uint) (int, error) {
+	if len(buf) == 0 {
+		return 0, nil
+	}
+	fbuf := make([]byte, len(buf)<<fr.shift)
+	n, err := fr.f.Read(fbuf)
+	if err != nil && err != io.EOF {
+		return 0, err
+	}
+	if n == 0 {
+		return 0, err
+	}
+	// resize buffers to an integral number of width-bit values
+	buf = buf[0 : n>>fr.shift]
+	fbuf = fbuf[0 : (n>>fr.shift)<<fr.shift]
+	// convert the file buffer
+	util.ConvertToUint(fr.width, fbuf, buf)
+	return len(buf), err
+}
+
+func (fr *fileReader) Close() error {
+	return fr.f.Close()
+}
+
+//-----------------------------------------------------------------------------
+// MD5 writer
+
+type md5Writer struct {
+	h     hash.Hash
+	width uint // data has width-bit values
+}
+
+func newMd5Writer(width uint) *md5Writer {
+	return &md5Writer{
+		h:     md5.New(),
+		width: width,
+	}
+}
+
+func (mw *md5Writer) Write(buf []uint) (int, error) {
+	if len(buf) == 0 {
+		return 0, nil
+	}
+	_, err := mw.h.Write(util.ConvertToUint8(mw.width, buf))
+	if err != nil {
+		return 0, err
+	}
+	return len(buf), nil
+}
+
+func (mw *md5Writer) Sum() []byte {
+	return mw.h.Sum([]byte{})
+}
+
+func (mw *md5Writer) String() string {
+	cs := mw.Sum()
+	s := make([]string, len(cs))
+	for i, v := range cs {
+		s[i] = fmt.Sprintf("%02x", v)
+	}
+	return strings.Join(s, "")
 }
 
 //-----------------------------------------------------------------------------

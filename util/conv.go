@@ -8,7 +8,10 @@ Utilities to Convert Slice Types
 
 package util
 
-import "fmt"
+import (
+	"encoding/binary"
+	"fmt"
+)
 
 //-----------------------------------------------------------------------------
 // 1-1 conversion of []uintX to []uintY
@@ -167,6 +170,36 @@ func ConvertToUint8(width uint, buf []uint) []uint8 {
 	}
 	panic(fmt.Sprintf("%d-bit to uint8 conversion not supported", width))
 	return nil
+}
+
+//-----------------------------------------------------------------------------
+
+// ConvertToUint converts a uint8 buffer to a uint buffer with width-bit data values.
+func ConvertToUint(width uint, in []uint8, out []uint) {
+	switch width {
+	case 64:
+		out := make([]uint, len(in)>>3)
+		for i := range out {
+			out[i] = uint(binary.LittleEndian.Uint64(in[i<<3:]))
+		}
+	case 32:
+		out := make([]uint, len(in)>>2)
+		for i := range out {
+			out[i] = uint(binary.LittleEndian.Uint32(in[i<<2:]))
+		}
+	case 16:
+		out := make([]uint, len(in)>>1)
+		for i := range out {
+			out[i] = uint(binary.LittleEndian.Uint16(in[i<<1:]))
+		}
+	case 8:
+		out := make([]uint, len(in))
+		for i := range out {
+			out[i] = uint(in[i])
+		}
+	default:
+		panic(fmt.Sprintf("uint8 to %d-bit conversion not supported", width))
+	}
 }
 
 //-----------------------------------------------------------------------------

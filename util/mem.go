@@ -12,6 +12,16 @@ import "fmt"
 
 //-----------------------------------------------------------------------------
 
+type Reader interface {
+	Read(buf []uint) (int, error)
+}
+
+type Writer interface {
+	Write(buf []uint) (int, error)
+}
+
+//-----------------------------------------------------------------------------
+
 // memory size constants
 const (
 	KiB = 1 << 10

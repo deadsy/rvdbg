@@ -29,24 +29,39 @@ var helpMemRegion = []cli.Help{
 }
 
 //-----------------------------------------------------------------------------
-// memory display
 
-type displayState struct {
-	mr  *memReader  // read from memory
-	md  *memDisplay // write to display
-	err error       // any terminating error
+type copyState struct {
+	rd       util.Reader    // read from
+	wr       util.Writer    // write to
+	size     int            // buffer size
+	progress *util.Progress // progress indicator
+	idx      int            // progress index
+	err      error          // stored error
 }
 
-func displayLoop(ds *displayState) bool {
-	buf := make([]uint, 16)
-	n, err := ds.mr.Read(buf)
+// copyLoop is the looping function for read from, write to copying
+func copyLoop(cs *copyState) bool {
+	buf := make([]uint, cs.size)
+	n, err := cs.rd.Read(buf)
 	if err != nil && err != io.EOF {
-		ds.err = err
+		cs.err = err
 		return true
 	}
-	ds.md.Write(buf[0:n])
-	return err == io.EOF
+	done := err == io.EOF
+	_, err = cs.wr.Write(buf[0:n])
+	if err != nil {
+		cs.err = err
+		return true
+	}
+	if cs.progress != nil {
+		cs.idx++
+		cs.progress.Update(cs.idx)
+	}
+	return done
 }
+
+//-----------------------------------------------------------------------------
+// memory display
 
 func display(c *cli.CLI, args []string, width uint) {
 	drv := c.User.(target).GetMemoryDriver()
@@ -55,13 +70,15 @@ func display(c *cli.CLI, args []string, width uint) {
 		c.User.Put(fmt.Sprintf("%s\n", err))
 		return
 	}
-	ds := &displayState{
-		mr: newMemReader(drv, r.addr, r.size, width),
-		md: newMemDisplay(c.User, r.addr, drv.GetAddressSize(), width),
+	// read from memory, write to the display
+	cs := &copyState{
+		rd:   newMemReader(drv, r.addr, r.size, width),
+		wr:   newMemDisplay(c.User, r.addr, drv.GetAddressSize(), width),
+		size: 16,
 	}
-	c.Loop(func() bool { return displayLoop(ds) }, cli.KeycodeCtrlD)
-	if ds.err != nil {
-		c.User.Put(fmt.Sprintf("%s\n", ds.err))
+	c.Loop(func() bool { return copyLoop(cs) }, cli.KeycodeCtrlD)
+	if cs.err != nil {
+		c.User.Put(fmt.Sprintf("%s\n", cs.err))
 	}
 }
 
@@ -203,35 +220,6 @@ func fileRegionArg(drv Driver, args []string) (string, uint, uint, error) {
 	return name, r.addr, r.size, nil
 }
 
-type readState struct {
-	mr       *memReader     // read from memory
-	fw       *fileWriter    // write to a file
-	progress *util.Progress // progress indicator
-	idx      int            // progress index
-	err      error          // stored error
-}
-
-const readSize = 1024
-
-// readLoop is the looping function for memory reading
-func readLoop(rs *readState) bool {
-	buf := make([]uint, readSize)
-	n, err := rs.mr.Read(buf)
-	if err != nil && err != io.EOF {
-		rs.err = err
-		return true
-	}
-	done := err == io.EOF
-	_, err = rs.fw.Write(buf[0:n])
-	if err != nil {
-		rs.err = err
-		return true
-	}
-	rs.idx++
-	rs.progress.Update(rs.idx)
-	return done
-}
-
 var cmdToFile = cli.Leaf{
 	Descr: "read from memory, write to file",
 	F: func(c *cli.CLI, args []string) {
@@ -255,79 +243,39 @@ var cmdToFile = cli.Leaf{
 			c.User.Put("nothing to read\n")
 			return
 		}
-		// memory reader
-		mr := newMemReader(drv, addr, n, 32)
-		// file writer
-		fw, err := newFileWriter(name, 32)
+
+		// read from memory, write to file
+		const readSize = 1024
+		const width = 32
+		rd := newMemReader(drv, addr, n, width)
+		wr, err := newFileWriter(name, width)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("unable to open %s (%s)\n", name, err))
 			return
 		}
-		// read from memory, write to file
-		rs := &readState{
-			mr:       mr,
-			fw:       fw,
-			progress: util.NewProgress(c.User, mr.totalReads(readSize)),
+		cs := &copyState{
+			rd:       rd,
+			wr:       wr,
+			size:     readSize,
+			progress: util.NewProgress(c.User, rd.totalReads(readSize)),
 		}
 		c.User.Put(fmt.Sprintf("writing %s (ctrl-d to abort): ", name))
-		rs.progress.Update(0)
-		done := c.Loop(func() bool { return readLoop(rs) }, cli.KeycodeCtrlD)
-		rs.progress.Erase()
+		cs.progress.Update(0)
+		done := c.Loop(func() bool { return copyLoop(cs) }, cli.KeycodeCtrlD)
+		cs.progress.Erase()
 		// flush and close the output file
-		fw.Close()
+		wr.Close()
 
 		// report result
 		if !done {
 			c.User.Put("abort\n")
 			return
 		}
-		if rs.err != nil {
-			c.User.Put(fmt.Sprintf("error (%s)\n", rs.err))
+		if cs.err != nil {
+			c.User.Put(fmt.Sprintf("error (%s)\n", cs.err))
 			return
 		}
 		c.User.Put("done\n")
-	},
-}
-
-//-----------------------------------------------------------------------------
-// memory verify
-
-var helpMemVerify = []cli.Help{
-	{"<filename> <addr/name> [len]", "compare file and memory data"},
-	{"  filename", "filename (string)"},
-	{"  addr", "address (hex), default is 0"},
-	{"  name", "region name (string), see \"map\" command"},
-	{"  len", "length (hex), defaults to region size or 0x100"},
-}
-
-var cmdVerify = cli.Leaf{
-	Descr: "compare file and memory data",
-	F: func(c *cli.CLI, args []string) {
-		drv := c.User.(target).GetMemoryDriver()
-		// process the arguments
-		err := cli.CheckArgc(args, []int{2, 3})
-		if err != nil {
-			c.User.Put(fmt.Sprintf("%s\n", err))
-			return
-		}
-		name, addr, n, err := fileRegionArg(drv, args)
-		if err != nil {
-			c.User.Put(fmt.Sprintf("%s\n", err))
-			return
-		}
-		// round down address to 32-bit byte boundary
-		addr &= ^uint(3)
-		// round up n to an integral multiple of 4 bytes
-		n = (n + 3) & ^uint(3)
-		if n == 0 {
-			c.User.Put("nothing to read\n")
-			return
-		}
-
-		_ = name
-
-		c.User.Put("TODO\n")
-
 	},
 }
 
@@ -414,6 +362,55 @@ var cmdPic = cli.Leaf{
 			}
 			c.User.Put(fmt.Sprintf("%s%s\n", addrStr, string(s)))
 		}
+	},
+}
+
+//-----------------------------------------------------------------------------
+// memory region checksum
+
+var cmdCheckSum = cli.Leaf{
+	Descr: "calcuate md5 checksum of memory region",
+	F: func(c *cli.CLI, args []string) {
+		drv := c.User.(target).GetMemoryDriver()
+
+		// get the arguments
+		r, err := RegionArg(drv, args)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
+		// round down address to 32-bit byte boundary
+		addr := r.addr & ^uint(3)
+		// round up n to an integral multiple of 4 bytes
+		n := (r.size + 3) & ^uint(3)
+
+		// read from memory, write to checksum
+		const readSize = 1024
+		const width = 32
+		rd := newMemReader(drv, addr, n, width)
+		wr := newMd5Writer(width)
+		cs := &copyState{
+			rd:       rd,
+			wr:       wr,
+			size:     readSize,
+			progress: util.NewProgress(c.User, rd.totalReads(readSize)),
+		}
+		c.User.Put(fmt.Sprintf("reading memory (ctrl-d to abort): "))
+		cs.progress.Update(0)
+		done := c.Loop(func() bool { return copyLoop(cs) }, cli.KeycodeCtrlD)
+		cs.progress.Erase()
+
+		// report result
+		if !done {
+			c.User.Put("abort\n")
+			return
+		}
+		if cs.err != nil {
+			c.User.Put(fmt.Sprintf("error (%s)\n", cs.err))
+			return
+		}
+		c.User.Put("done\n")
+		c.User.Put(fmt.Sprintf("%s\n", wr))
 	},
 }
 
@@ -529,7 +526,7 @@ var Menu = cli.Menu{
 	{"ww", cmdWrite32, helpMemWrite},
 	{"wd", cmdWrite64, helpMemWrite},
 	{">file", cmdToFile, helpMemToFile},
-	{"verify", cmdVerify, helpMemVerify},
+	{"md5", cmdCheckSum, helpMemRegion},
 	{"pic", cmdPic, helpMemRegion},
 }
 
