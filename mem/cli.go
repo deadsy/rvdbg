@@ -11,7 +11,6 @@ package mem
 import (
 	"fmt"
 	"io"
-	"math"
 	"math/rand"
 	"time"
 
@@ -243,7 +242,6 @@ var cmdToFile = cli.Leaf{
 			c.User.Put("nothing to read\n")
 			return
 		}
-
 		// read from memory, write to file
 		const readSize = 1024
 		const width = 32
@@ -282,33 +280,6 @@ var cmdToFile = cli.Leaf{
 //-----------------------------------------------------------------------------
 // memory picture
 
-// analyze the buffer and return a character to represent it
-func analyze(data []uint8, ofs, n int) rune {
-	// are we off the end of the buffer?
-	if ofs >= len(data) {
-		return ' '
-	}
-	// trim the length we will check
-	if ofs+n > len(data) {
-		n = len(data) - ofs
-	}
-	var c rune
-	b0 := data[ofs]
-	if b0 == 0 {
-		c = '-'
-	} else if b0 == 0xff {
-		c = '.'
-	} else {
-		return '$'
-	}
-	for i := 0; i < n; i++ {
-		if data[ofs+i] != b0 {
-			return '$'
-		}
-	}
-	return c
-}
-
 var cmdPic = cli.Leaf{
 	Descr: "display a pictorial summary of memory",
 	F: func(c *cli.CLI, args []string) {
@@ -323,44 +294,27 @@ var cmdPic = cli.Leaf{
 		addr := r.addr & ^uint(3)
 		// round up n to an integral multiple of 4 bytes
 		n := (r.size + 3) & ^uint(3)
-		// work out how many rows, columns and bytes per symbol we should display
-		colsMax := 70
-		cols := colsMax + 1
-		bytesPerSymbol := 1
-		// we try to display a matrix that is roughly square
-		for cols > colsMax {
-			bytesPerSymbol *= 2
-			cols = int(math.Sqrt(float64(n) / float64(bytesPerSymbol)))
+		// read from memory, write to memory picture
+		const readSize = 1024
+		const width = 32
+		rd := newMemReader(drv, addr, n, width)
+		wr := newMemPicture(c.User, addr, 32, n)
+		cs := &copyState{
+			rd:   rd,
+			wr:   wr,
+			size: readSize,
 		}
-		rows := int(math.Ceil(float64(n) / (float64(cols) * float64(bytesPerSymbol))))
-		// bytes per row
-		bytesPerRow := cols * bytesPerSymbol
-		// read the memory
-		if n > 16*util.KiB {
-			c.User.Put("reading memory ...\n")
-		}
-		data32, err := drv.RdMem(32, addr, n>>2)
-		if err != nil {
-			c.User.Put(fmt.Sprintf("%s\n", err))
+		c.User.Put(fmt.Sprintf("%s\n", wr.headerString()))
+		done := c.Loop(func() bool { return copyLoop(cs) }, cli.KeycodeCtrlD)
+		wr.Close()
+		// report result
+		if !done {
+			c.User.Put("abort\n")
 			return
 		}
-		data8 := util.ConvertToUint8(32, data32)
-		// display the summary
-		c.User.Put("'.' all ones, '-' all zeroes, '$' various\n")
-		c.User.Put(fmt.Sprintf("%d (0x%x) bytes per symbol\n", bytesPerSymbol, bytesPerSymbol))
-		c.User.Put(fmt.Sprintf("%d (0x%x) bytes per row\n", bytesPerRow, bytesPerRow))
-		c.User.Put(fmt.Sprintf("%d cols x %d rows\n", cols, rows))
-		// display the matrix
-		addrFmt := fmt.Sprintf("0x%s: ", util.UintFormat(drv.GetAddressSize()))
-		var ofs int
-		for y := 0; y < rows; y++ {
-			s := []rune{}
-			addrStr := fmt.Sprintf(addrFmt, addr+uint(ofs))
-			for x := 0; x < cols; x++ {
-				s = append(s, analyze(data8, ofs, bytesPerSymbol))
-				ofs += bytesPerSymbol
-			}
-			c.User.Put(fmt.Sprintf("%s%s\n", addrStr, string(s)))
+		if cs.err != nil {
+			c.User.Put(fmt.Sprintf("error (%s)\n", cs.err))
+			return
 		}
 	},
 }

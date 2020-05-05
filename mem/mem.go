@@ -11,9 +11,11 @@ package mem
 import (
 	"bufio"
 	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"hash"
 	"io"
+	"math"
 	"os"
 	"strings"
 
@@ -99,6 +101,107 @@ func (mr *memReader) Read(buf []uint) (int, error) {
 }
 
 //-----------------------------------------------------------------------------
+// memory picture
+
+// analyze the buffer and return a character to represent it
+func analyze(data []uint8, ofs, n int) rune {
+	// are we off the end of the buffer?
+	if ofs >= len(data) {
+		return ' '
+	}
+	// trim the length we will check
+	if ofs+n > len(data) {
+		n = len(data) - ofs
+	}
+	var c rune
+	b0 := data[ofs]
+	if b0 == 0 {
+		c = '-'
+	} else if b0 == 0xff {
+		c = '.'
+	} else {
+		return '$'
+	}
+	for i := 0; i < n; i++ {
+		if data[ofs+i] != b0 {
+			return '$'
+		}
+	}
+	return c
+}
+
+type memPicture struct {
+	ui                          cli.USER // access to user interface
+	addr                        uint     // address of memory buffer
+	fmtAddr                     string   // format of address string
+	cols, rows                  int      // number of cols/rows
+	bytesPerSymbol, bytesPerRow int      // bytes per symbol/row
+	rowBuffer                   []uint8  // running buffer for row data
+}
+
+func (mp *memPicture) rowString() string {
+	s := []rune{}
+	addrStr := fmt.Sprintf(mp.fmtAddr, mp.addr)
+	for ofs := 0; ofs < mp.bytesPerRow; ofs += mp.bytesPerSymbol {
+		s = append(s, analyze(mp.rowBuffer, ofs, mp.bytesPerSymbol))
+	}
+	return fmt.Sprintf("%s %s", addrStr, string(s))
+}
+
+// headerString returns the header string for memory picture.
+func (mp *memPicture) headerString() string {
+	s := []string{}
+	s = append(s, "'.' all ones, '-' all zeroes, '$' various")
+	s = append(s, fmt.Sprintf("%d (0x%x) bytes per symbol", mp.bytesPerSymbol, mp.bytesPerSymbol))
+	s = append(s, fmt.Sprintf("%d (0x%x) bytes per row", mp.bytesPerRow, mp.bytesPerRow))
+	s = append(s, fmt.Sprintf("%d cols x %d rows", mp.cols, mp.rows))
+	return strings.Join(s, "\n")
+}
+
+const colsMax = 70
+
+func newMemPicture(ui cli.USER, addr, addrWidth, n uint) *memPicture {
+	// work out how many rows, columns and bytes per symbol we should display
+	cols := colsMax + 1
+	bytesPerSymbol := 1
+	// we try to display a matrix that is roughly square
+	for cols > colsMax {
+		bytesPerSymbol *= 2
+		cols = int(math.Sqrt(float64(n) / float64(bytesPerSymbol)))
+	}
+	rows := int(math.Ceil(float64(n) / (float64(cols) * float64(bytesPerSymbol))))
+	// bytes per row
+	bytesPerRow := cols * bytesPerSymbol
+	return &memPicture{
+		ui:             ui,
+		addr:           addr,
+		fmtAddr:        util.UintFormat(addrWidth),
+		cols:           cols,
+		rows:           rows,
+		bytesPerSymbol: bytesPerSymbol,
+		bytesPerRow:    bytesPerRow,
+	}
+}
+
+func (mp *memPicture) Write(buf []uint) (int, error) {
+	// assume the []uint buf has 32-bit values
+	mp.rowBuffer = append(mp.rowBuffer, util.ConvertToUint8(32, buf)...)
+	for len(mp.rowBuffer) > mp.bytesPerRow {
+		mp.ui.Put(fmt.Sprintf("%s\r\n", mp.rowString()))
+		mp.rowBuffer = mp.rowBuffer[mp.bytesPerRow:]
+		mp.addr += uint(mp.bytesPerRow)
+	}
+	return len(buf), nil
+}
+
+func (mp *memPicture) Close() error {
+	if len(mp.rowBuffer) != 0 {
+		mp.ui.Put(fmt.Sprintf("%s\n", mp.rowString()))
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
 // memory display
 
 const bytesPerLine = 16 // must be a power of 2
@@ -120,8 +223,8 @@ func newMemDisplay(ui cli.USER, addr, addrWidth, width uint) *memDisplay {
 	addr &= ^align
 	return &memDisplay{
 		ui:       ui,
-		fmtLine:  fmt.Sprintf("%%0%dx  %%s  %%s\r\n", [2]int{16, 8}[util.BoolToInt(addrWidth == 32)]),
-		fmtData:  fmt.Sprintf("%%0%dx", width>>2),
+		fmtLine:  fmt.Sprintf("%s  %%s  %%s\r\n", util.UintFormat(addrWidth)),
+		fmtData:  util.UintFormat(width),
 		addrMask: (1 << addrWidth) - 1,
 		addr:     addr,
 		width:    width,
@@ -282,17 +385,8 @@ func (mw *md5Writer) Write(buf []uint) (int, error) {
 	return len(buf), nil
 }
 
-func (mw *md5Writer) Sum() []byte {
-	return mw.h.Sum([]byte{})
-}
-
 func (mw *md5Writer) String() string {
-	cs := mw.Sum()
-	s := make([]string, len(cs))
-	for i, v := range cs {
-		s[i] = fmt.Sprintf("%02x", v)
-	}
-	return strings.Join(s, "")
+	return hex.EncodeToString(mw.h.Sum(nil))
 }
 
 //-----------------------------------------------------------------------------
