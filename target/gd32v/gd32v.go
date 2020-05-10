@@ -22,6 +22,7 @@ import (
 	"github.com/deadsy/rvdbg/cpu/riscv/rv13"
 	"github.com/deadsy/rvdbg/flash"
 	"github.com/deadsy/rvdbg/gpio"
+	"github.com/deadsy/rvdbg/i2c"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/mem"
@@ -56,6 +57,7 @@ var menuRoot = cli.Menu{
 	{"hart", riscv.CmdHart, riscv.HartHelp},
 	{"help", target.CmdHelp},
 	{"history", target.CmdHistory, cli.HistoryHelp},
+	{"i2c", i2c.Menu, "i2c functions"},
 	{"jtag", jtag.Menu, "jtag functions"},
 	{"map", soc.CmdMap},
 	{"mem", mem.Menu, "memory functions"},
