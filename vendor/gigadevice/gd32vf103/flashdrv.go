@@ -112,16 +112,19 @@ func (drv *FlashDriver) EraseAll() error {
 	//# halt the cpu- don't try to run while we change flash
 	//self.device.cpu.halt()
 
-	//# make sure the flash is not busy
-	//self.wait4complete()
-
-	// unlock the flash
-	err := drv.unlock()
+	// make sure the flash is not busy
+	err := drv.wait()
 	if err != nil {
 		return err
 	}
 
-	//# set the mass erase bit
+	// unlock the flash
+	err = drv.unlock()
+	if err != nil {
+		return err
+	}
+
+	// set the mass erase bit
 	err = drv.fmc.Set(drv.drv, "CTL0", ctlMER)
 	if err != nil {
 		return err
@@ -133,8 +136,11 @@ func (drv *FlashDriver) EraseAll() error {
 		return err
 	}
 
-	//# wait for completion
-	//error = self.wait4complete()
+	// wait for completion
+	err = drv.wait()
+	if err != nil {
+		return err
+	}
 
 	// clear the mass erase bit
 	err = drv.fmc.Clr(drv.drv, "CTL0", ctlMER)
@@ -150,16 +156,23 @@ func (drv *FlashDriver) EraseAll() error {
 // private functions
 
 const (
-	ctlENDIE = (1 << 12) //                           End of operation interrupt enable bit
-	ctlERRIE = (1 << 10) //                          Error interrupt enable bit
-	ctlOBWEN = (1 << 9)  //                           Option byte erase/program enable bit
-	ctlLK    = (1 << 7)  //                           FMC_CTL0 lock bit
-	ctlSTART = (1 << 6)  //                           Send erase command to FMC bit
-	ctlOBER  = (1 << 5)  //                           Option bytes erase command bit
-	ctlOBPG  = (1 << 4)  //                           Option bytes program command bit
-	ctlMER   = (1 << 2)  //                           Main flash mass erase for bank0 command bit
-	ctlPER   = (1 << 1)  //                           Main flash page erase for bank0 command bit
+	ctlENDIE = (1 << 12) // End of operation interrupt enable bit
+	ctlERRIE = (1 << 10) // Error interrupt enable bit
+	ctlOBWEN = (1 << 9)  // Option byte erase/program enable bit
+	ctlLK    = (1 << 7)  // FMC_CTL0 lock bit
+	ctlSTART = (1 << 6)  // Send erase command to FMC bit
+	ctlOBER  = (1 << 5)  // Option bytes erase command bit
+	ctlOBPG  = (1 << 4)  // Option bytes program command bit
+	ctlMER   = (1 << 2)  // Main flash mass erase for bank0 command bit
+	ctlPER   = (1 << 1)  // Main flash page erase for bank0 command bit
 	ctlPG    = (1 << 0)  // Main flash program for bank0 command bit
+)
+
+const (
+	statENDF  = (1 << 5) // End of operation flag bit
+	statWPERR = (1 << 4) // Erase/Program protection error flag bit
+	statPGERR = (1 << 2) // Program error flag bit
+	statBUSY  = (1 << 0) // The flash is busy bit
 )
 
 // unlock the flash
@@ -191,6 +204,45 @@ func (drv *FlashDriver) unlock() error {
 
 func (drv *FlashDriver) lock() error {
 	return drv.fmc.Set(drv.drv, "CTL0", ctlLK)
+}
+
+// wait for flash operation completion
+func (drv *FlashDriver) wait() error {
+	const pollMax = 5
+	const pollTime = 100 * time.Millisecond
+	var stat uint
+	var err error
+	i := 0
+	for i = 0; i < pollMax; i++ {
+		stat, err = drv.fmc.Rd(drv.drv, "STAT0")
+		if err != nil {
+			return err
+		}
+		if stat&statBUSY == 0 {
+			break
+		}
+		time.Sleep(pollTime)
+	}
+	// clear status bits
+	err = drv.fmc.Wr(drv.drv, "STAT0", statENDF|statWPERR|statPGERR)
+	if err != nil {
+		return err
+	}
+	// check for errors
+	if i >= pollMax {
+		return errors.New("timeout")
+	}
+	return checkErrors(stat)
+}
+
+func checkErrors(stat uint) error {
+	if stat&statWPERR != 0 {
+		return errors.New("write protect error")
+	}
+	if stat&statPGERR != 0 {
+		return errors.New("programming error")
+	}
+	return nil
 }
 
 /*
