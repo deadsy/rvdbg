@@ -48,7 +48,7 @@ var CmdCSR = cli.Leaf{
 
 		csr, drv := c.User.(target).GetCSR()
 
-		p := csr.GetPeripheral("CSR")
+		p, _ := csr.GetPeripheral("CSR")
 
 		if len(args) == 0 {
 			c.User.Put(fmt.Sprintf("%s\n", p.Display(drv, nil, false)))
@@ -60,8 +60,8 @@ var CmdCSR = cli.Leaf{
 			return
 		}
 
-		r := p.GetRegister(args[0])
-		if r == nil {
+		r, err := p.GetRegister(args[0])
+		if err != nil {
 			c.User.Put(fmt.Sprintf("no register \"%s\" (run \"csr\" for the names)\n", args[0]))
 			return
 		}

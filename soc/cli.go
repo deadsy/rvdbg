@@ -75,8 +75,8 @@ var CmdRegs = cli.Leaf{
 
 		dev, drv := c.User.(target).GetSoC()
 
-		p := dev.GetPeripheral(args[0])
-		if p == nil {
+		p, err := dev.GetPeripheral(args[0])
+		if err != nil {
 			c.User.Put(fmt.Sprintf("no peripheral named \"%s\" (run \"map\" for the names)\n", args[0]))
 			return
 		}
@@ -95,8 +95,8 @@ var CmdRegs = cli.Leaf{
 			return
 		}
 
-		r := p.GetRegister(args[1])
-		if r == nil {
+		r, err := p.GetRegister(args[1])
+		if err != nil {
 			c.User.Put(fmt.Sprintf("no register \"%s\" (run \"regs %s\" for the names) ", args[1], args[0]))
 			return
 		}

@@ -42,11 +42,11 @@ func (m *memDriver) GetDefaultRegion() *mem.Region {
 
 // LookupSymbol returns an address and size for a symbol.
 func (m *memDriver) LookupSymbol(name string) *mem.Region {
-	p := m.dev.GetPeripheral(name)
-	if p != nil {
-		return mem.NewRegion(name, p.Addr, p.Size, nil)
+	p, err := m.dev.GetPeripheral(name)
+	if err != nil {
+		return nil
 	}
-	return nil
+	return mem.NewRegion(name, p.Addr, p.Size, nil)
 }
 
 // RdMem reads n x width-bit values from memory.

@@ -219,6 +219,18 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 	socDevice := gd32vf103.NewSoC(gd32vf103.VB).Setup()
 	socDriver := newSocDriver(rvDebug)
 
+	// gpio driver
+	gpioDriver, err := gd32vf103.NewGpioDriver(socDriver, socDevice, gpioNames)
+	if err != nil {
+		return nil, err
+	}
+
+	// flash driver
+	flashDriver, err := gd32vf103.NewFlashDriver(socDriver, socDevice)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Target{
 		jtagDevice:  jtagDevice,
 		rvDebug:     rvDebug,
@@ -226,10 +238,9 @@ func New(jtagDriver jtag.Driver) (target.Target, error) {
 		socDriver:   socDriver,
 		memDriver:   newMemDriver(rvDebug, socDevice),
 		csrDriver:   newCsrDriver(rvDebug),
-		gpioDriver:  gd32vf103.NewGpioDriver(socDriver, socDevice, gpioNames),
-		flashDriver: gd32vf103.NewFlashDriver(socDriver, socDevice),
+		gpioDriver:  gpioDriver,
+		flashDriver: flashDriver,
 	}, nil
-
 }
 
 //-----------------------------------------------------------------------------

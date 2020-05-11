@@ -344,7 +344,7 @@ func (drv *dbusDriver) Wr(width, addr, val uint) error {
 }
 
 func (dbg *Debug) dbusDump() (string, error) {
-	p := dbg.dbusDevice.GetPeripheral("DBUS")
+	p, _ := dbg.dbusDevice.GetPeripheral("DBUS")
 	drv := &dbusDriver{dbg}
 	return p.Display(drv, nil, true), nil
 }

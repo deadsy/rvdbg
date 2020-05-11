@@ -32,13 +32,13 @@ type GpioDriver struct {
 }
 
 // NewGpioDriver retuns a new GPIO driver for the gd32vf103.
-func NewGpioDriver(drv soc.Driver, dev *soc.Device, names map[string]string) *GpioDriver {
+func NewGpioDriver(drv soc.Driver, dev *soc.Device, names map[string]string) (*GpioDriver, error) {
 	return &GpioDriver{
 		names: names,
 		cache: make(map[string]string),
 		drv:   drv,
 		dev:   dev,
-	}
+	}, nil
 }
 
 // targetName returns a taget specific name for the GPIO pin name.
@@ -68,35 +68,36 @@ func (drv *GpioDriver) Status() string {
 	for i := 0; i < 8; i++ {
 		port := fmt.Sprintf("GPIO%c", 'A'+i)
 
-		if drv.dev.GetPeripheral(port) == nil {
+		gpio, err := drv.dev.GetPeripheral(port)
+		if err != nil {
 			continue
 		}
 
-		ctl0, err := drv.dev.RdPeripheralRegister(drv.drv, port, "CTL0")
+		ctl0, err := gpio.Rd(drv.drv, "CTL0")
 		if err != nil {
 			s = append(s, []string{"", "", "", fmt.Sprintf("could not read %s.CTL0: %s", port, err)})
 			continue
 		}
 
-		ctl1, err := drv.dev.RdPeripheralRegister(drv.drv, port, "CTL1")
+		ctl1, err := gpio.Rd(drv.drv, "CTL1")
 		if err != nil {
 			s = append(s, []string{"", "", "", fmt.Sprintf("could not read %s.CTL1: %s", port, err)})
 			continue
 		}
 
-		istat, err := drv.dev.RdPeripheralRegister(drv.drv, port, "ISTAT")
+		istat, err := gpio.Rd(drv.drv, "ISTAT")
 		if err != nil {
 			s = append(s, []string{"", "", "", fmt.Sprintf("could not read %s.ISTAT: %s", port, err)})
 			continue
 		}
 
-		octl, err := drv.dev.RdPeripheralRegister(drv.drv, port, "OCTL")
+		octl, err := gpio.Rd(drv.drv, "OCTL")
 		if err != nil {
 			s = append(s, []string{"", "", "", fmt.Sprintf("could not read %s.OCTL: %s", port, err)})
 			continue
 		}
 
-		lock, err := drv.dev.RdPeripheralRegister(drv.drv, port, "LOCK")
+		lock, err := gpio.Rd(drv.drv, "LOCK")
 		if err != nil {
 			s = append(s, []string{"", "", "", fmt.Sprintf("could not read %s.LOCK: %s", port, err)})
 			continue
@@ -191,9 +192,12 @@ func (drv *GpioDriver) Pin(name string) (string, uint, error) {
 		return "", 0, fmt.Errorf("pin name \"%s\" has the wrong length", name)
 	}
 	port := fmt.Sprintf("GPIO%s", name[1:2])
-	if drv.dev.GetPeripheral(port) == nil {
-		return "", 0, fmt.Errorf("no port \"%s\" on this device", port)
+
+	_, err := drv.dev.GetPeripheral(port)
+	if err != nil {
+		return "", 0, err
 	}
+
 	bit, err := strconv.ParseUint(name[2:], 10, 8)
 	if err != nil {
 		return "", 0, fmt.Errorf("could not parse gpio bit in \"%s\"", name)

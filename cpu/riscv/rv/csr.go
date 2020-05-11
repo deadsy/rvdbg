@@ -381,13 +381,13 @@ func (hi *HartInfo) NewCsr() *soc.Device {
 
 	// modifications decodes for RV64
 	if hi.MXLEN == 64 {
-		p := csr.GetPeripheral("CSR")
+		p, _ := csr.GetPeripheral("CSR")
 		// mstatus
-		r := p.GetRegister("mstatus")
+		r, _ := p.GetRegister("mstatus")
 		r.Fields = append(r.Fields, soc.Field{Name: "sxl", Msb: 35, Lsb: 34, Fmt: fmtMXL})
 		r.Fields = append(r.Fields, soc.Field{Name: "uxl", Msb: 33, Lsb: 32, Fmt: fmtMXL})
 		// sstatus
-		r = p.GetRegister("sstatus")
+		r, _ = p.GetRegister("sstatus")
 		r.Fields = append(r.Fields, soc.Field{Name: "uxl", Msb: 33, Lsb: 32, Fmt: fmtMXL})
 		// delete RV32 only registers
 		p.RemoveRegister("mcycleh")

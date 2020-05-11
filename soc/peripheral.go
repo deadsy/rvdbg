@@ -9,6 +9,8 @@ Peripherals
 package soc
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	cli "github.com/deadsy/go-cli"
@@ -46,17 +48,17 @@ func (a PeripheralSet) Less(i, j int) bool {
 //-----------------------------------------------------------------------------
 
 // GetRegister returns the named register if it exists.
-func (p *Peripheral) GetRegister(name string) *Register {
+func (p *Peripheral) GetRegister(name string) (*Register, error) {
 	if p == nil {
-		return nil
+		return nil, errors.New("nil peripheral")
 	}
 	for i := range p.Registers {
 		r := &p.Registers[i]
 		if r.Name == name {
-			return r
+			return r, nil
 		}
 	}
-	return nil
+	return nil, fmt.Errorf("register \"%s\" not found", name)
 }
 
 // RemoveRegister ignores a register within the peripheral.
@@ -71,6 +73,49 @@ func (p *Peripheral) RemoveRegister(name string) {
 			return
 		}
 	}
+}
+
+// Wr writes a register within a peripheral.
+func (p *Peripheral) Wr(drv Driver, rname string, val uint) error {
+	r, err := p.GetRegister(rname)
+	if err != nil {
+		return err
+	}
+	return r.Wr(drv, 0, val)
+}
+
+// Rd reads a register within a peripheral.
+func (p *Peripheral) Rd(drv Driver, rname string) (uint, error) {
+	r, err := p.GetRegister(rname)
+	if err != nil {
+		return 0, err
+	}
+	return r.Rd(drv, 0)
+}
+
+// Rmw read/modify/writes a register within a peripheral.
+func (p *Peripheral) Rmw(drv Driver, rname string, setbits, clrbits uint) error {
+	r, err := p.GetRegister(rname)
+	if err != nil {
+		return err
+	}
+	val, err := r.Rd(drv, 0)
+	if err != nil {
+		return err
+	}
+	val |= setbits
+	val &= ^clrbits
+	return r.Wr(drv, 0, val)
+}
+
+// Set bits for a register within a peripheral.
+func (p *Peripheral) Set(drv Driver, rname string, bits uint) error {
+	return p.Rmw(drv, rname, bits, 0)
+}
+
+// Clr bits for a register within a peripheral.
+func (p *Peripheral) Clr(drv Driver, rname string, bits uint) error {
+	return p.Rmw(drv, rname, 0, bits)
 }
 
 // Display returns a string for the decoded registers of the peripheral.
