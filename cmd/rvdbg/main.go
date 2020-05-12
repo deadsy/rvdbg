@@ -16,6 +16,7 @@ import (
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/target"
+	"github.com/deadsy/rvdbg/target/aphx"
 	"github.com/deadsy/rvdbg/target/gd32v"
 	"github.com/deadsy/rvdbg/target/maixgo"
 	"github.com/deadsy/rvdbg/target/redv"
@@ -42,6 +43,8 @@ func run(info *target.Info) error {
 	// create the target
 	var tgt target.Target
 	switch info.Name {
+	case "aphx":
+		tgt, err = aphx.New(jtagDriver)
 	case "wap":
 		tgt, err = wap.New(jtagDriver)
 	case "maixgo":
@@ -77,10 +80,11 @@ func run(info *target.Info) error {
 //-----------------------------------------------------------------------------
 
 func addTargets() {
+	target.Add(&aphx.Info)
 	target.Add(&gd32v.Info)
-	target.Add(&wap.Info)
 	target.Add(&maixgo.Info)
 	target.Add(&redv.Info)
+	target.Add(&wap.Info)
 }
 
 //-----------------------------------------------------------------------------

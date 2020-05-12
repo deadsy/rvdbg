@@ -132,7 +132,10 @@ ir 31 drlen 1 # bypass
 
 */
 
-var ChainInfo = []jtag.DeviceInfo{
+// CoreIndex is the index of the ARM core on the JTAG chain.
+const CoreIndex = 0
+
+var Chain = []jtag.DeviceInfo{
 	// irlen, idcode, name
 	{4, jtag.IDCode(0x5ba00477), "bcm49408.arm0"}, // ARM core
 	{4, jtag.IDCode(0x4ba00477), "bcm49408.arm1"}, // ARM core
