@@ -54,6 +54,149 @@ func flashSectors(dev *soc.Device) []*mem.Region {
 
 //-----------------------------------------------------------------------------
 
+// control register bits
+const (
+	ctlENDIE = (1 << 12) // End of operation interrupt enable bit
+	ctlERRIE = (1 << 10) // Error interrupt enable bit
+	ctlOBWEN = (1 << 9)  // Option byte erase/program enable bit
+	ctlLK    = (1 << 7)  // FMC_CTL0 lock bit
+	ctlSTART = (1 << 6)  // Send erase command to FMC bit
+	ctlOBER  = (1 << 5)  // Option bytes erase command bit
+	ctlOBPG  = (1 << 4)  // Option bytes program command bit
+	ctlMER   = (1 << 2)  // Main flash mass erase for bank0 command bit
+	ctlPER   = (1 << 1)  // Main flash page erase for bank0 command bit
+	ctlPG    = (1 << 0)  // Main flash program for bank0 command bit
+)
+
+// status register bits
+const (
+	statENDF  = (1 << 5) // End of operation flag bit
+	statWPERR = (1 << 4) // Erase/Program protection error flag bit
+	statPGERR = (1 << 2) // Program error flag bit
+	statBUSY  = (1 << 0) // The flash is busy bit
+)
+
+func (drv *FlashDriver) wrCtl(val uint) error {
+	return drv.fmc.Wr(drv.drv, "CTL0", val)
+}
+
+func (drv *FlashDriver) rdCtl() (uint, error) {
+	return drv.fmc.Rd(drv.drv, "CTL0")
+}
+
+func (drv *FlashDriver) setCtl(bits uint) error {
+	return drv.fmc.Set(drv.drv, "CTL0", bits)
+}
+
+func (drv *FlashDriver) clrCtl(bits uint) error {
+	return drv.fmc.Clr(drv.drv, "CTL0", bits)
+}
+
+func (drv *FlashDriver) wrKey(val uint) error {
+	return drv.fmc.Wr(drv.drv, "KEY0", val)
+}
+
+func (drv *FlashDriver) wrStat(val uint) error {
+	return drv.fmc.Wr(drv.drv, "STAT0", val)
+}
+
+func (drv *FlashDriver) rdStat() (uint, error) {
+	return drv.fmc.Rd(drv.drv, "STAT0")
+}
+
+func (drv *FlashDriver) wrAddr(val uint) error {
+	return drv.fmc.Wr(drv.drv, "ADDR0", val)
+}
+
+/*
+
+WS     : 40022000[31:0] = 0x00000030 wait state counter register
+KEY0   : 40022004[31:0] = 0          Unlock key register 0
+OBKEY  : 40022008[31:0] = 0          Option byte unlock key register
+STAT0  : 4002200c[31:0] = 0          Status register 0
+CTL0   : 40022010[31:0] = 0x00000080 Control register 0
+ADDR0  : 40022014[31:0] = 0          Address register 0
+OBSTAT : 4002201c[31:0] = 0x03fffffc Option byte status register
+WP     : 40022020[31:0] = 0xffffffff Erase/Program Protection register
+PID    : 40022100[31:0] = 0x4a425633 Product ID register
+
+*/
+
+//-----------------------------------------------------------------------------
+
+// unlock the flash
+func (drv *FlashDriver) unlock() error {
+	ctl, err := drv.rdCtl()
+	if err != nil {
+		return err
+	}
+	if ctl&ctlLK == 0 {
+		// already unlocked
+		return nil
+	}
+	// write the unlock sequence
+	err = drv.wrKey(0x45670123)
+	if err != nil {
+		return err
+	}
+	err = drv.wrKey(0xCDEF89AB)
+	if err != nil {
+		return err
+	}
+	// clear any set CR bits
+	err = drv.wrCtl(0)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// lock the flash
+func (drv *FlashDriver) lock() error {
+	return drv.setCtl(ctlLK)
+}
+
+// wait for flash operation completion
+func (drv *FlashDriver) wait() error {
+	const pollMax = 5
+	const pollTime = 100 * time.Millisecond
+	var stat uint
+	var err error
+	i := 0
+	for i = 0; i < pollMax; i++ {
+		stat, err = drv.rdStat()
+		if err != nil {
+			return err
+		}
+		if stat&statBUSY == 0 {
+			break
+		}
+		time.Sleep(pollTime)
+	}
+	// clear status bits
+	err = drv.wrStat(statENDF | statWPERR | statPGERR)
+	if err != nil {
+		return err
+	}
+	// check for errors
+	if i >= pollMax {
+		return errors.New("timeout")
+	}
+	return checkErrors(stat)
+}
+
+func checkErrors(stat uint) error {
+	if stat&statWPERR != 0 {
+		return errors.New("write protect error")
+	}
+	if stat&statPGERR != 0 {
+		return errors.New("programming error")
+	}
+	return nil
+}
+
+//-----------------------------------------------------------------------------
+
 // FlashDriver is a flash driver for the gd32vf103.
 type FlashDriver struct {
 	drv     soc.Driver
@@ -95,168 +238,110 @@ func (drv *FlashDriver) LookupSymbol(name string) *mem.Region {
 	return mem.NewRegion(name, p.Addr, p.Size, nil)
 }
 
-// GetSectors returns the flash sector memory regions for the gd32vf103.
+// GetSectors returns the flash memory regions.
 func (drv *FlashDriver) GetSectors() []*mem.Region {
 	return drv.sectors
 }
 
-// Erase erases a flash sector.
+// Erase erases a flash region.
 func (drv *FlashDriver) Erase(r *mem.Region) error {
-	time.Sleep(100 * time.Millisecond)
-	return errors.New("TODO")
-}
-
-// EraseAll erases all of the device flash.
-func (drv *FlashDriver) EraseAll() error {
-
-	//# halt the cpu- don't try to run while we change flash
-	//self.device.cpu.halt()
-
 	// make sure the flash is not busy
 	err := drv.wait()
 	if err != nil {
 		return err
 	}
-
 	// unlock the flash
 	err = drv.unlock()
 	if err != nil {
 		return err
 	}
-
-	// set the mass erase bit
-	err = drv.fmc.Set(drv.drv, "CTL0", ctlMER)
+	// set the page erase bit
+	err = drv.setCtl(ctlPER)
 	if err != nil {
 		return err
 	}
-
+	// set the page address
+	err = drv.wrAddr(r.GetAddr())
+	if err != nil {
+		return err
+	}
 	// set the start bit
-	err = drv.fmc.Set(drv.drv, "CTL0", ctlSTART)
+	err = drv.setCtl(ctlSTART)
 	if err != nil {
 		return err
 	}
-
 	// wait for completion
 	err = drv.wait()
 	if err != nil {
 		return err
 	}
-
-	// clear the mass erase bit
-	err = drv.fmc.Clr(drv.drv, "CTL0", ctlMER)
+	// clear the page erase bit
+	err = drv.clrCtl(ctlPER)
 	if err != nil {
 		return err
 	}
-
 	// lock the flash
 	return drv.lock()
 }
 
-//-----------------------------------------------------------------------------
-// private functions
-
-const (
-	ctlENDIE = (1 << 12) // End of operation interrupt enable bit
-	ctlERRIE = (1 << 10) // Error interrupt enable bit
-	ctlOBWEN = (1 << 9)  // Option byte erase/program enable bit
-	ctlLK    = (1 << 7)  // FMC_CTL0 lock bit
-	ctlSTART = (1 << 6)  // Send erase command to FMC bit
-	ctlOBER  = (1 << 5)  // Option bytes erase command bit
-	ctlOBPG  = (1 << 4)  // Option bytes program command bit
-	ctlMER   = (1 << 2)  // Main flash mass erase for bank0 command bit
-	ctlPER   = (1 << 1)  // Main flash page erase for bank0 command bit
-	ctlPG    = (1 << 0)  // Main flash program for bank0 command bit
-)
-
-const (
-	statENDF  = (1 << 5) // End of operation flag bit
-	statWPERR = (1 << 4) // Erase/Program protection error flag bit
-	statPGERR = (1 << 2) // Program error flag bit
-	statBUSY  = (1 << 0) // The flash is busy bit
-)
-
-// unlock the flash
-func (drv *FlashDriver) unlock() error {
-	ctl, err := drv.fmc.Rd(drv.drv, "CTL0")
+// EraseAll erases all of the device flash.
+func (drv *FlashDriver) EraseAll() error {
+	// make sure the flash is not busy
+	err := drv.wait()
 	if err != nil {
 		return err
 	}
-	if ctl&ctlLK == 0 {
-		// already unlocked
-		return nil
-	}
-	// write the unlock sequence
-	err = drv.fmc.Wr(drv.drv, "KEY0", 0x45670123)
+	// unlock the flash
+	err = drv.unlock()
 	if err != nil {
 		return err
 	}
-	err = drv.fmc.Wr(drv.drv, "KEY0", 0xCDEF89AB)
+	// set the mass erase bit
+	err = drv.setCtl(ctlMER)
 	if err != nil {
 		return err
 	}
-	// clear any set CR bits
-	err = drv.fmc.Wr(drv.drv, "CTL0", 0)
+	// set the start bit
+	err = drv.setCtl(ctlSTART)
 	if err != nil {
 		return err
 	}
-	return nil
+	// wait for completion
+	err = drv.wait()
+	if err != nil {
+		return err
+	}
+	// clear the mass erase bit
+	err = drv.clrCtl(ctlMER)
+	if err != nil {
+		return err
+	}
+	// lock the flash
+	return drv.lock()
 }
 
-func (drv *FlashDriver) lock() error {
-	return drv.fmc.Set(drv.drv, "CTL0", ctlLK)
-}
-
-// wait for flash operation completion
-func (drv *FlashDriver) wait() error {
-	const pollMax = 5
-	const pollTime = 100 * time.Millisecond
-	var stat uint
-	var err error
-	i := 0
-	for i = 0; i < pollMax; i++ {
-		stat, err = drv.fmc.Rd(drv.drv, "STAT0")
-		if err != nil {
-			return err
-		}
-		if stat&statBUSY == 0 {
-			break
-		}
-		time.Sleep(pollTime)
+// Write a flash region.
+func (drv *FlashDriver) Write(r *mem.Region, buf []byte) (int, error) {
+	// convert the input buffer to 32-bit values
+	if len(buf)&3 != 0 {
+		return 0, errors.New("len(buf) must be a multiple of 4 bytes")
 	}
-	// clear status bits
-	err = drv.fmc.Wr(drv.drv, "STAT0", statENDF|statWPERR|statPGERR)
+	buf32 := make([]uint, len(buf)>>2)
+	util.ConvertFromUint8(32, buf, buf32)
+
+	// make sure the flash is not busy
+	err := drv.wait()
 	if err != nil {
-		return err
+		return 0, err
 	}
-	// check for errors
-	if i >= pollMax {
-		return errors.New("timeout")
+	// unlock the flash
+	err = drv.unlock()
+	if err != nil {
+		return 0, err
 	}
-	return checkErrors(stat)
+
+	// lock the flash
+	return len(buf), drv.lock()
 }
-
-func checkErrors(stat uint) error {
-	if stat&statWPERR != 0 {
-		return errors.New("write protect error")
-	}
-	if stat&statPGERR != 0 {
-		return errors.New("programming error")
-	}
-	return nil
-}
-
-/*
-
-WS     : 40022000[31:0] = 0x00000030 wait state counter register
-KEY0   : 40022004[31:0] = 0          Unlock key register 0
-OBKEY  : 40022008[31:0] = 0          Option byte unlock key register
-STAT0  : 4002200c[31:0] = 0          Status register 0
-CTL0   : 40022010[31:0] = 0x00000080 Control register 0
-ADDR0  : 40022014[31:0] = 0          Address register 0
-OBSTAT : 4002201c[31:0] = 0x03fffffc Option byte status register
-WP     : 40022020[31:0] = 0xffffffff Erase/Program Protection register
-PID    : 40022100[31:0] = 0x4a425633 Product ID register
-
-*/
 
 //-----------------------------------------------------------------------------

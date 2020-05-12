@@ -351,7 +351,7 @@ func (fr *fileReader) Read(buf []uint) (int, error) {
 	buf = buf[0 : n>>fr.shift]
 	fbuf = fbuf[0 : (n>>fr.shift)<<fr.shift]
 	// convert the file buffer
-	util.ConvertToUint(fr.width, fbuf, buf)
+	util.ConvertFromUint8(fr.width, fbuf, buf)
 	return len(buf), err
 }
 

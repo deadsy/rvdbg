@@ -131,9 +131,10 @@ func Convert32to64(x []uint32) []uint64 {
 //-----------------------------------------------------------------------------
 
 func ConvertToUint8(width uint, buf []uint) []uint8 {
+	var out []uint8
 	switch width {
 	case 64:
-		out := make([]uint8, len(buf)*8)
+		out = make([]uint8, len(buf)*8)
 		for i := range buf {
 			out[(8*i)+0] = uint8(buf[i] >> 0)
 			out[(8*i)+1] = uint8(buf[i] >> 8)
@@ -144,56 +145,49 @@ func ConvertToUint8(width uint, buf []uint) []uint8 {
 			out[(8*i)+6] = uint8(buf[i] >> 48)
 			out[(8*i)+7] = uint8(buf[i] >> 56)
 		}
-		return out
 	case 32:
-		out := make([]uint8, len(buf)*4)
+		out = make([]uint8, len(buf)*4)
 		for i := range buf {
 			out[(4*i)+0] = uint8(buf[i] >> 0)
 			out[(4*i)+1] = uint8(buf[i] >> 8)
 			out[(4*i)+2] = uint8(buf[i] >> 16)
 			out[(4*i)+3] = uint8(buf[i] >> 24)
 		}
-		return out
 	case 16:
-		out := make([]uint8, len(buf)*2)
+		out = make([]uint8, len(buf)*2)
 		for i := range buf {
 			out[(2*i)+0] = uint8(buf[i] >> 0)
 			out[(2*i)+1] = uint8(buf[i] >> 8)
 		}
-		return out
 	case 8:
-		out := make([]uint8, len(buf))
+		out = make([]uint8, len(buf))
 		for i := range buf {
 			out[i] = uint8(buf[i])
 		}
-		return out
+	default:
+		panic(fmt.Sprintf("%d-bit to uint8 conversion not supported", width))
 	}
-	panic(fmt.Sprintf("%d-bit to uint8 conversion not supported", width))
-	return nil
+	return out
 }
 
 //-----------------------------------------------------------------------------
 
-// ConvertToUint converts a uint8 buffer to a uint buffer with width-bit data values.
-func ConvertToUint(width uint, in []uint8, out []uint) {
+// ConvertFromUint8 converts a uint8 buffer to a uint buffer with width-bit data values.
+func ConvertFromUint8(width uint, in []uint8, out []uint) {
 	switch width {
 	case 64:
-		out := make([]uint, len(in)>>3)
 		for i := range out {
 			out[i] = uint(binary.LittleEndian.Uint64(in[i<<3:]))
 		}
 	case 32:
-		out := make([]uint, len(in)>>2)
 		for i := range out {
 			out[i] = uint(binary.LittleEndian.Uint32(in[i<<2:]))
 		}
 	case 16:
-		out := make([]uint, len(in)>>1)
 		for i := range out {
 			out[i] = uint(binary.LittleEndian.Uint16(in[i<<1:]))
 		}
 	case 8:
-		out := make([]uint, len(in))
 		for i := range out {
 			out[i] = uint(in[i])
 		}

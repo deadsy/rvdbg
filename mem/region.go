@@ -75,6 +75,11 @@ func (r *Region) SetSize(size uint) {
 	r.end = r.addr + r.size - 1
 }
 
+// GetAddr gets the region start address.
+func (r *Region) GetAddr() uint {
+	return r.addr
+}
+
 // Overlaps returns true if the regions overlap.
 func (r *Region) Overlaps(x *Region) bool {
 	return max(r.addr, x.addr) <= min(r.end, x.end)
