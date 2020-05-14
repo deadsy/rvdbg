@@ -321,27 +321,57 @@ func (drv *FlashDriver) EraseAll() error {
 }
 
 // Write a flash region.
-func (drv *FlashDriver) Write(r *mem.Region, buf []byte) (int, error) {
-	// convert the input buffer to 32-bit values
+func (drv *FlashDriver) Write(r *mem.Region, buf []byte) error {
+	// check arguments
 	if len(buf)&3 != 0 {
-		return 0, errors.New("len(buf) must be a multiple of 4 bytes")
+		return errors.New("write buffer must be a multiple of 4 bytes")
 	}
-	buf32 := make([]uint, len(buf)>>2)
-	util.ConvertFromUint8(32, buf, buf32)
+	if r.GetSize()&3 != 0 {
+		return errors.New("flash region must be a multiple of 4 bytes")
+	}
+	if int(r.GetSize()) < len(buf) {
+		return errors.New("flash region size is smaller than the write buffer")
+	}
 
 	// make sure the flash is not busy
 	err := drv.wait()
 	if err != nil {
-		return 0, err
+		return err
 	}
+
 	// unlock the flash
 	err = drv.unlock()
 	if err != nil {
-		return 0, err
+		return err
+	}
+
+	// convert the write buffer to 32-bit values
+	buf32 := make([]uint, len(buf)>>2)
+	util.ConvertFromUint8(32, buf, buf32)
+
+	// write to flash
+	addr := r.GetAddr()
+	for i := 0; i < len(buf32); i++ {
+		// set the program bit
+		err = drv.setCtl(ctlPG)
+		if err != nil {
+			return err
+		}
+		// write to flash
+		err = drv.drv.Wr(32, addr, buf32[i])
+		if err != nil {
+			return err
+		}
+		addr += 4
+		// wait for completion
+		err := drv.wait()
+		if err != nil {
+			return err
+		}
 	}
 
 	// lock the flash
-	return len(buf), drv.lock()
+	return drv.lock()
 }
 
 //-----------------------------------------------------------------------------

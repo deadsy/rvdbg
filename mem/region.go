@@ -69,15 +69,20 @@ func (r *Region) SetAddrSize(bits uint) {
 	r.addrSize = bits
 }
 
+// GetAddr gets the region start address.
+func (r *Region) GetAddr() uint {
+	return r.addr
+}
+
 // SetSize sets the region size in bytes.
 func (r *Region) SetSize(size uint) {
 	r.size = size
 	r.end = r.addr + r.size - 1
 }
 
-// GetAddr gets the region start address.
-func (r *Region) GetAddr() uint {
-	return r.addr
+// GetSize gets the region size in bytes.
+func (r *Region) GetSize() uint {
+	return r.size
 }
 
 // Overlaps returns true if the regions overlap.

@@ -20,13 +20,13 @@ import (
 
 // Driver is the Flash driver api.
 type Driver interface {
-	GetDefaultRegion() *mem.Region                // get a default region
-	GetAddressSize() uint                         // get address size in bits
-	LookupSymbol(name string) *mem.Region         // lookup a symbol
-	GetSectors() []*mem.Region                    // return the set of flash regions
-	Erase(r *mem.Region) error                    // erase a flash region
-	EraseAll() error                              // erase all of the flash
-	Write(r *mem.Region, buf []byte) (int, error) // write a flash region
+	GetDefaultRegion() *mem.Region         // get a default region
+	GetAddressSize() uint                  // get address size in bits
+	LookupSymbol(name string) *mem.Region  // lookup a symbol
+	GetSectors() []*mem.Region             // return the set of flash regions
+	Erase(r *mem.Region) error             // erase a flash region
+	EraseAll() error                       // erase all of the flash
+	Write(r *mem.Region, buf []byte) error // write a flash region
 }
 
 // target provides a method for getting the Flash driver.
