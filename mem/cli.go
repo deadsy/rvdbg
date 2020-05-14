@@ -71,8 +71,8 @@ func display(c *cli.CLI, args []string, width uint) {
 	}
 	// read from memory, write to the display
 	cs := &copyState{
-		rd:   newMemReader(drv, r.addr, r.size, width),
-		wr:   newMemDisplay(c.User, r.addr, drv.GetAddressSize(), width),
+		rd:   newMemReader(drv, r.Addr, r.Size, width),
+		wr:   newMemDisplay(c.User, r.Addr, drv.GetAddressSize(), width),
 		size: 16,
 	}
 	c.Loop(func() bool { return copyLoop(cs) }, cli.KeycodeCtrlD)
@@ -203,49 +203,33 @@ var helpMemToFile = []cli.Help{
 	{"  len", "length (hex), defaults to region size or 0x100"},
 }
 
-// fileRegionArg converts filename and memory region arguments to a (name, addr, n) tuple.
-func fileRegionArg(drv Driver, args []string) (string, uint, uint, error) {
-	err := cli.CheckArgc(args, []int{1, 2, 3})
-	if err != nil {
-		return "", 0, 0, err
-	}
-	// args[0] is the filename
-	name := args[0]
-	// the remaining arguments define the memory region
-	r, err := RegionArg(drv, args[1:])
-	if err != nil {
-		return "", 0, 0, err
-	}
-	return name, r.addr, r.size, nil
-}
-
 var cmdToFile = cli.Leaf{
 	Descr: "read from memory, write to file",
 	F: func(c *cli.CLI, args []string) {
 		drv := c.User.(target).GetMemoryDriver()
+
 		// process the arguments
 		err := cli.CheckArgc(args, []int{2, 3})
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
 		}
-		name, addr, n, err := fileRegionArg(drv, args)
+		name, region, err := FileRegionArg(drv, args)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
 		}
-		// round down address to 32-bit byte boundary
-		addr &= ^uint(3)
-		// round up n to an integral multiple of 4 bytes
-		n = (n + 3) & ^uint(3)
-		if n == 0 {
+		if region.Size == 0 {
 			c.User.Put("nothing to read\n")
 			return
 		}
+		// work with 32-bit alignment
+		region.Align32()
+
 		// read from memory, write to file
 		const readSize = 1024
 		const width = 32
-		rd := newMemReader(drv, addr, n, width)
+		rd := newMemReader(drv, region.Addr, region.Size, width)
 		wr, err := newFileWriter(name, width)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("unable to open %s (%s)\n", name, err))
@@ -284,21 +268,25 @@ var cmdPic = cli.Leaf{
 	Descr: "display a pictorial summary of memory",
 	F: func(c *cli.CLI, args []string) {
 		drv := c.User.(target).GetMemoryDriver()
+
 		// get the arguments
-		r, err := RegionArg(drv, args)
+		region, err := RegionArg(drv, args)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
 		}
-		// round down address to 32-bit byte boundary
-		addr := r.addr & ^uint(3)
-		// round up n to an integral multiple of 4 bytes
-		n := (r.size + 3) & ^uint(3)
+		if region.Size == 0 {
+			c.User.Put("nothing to read\n")
+			return
+		}
+		// work with 32-bit alignment
+		region.Align32()
+
 		// read from memory, write to memory picture
 		const readSize = 1024
 		const width = 32
-		rd := newMemReader(drv, addr, n, width)
-		wr := newMemPicture(c.User, addr, 32, n)
+		rd := newMemReader(drv, region.Addr, region.Size, width)
+		wr := newMemPicture(c.User, region.Addr, region.Size, 32)
 		cs := &copyState{
 			rd:   rd,
 			wr:   wr,
@@ -328,20 +316,18 @@ var cmdCheckSum = cli.Leaf{
 		drv := c.User.(target).GetMemoryDriver()
 
 		// get the arguments
-		r, err := RegionArg(drv, args)
+		region, err := RegionArg(drv, args)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("%s\n", err))
 			return
 		}
-		// round down address to 32-bit byte boundary
-		addr := r.addr & ^uint(3)
-		// round up n to an integral multiple of 4 bytes
-		n := (r.size + 3) & ^uint(3)
+		// work with 32-bit alignment
+		region.Align32()
 
 		// read from memory, write to checksum
 		const readSize = 1024
 		const width = 32
-		rd := newMemReader(drv, addr, n, width)
+		rd := newMemReader(drv, region.Addr, region.Size, width)
 		wr := newMd5Writer(width)
 		cs := &copyState{
 			rd:       rd,
@@ -396,38 +382,38 @@ func cmpBuf(a, b []uint) bool {
 func cmdTest(c *cli.CLI, args []string, width uint) {
 	drv := c.User.(target).GetMemoryDriver()
 	// get the arguments
-	r, err := RegionArg(drv, args)
+	region, err := RegionArg(drv, args)
 	if err != nil {
 		c.User.Put(fmt.Sprintf("%s\n", err))
 		return
 	}
-	// round down address to 32-bit byte boundary
-	addr := r.addr & ^uint(3)
-	// round up n to an integral multiple of 4 bytes
-	n := (r.size + 3) & ^uint(3)
+	// work with 32-bit alignment
+	region.Align32()
+
 	// build a random buffer of width-bit words
-	nx := n / (width >> 3)
+	nx := region.Size / (width >> 3)
 	mask := uint((1 << width) - 1)
 	wrbuf := randBuf(nx, mask)
+
 	// TODO halt the cpu
 	// write memory
 	start := time.Now()
-	err = drv.WrMem(width, addr, wrbuf)
+	err = drv.WrMem(width, region.Addr, wrbuf)
 	if err != nil {
 		c.User.Put(fmt.Sprintf("write error: %s\n", err))
 		return
 	}
 	delta := time.Now().Sub(start)
-	c.User.Put(fmt.Sprintf("write %.2f KiB/sec\n", float64(n)/(1024.0*delta.Seconds())))
+	c.User.Put(fmt.Sprintf("write %.2f KiB/sec\n", float64(region.Size)/(1024.0*delta.Seconds())))
 	// read memory
 	start = time.Now()
-	rdbuf, err := drv.RdMem(width, addr, nx)
+	rdbuf, err := drv.RdMem(width, region.Addr, nx)
 	if err != nil {
 		c.User.Put(fmt.Sprintf("read error: %s\n", err))
 		return
 	}
 	delta = time.Now().Sub(start)
-	c.User.Put(fmt.Sprintf("read %.2f KiB/sec\n", float64(n)/(1024.0*delta.Seconds())))
+	c.User.Put(fmt.Sprintf("read %.2f KiB/sec\n", float64(region.Size)/(1024.0*delta.Seconds())))
 	c.User.Put(fmt.Sprintf("read %s write\n", []string{"!=", "=="}[util.BoolToInt(cmpBuf(rdbuf, wrbuf))]))
 }
 
@@ -463,22 +449,22 @@ var cmdTest64 = cli.Leaf{
 
 // Menu memory submenu items
 var Menu = cli.Menu{
-	{"db", cmdDisplay8, helpMemRegion},
-	{"dh", cmdDisplay16, helpMemRegion},
-	{"dw", cmdDisplay32, helpMemRegion},
-	{"dd", cmdDisplay64, helpMemRegion},
-	{"rb", cmdRead8, helpMemRead},
-	{"rh", cmdRead16, helpMemRead},
-	{"rw", cmdRead32, helpMemRead},
-	{"rd", cmdRead64, helpMemRead},
-	{"tb", cmdTest8, helpMemRegion},
-	{"th", cmdTest16, helpMemRegion},
-	{"tw", cmdTest32, helpMemRegion},
-	{"td", cmdTest64, helpMemRegion},
-	{"wb", cmdWrite8, helpMemWrite},
-	{"wh", cmdWrite16, helpMemWrite},
-	{"ww", cmdWrite32, helpMemWrite},
-	{"wd", cmdWrite64, helpMemWrite},
+	{"d8", cmdDisplay8, helpMemRegion},
+	{"d16", cmdDisplay16, helpMemRegion},
+	{"d32", cmdDisplay32, helpMemRegion},
+	{"d64", cmdDisplay64, helpMemRegion},
+	{"r8", cmdRead8, helpMemRead},
+	{"r16", cmdRead16, helpMemRead},
+	{"r32", cmdRead32, helpMemRead},
+	{"r64", cmdRead64, helpMemRead},
+	{"t8", cmdTest8, helpMemRegion},
+	{"t16", cmdTest16, helpMemRegion},
+	{"t32", cmdTest32, helpMemRegion},
+	{"t64", cmdTest64, helpMemRegion},
+	{"w8", cmdWrite8, helpMemWrite},
+	{"w16", cmdWrite16, helpMemWrite},
+	{"w32", cmdWrite32, helpMemWrite},
+	{"w64", cmdWrite64, helpMemWrite},
 	{">file", cmdToFile, helpMemToFile},
 	{"md5", cmdCheckSum, helpMemRegion},
 	{"pic", cmdPic, helpMemRegion},

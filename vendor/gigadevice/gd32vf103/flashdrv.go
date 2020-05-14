@@ -261,7 +261,7 @@ func (drv *FlashDriver) Erase(r *mem.Region) error {
 		return err
 	}
 	// set the page address
-	err = drv.wrAddr(r.GetAddr())
+	err = drv.wrAddr(r.Addr)
 	if err != nil {
 		return err
 	}
@@ -326,10 +326,10 @@ func (drv *FlashDriver) Write(r *mem.Region, buf []byte) error {
 	if len(buf)&3 != 0 {
 		return errors.New("write buffer must be a multiple of 4 bytes")
 	}
-	if r.GetSize()&3 != 0 {
+	if r.Size&3 != 0 {
 		return errors.New("flash region must be a multiple of 4 bytes")
 	}
-	if int(r.GetSize()) < len(buf) {
+	if int(r.Size) < len(buf) {
 		return errors.New("flash region size is smaller than the write buffer")
 	}
 
@@ -350,7 +350,7 @@ func (drv *FlashDriver) Write(r *mem.Region, buf []byte) error {
 	util.ConvertFromUint8(32, buf, buf32)
 
 	// write to flash
-	addr := r.GetAddr()
+	addr := r.Addr
 	for i := 0; i < len(buf32); i++ {
 		// set the program bit
 		err = drv.setCtl(ctlPG)

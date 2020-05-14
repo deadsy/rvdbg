@@ -160,7 +160,7 @@ func (mp *memPicture) headerString() string {
 
 const colsMax = 70
 
-func newMemPicture(ui cli.USER, addr, addrWidth, n uint) *memPicture {
+func newMemPicture(ui cli.USER, addr, n, addrWidth uint) *memPicture {
 	// work out how many rows, columns and bytes per symbol we should display
 	cols := colsMax + 1
 	bytesPerSymbol := 1

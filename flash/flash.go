@@ -151,7 +151,26 @@ var cmdWrite = cli.Leaf{
 	Descr: "write to flash",
 	F: func(c *cli.CLI, args []string) {
 		drv := c.User.(target).GetFlashDriver()
-		_ = drv
+
+		// process the arguments
+		err := cli.CheckArgc(args, []int{2, 3})
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
+		name, region, err := mem.FileRegionArg(drv, args)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("%s\n", err))
+			return
+		}
+		if region.Size == 0 {
+			c.User.Put("target region has 0 size\n")
+			return
+		}
+		// work with 32-bit alignment
+		region.Align32()
+		c.User.Put(fmt.Sprintf("%s -> %s\n", name, region))
+
 	},
 }
 
