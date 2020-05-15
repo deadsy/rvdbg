@@ -28,6 +28,7 @@ var helpMemRegion = []cli.Help{
 }
 
 //-----------------------------------------------------------------------------
+// copy from reader to writer
 
 type copyState struct {
 	rd       util.Reader    // read from
@@ -230,7 +231,7 @@ var cmdToFile = cli.Leaf{
 		const readSize = 1024
 		const width = 32
 		rd := newMemReader(drv, region.Addr, region.Size, width)
-		wr, err := newFileWriter(name, width)
+		wr, err := util.NewFileWriter(name, width)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("unable to open %s (%s)\n", name, err))
 			return

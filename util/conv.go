@@ -130,6 +130,7 @@ func Convert32to64(x []uint32) []uint64 {
 
 //-----------------------------------------------------------------------------
 
+// ConvertToUint8 converts a uint buffer with width-bit data values to a uint8 buffer.
 func ConvertToUint8(width uint, buf []uint) []uint8 {
 	var out []uint8
 	switch width {

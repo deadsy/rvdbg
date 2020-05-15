@@ -36,6 +36,20 @@ type target interface {
 
 //-----------------------------------------------------------------------------
 
+type flashWriter struct {
+	drv    Driver      // flash driver
+	region *mem.Region // flash mem ory region to write
+}
+
+func newFlashWriter(drv Driver, region *mem.Region) *flashWriter {
+	return &flashWriter{
+		drv:    drv,
+		region: region,
+	}
+}
+
+//-----------------------------------------------------------------------------
+
 var helpFlashErase = []cli.Help{
 	{"all", "erase all"},
 	{"<addr/name> [len]", "erase memory region"},
@@ -169,7 +183,16 @@ var cmdWrite = cli.Leaf{
 		}
 		// work with 32-bit alignment
 		region.Align32()
-		c.User.Put(fmt.Sprintf("%s -> %s\n", name, region))
+
+		rd, err := util.NewFileReader(name, 32)
+		if err != nil {
+			c.User.Put(fmt.Sprintf("unable to open %s (%s)\n", name, err))
+			return
+		}
+
+		wr := newFlashWriter(drv, region)
+		_ = wr
+		_ = rd
 
 	},
 }

@@ -12,12 +12,9 @@ import "fmt"
 
 //-----------------------------------------------------------------------------
 
-type Reader interface {
-	Read(buf []uint) (int, error)
-}
-
-type Writer interface {
-	Write(buf []uint) (int, error)
+// WidthToShift converts an address alignment width to a bit shift.
+func WidthToShift(w uint) int {
+	return map[uint]int{8: 0, 16: 1, 32: 2, 64: 3}[w]
 }
 
 //-----------------------------------------------------------------------------

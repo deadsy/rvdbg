@@ -9,14 +9,12 @@ Memory Display
 package mem
 
 import (
-	"bufio"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
 	"hash"
 	"io"
 	"math"
-	"os"
 	"strings"
 
 	cli "github.com/deadsy/go-cli"
@@ -40,10 +38,6 @@ type target interface {
 }
 
 //-----------------------------------------------------------------------------
-
-var widthToShift = map[uint]int{8: 0, 16: 1, 32: 2, 64: 3}
-
-//-----------------------------------------------------------------------------
 // memory reader
 
 type memReader struct {
@@ -56,7 +50,7 @@ type memReader struct {
 }
 
 func newMemReader(drv Driver, addr, n, width uint) *memReader {
-	shift := widthToShift[width]
+	shift := util.WidthToShift(width)
 	// round down address, round up n to be width-bit aligned.
 	align := uint((1 << shift) - 1)
 	addr &= ^align
@@ -98,6 +92,10 @@ func (mr *memReader) Read(buf []uint) (int, error) {
 		mr.err = io.EOF
 	}
 	return int(nread) >> mr.shift, mr.err
+}
+
+func (mr *memReader) Close() error {
+	return nil
 }
 
 //-----------------------------------------------------------------------------
@@ -217,7 +215,7 @@ type memDisplay struct {
 }
 
 func newMemDisplay(ui cli.USER, addr, addrWidth, width uint) *memDisplay {
-	shift := widthToShift[width]
+	shift := util.WidthToShift(width)
 	// round down address to be width-bit aligned.
 	align := uint((1 << shift) - 1)
 	addr &= ^align
@@ -269,94 +267,8 @@ func (md *memDisplay) Write(buf []uint) (int, error) {
 	return len(buf), nil
 }
 
-//-----------------------------------------------------------------------------
-// file writer
-
-type fileWriter struct {
-	f     *os.File
-	w     *bufio.Writer
-	width uint // data has width-bit values
-}
-
-func newFileWriter(name string, width uint) (*fileWriter, error) {
-	f, err := os.Create(name)
-	if err != nil {
-		return nil, err
-	}
-	return &fileWriter{
-		f:     f,
-		w:     bufio.NewWriter(f),
-		width: width,
-	}, nil
-}
-
-func (fw *fileWriter) Write(buf []uint) (int, error) {
-	if len(buf) == 0 {
-		return 0, nil
-	}
-	_, err := fw.w.Write(util.ConvertToUint8(fw.width, buf))
-	if err != nil {
-		return 0, err
-	}
-	return len(buf), nil
-}
-
-func (fw *fileWriter) Close() error {
-	fw.w.Flush()
-	return fw.f.Close()
-}
-
-//-----------------------------------------------------------------------------
-// file reader
-
-type fileReader struct {
-	f     *os.File
-	size  int64 // size of file in bytes
-	width uint  // data has width-bit values
-	shift int   // shift for width-bits
-}
-
-func newFileReader(name string, width uint) (*fileReader, error) {
-	f, err := os.Open(name)
-	if err != nil {
-		return nil, err
-	}
-	info, err := f.Stat()
-	if err != nil {
-		f.Close()
-		return nil, err
-	}
-	shift := widthToShift[width]
-	return &fileReader{
-		f:     f,
-		size:  (info.Size() >> shift) << shift,
-		width: width,
-		shift: shift,
-	}, nil
-}
-
-func (fr *fileReader) Read(buf []uint) (int, error) {
-	if len(buf) == 0 {
-		return 0, nil
-	}
-	fbuf := make([]byte, len(buf)<<fr.shift)
-	n, err := fr.f.Read(fbuf)
-	if err != nil && err != io.EOF {
-		return 0, err
-	}
-	if n == 0 {
-		return 0, err
-	}
-	// resize buffers to an integral number of width-bit values
-	buf = buf[0 : n>>fr.shift]
-	fbuf = fbuf[0 : (n>>fr.shift)<<fr.shift]
-	// convert the file buffer
-	util.ConvertFromUint8(fr.width, fbuf, buf)
-	return len(buf), err
-}
-
-func (fr *fileReader) Close() error {
-	return fr.f.Close()
+func (md *memDisplay) Close() error {
+	return nil
 }
 
 //-----------------------------------------------------------------------------
@@ -374,6 +286,10 @@ func newMd5Writer(width uint) *md5Writer {
 	}
 }
 
+func (mw *md5Writer) String() string {
+	return hex.EncodeToString(mw.h.Sum(nil))
+}
+
 func (mw *md5Writer) Write(buf []uint) (int, error) {
 	if len(buf) == 0 {
 		return 0, nil
@@ -385,8 +301,8 @@ func (mw *md5Writer) Write(buf []uint) (int, error) {
 	return len(buf), nil
 }
 
-func (mw *md5Writer) String() string {
-	return hex.EncodeToString(mw.h.Sum(nil))
+func (mw *md5Writer) Close() error {
+	return nil
 }
 
 //-----------------------------------------------------------------------------
