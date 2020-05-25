@@ -12,20 +12,84 @@ import (
 	"bufio"
 	"io"
 	"os"
+
+	"github.com/deadsy/go-cli"
 )
 
 //-----------------------------------------------------------------------------
 
 // Reader is a data source interface.
 type Reader interface {
-	Read(buf []uint) (int, error)
-	Close() error
+	Read(buf []uint) (int, error) // read a []uint buffer from the object
+	NumReads(n int) int           // how many reads of n-uint buffers will it take?
+	Close() error                 // close the read object
 }
 
 // Writer is a data sink interface.
 type Writer interface {
-	Write(buf []uint) (int, error)
-	Close() error
+	Write(buf []uint) (int, error) // write a []uint buffer to the write object
+	Close() error                  // close the write object
+}
+
+//-----------------------------------------------------------------------------
+// copy from reader to writer
+
+// CopyState records the state of read from, write to copying.
+type CopyState struct {
+	rd       Reader    // read from
+	wr       Writer    // write to
+	size     int       // buffer size
+	progress *Progress // progress indicator
+	idx      int       // progress index
+	err      error     // stored error
+}
+
+// NewCopyState returns a new copy state object.
+func NewCopyState(rd Reader, wr Writer, size int) *CopyState {
+	return &CopyState{
+		rd:   rd,
+		wr:   wr,
+		size: size,
+	}
+}
+
+// CopyLoop is the looping function for read from, write to copying
+func (cs *CopyState) CopyLoop() bool {
+	buf := make([]uint, cs.size)
+	n, err := cs.rd.Read(buf)
+	if err != nil && err != io.EOF {
+		cs.err = err
+		return true
+	}
+	done := err == io.EOF
+	_, err = cs.wr.Write(buf[0:n])
+	if err != nil {
+		cs.err = err
+		return true
+	}
+	if cs.progress != nil {
+		cs.idx++
+		cs.progress.Update(cs.idx)
+	}
+	return done
+}
+
+// Start starts the progress indicator for a copy.
+func (cs *CopyState) Start(ui cli.USER) {
+	cs.progress = NewProgress(ui, cs.rd.NumReads(cs.size))
+	cs.progress.Update(0)
+}
+
+// Stop stops the progress indicator for a copy.
+func (cs *CopyState) Stop() {
+	if cs.progress != nil {
+		cs.progress.Erase()
+	}
+}
+
+// GetError returns the recorded error for a copy.
+func (cs *CopyState) GetError() error {
+	return cs.err
 }
 
 //-----------------------------------------------------------------------------
@@ -70,10 +134,11 @@ func (fw *fileWriter) Close() error {
 // file reader
 
 type fileReader struct {
+	name  string // filename
 	f     *os.File
-	size  int64 // size of file in bytes
-	width uint  // data has width-bit values
-	shift int   // shift for width-bits
+	size  uint // size of file in bytes
+	width uint // data has width-bit values
+	shift int  // shift for width-bits
 }
 
 // NewFileReader returns a Reader interface to a file.
@@ -89,11 +154,18 @@ func NewFileReader(name string, width uint) (Reader, error) {
 	}
 	shift := WidthToShift(width)
 	return &fileReader{
+		name:  name,
 		f:     f,
-		size:  (info.Size() >> shift) << shift,
+		size:  (uint(info.Size()) >> shift) << shift,
 		width: width,
 		shift: shift,
 	}, nil
+}
+
+// TotalReads returns the total number of calls to Read() required.
+func (fr *fileReader) NumReads(n int) int {
+	bytesPerRead := n << fr.shift
+	return (int(fr.size) + bytesPerRead - 1) / bytesPerRead
 }
 
 func (fr *fileReader) Read(buf []uint) (int, error) {
@@ -118,6 +190,10 @@ func (fr *fileReader) Read(buf []uint) (int, error) {
 
 func (fr *fileReader) Close() error {
 	return fr.f.Close()
+}
+
+func (fr *fileReader) String() string {
+	return fr.name
 }
 
 //-----------------------------------------------------------------------------

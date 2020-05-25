@@ -10,6 +10,7 @@ package flash
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/mem"
@@ -46,6 +47,19 @@ func newFlashWriter(drv Driver, region *mem.Region) *flashWriter {
 		drv:    drv,
 		region: region,
 	}
+}
+
+func (fw *flashWriter) Write(buf []uint) (int, error) {
+	time.Sleep(50 * time.Millisecond)
+	return len(buf), nil
+}
+
+func (fw *flashWriter) Close() error {
+	return nil
+}
+
+func (fw *flashWriter) String() string {
+	return fmt.Sprintf("%s", fw.region)
 }
 
 //-----------------------------------------------------------------------------
@@ -184,15 +198,34 @@ var cmdWrite = cli.Leaf{
 		// work with 32-bit alignment
 		region.Align32()
 
+		// file reader
 		rd, err := util.NewFileReader(name, 32)
 		if err != nil {
 			c.User.Put(fmt.Sprintf("unable to open %s (%s)\n", name, err))
 			return
 		}
 
+		// flash writer
 		wr := newFlashWriter(drv, region)
-		_ = wr
-		_ = rd
+
+		// copy from file to flash
+		cs := util.NewCopyState(rd, wr, 256)
+		c.User.Put(fmt.Sprintf("read from %s, write to flash (ctrl-d to abort): ", rd))
+		cs.Start(c.User)
+		done := c.Loop(func() bool { return cs.CopyLoop() }, cli.KeycodeCtrlD)
+		cs.Stop()
+
+		// report result
+		if !done {
+			c.User.Put("abort\n")
+			return
+		}
+		err = cs.GetError()
+		if err != nil {
+			c.User.Put(fmt.Sprintf("error (%s)\n", err))
+			return
+		}
+		c.User.Put("done\n")
 
 	},
 }

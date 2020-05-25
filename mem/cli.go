@@ -10,7 +10,6 @@ package mem
 
 import (
 	"fmt"
-	"io"
 	"math/rand"
 	"time"
 
@@ -28,39 +27,6 @@ var helpMemRegion = []cli.Help{
 }
 
 //-----------------------------------------------------------------------------
-// copy from reader to writer
-
-type copyState struct {
-	rd       util.Reader    // read from
-	wr       util.Writer    // write to
-	size     int            // buffer size
-	progress *util.Progress // progress indicator
-	idx      int            // progress index
-	err      error          // stored error
-}
-
-// copyLoop is the looping function for read from, write to copying
-func copyLoop(cs *copyState) bool {
-	buf := make([]uint, cs.size)
-	n, err := cs.rd.Read(buf)
-	if err != nil && err != io.EOF {
-		cs.err = err
-		return true
-	}
-	done := err == io.EOF
-	_, err = cs.wr.Write(buf[0:n])
-	if err != nil {
-		cs.err = err
-		return true
-	}
-	if cs.progress != nil {
-		cs.idx++
-		cs.progress.Update(cs.idx)
-	}
-	return done
-}
-
-//-----------------------------------------------------------------------------
 // memory display
 
 func display(c *cli.CLI, args []string, width uint) {
@@ -71,14 +37,14 @@ func display(c *cli.CLI, args []string, width uint) {
 		return
 	}
 	// read from memory, write to the display
-	cs := &copyState{
-		rd:   newMemReader(drv, r.Addr, r.Size, width),
-		wr:   newMemDisplay(c.User, r.Addr, drv.GetAddressSize(), width),
-		size: 16,
-	}
-	c.Loop(func() bool { return copyLoop(cs) }, cli.KeycodeCtrlD)
-	if cs.err != nil {
-		c.User.Put(fmt.Sprintf("%s\n", cs.err))
+	cs := util.NewCopyState(
+		newMemReader(drv, r.Addr, r.Size, width),
+		newMemDisplay(c.User, r.Addr, drv.GetAddressSize(), width),
+		16)
+	c.Loop(func() bool { return cs.CopyLoop() }, cli.KeycodeCtrlD)
+	err = cs.GetError()
+	if err != nil {
+		c.User.Put(fmt.Sprintf("%s\n", err))
 	}
 }
 
@@ -228,7 +194,6 @@ var cmdToFile = cli.Leaf{
 		region.Align32()
 
 		// read from memory, write to file
-		const readSize = 1024
 		const width = 32
 		rd := newMemReader(drv, region.Addr, region.Size, width)
 		wr, err := util.NewFileWriter(name, width)
@@ -236,16 +201,11 @@ var cmdToFile = cli.Leaf{
 			c.User.Put(fmt.Sprintf("unable to open %s (%s)\n", name, err))
 			return
 		}
-		cs := &copyState{
-			rd:       rd,
-			wr:       wr,
-			size:     readSize,
-			progress: util.NewProgress(c.User, rd.totalReads(readSize)),
-		}
+		cs := util.NewCopyState(rd, wr, 1024)
 		c.User.Put(fmt.Sprintf("writing %s (ctrl-d to abort): ", name))
-		cs.progress.Update(0)
-		done := c.Loop(func() bool { return copyLoop(cs) }, cli.KeycodeCtrlD)
-		cs.progress.Erase()
+		cs.Start(c.User)
+		done := c.Loop(func() bool { return cs.CopyLoop() }, cli.KeycodeCtrlD)
+		cs.Stop()
 		// flush and close the output file
 		wr.Close()
 
@@ -254,8 +214,10 @@ var cmdToFile = cli.Leaf{
 			c.User.Put("abort\n")
 			return
 		}
-		if cs.err != nil {
-			c.User.Put(fmt.Sprintf("error (%s)\n", cs.err))
+
+		err = cs.GetError()
+		if err != nil {
+			c.User.Put(fmt.Sprintf("error (%s)\n", err))
 			return
 		}
 		c.User.Put("done\n")
@@ -284,25 +246,20 @@ var cmdPic = cli.Leaf{
 		region.Align32()
 
 		// read from memory, write to memory picture
-		const readSize = 1024
-		const width = 32
-		rd := newMemReader(drv, region.Addr, region.Size, width)
+		rd := newMemReader(drv, region.Addr, region.Size, 32)
 		wr := newMemPicture(c.User, region.Addr, region.Size, 32)
-		cs := &copyState{
-			rd:   rd,
-			wr:   wr,
-			size: readSize,
-		}
+		cs := util.NewCopyState(rd, wr, 1024)
 		c.User.Put(fmt.Sprintf("%s\n", wr.headerString()))
-		done := c.Loop(func() bool { return copyLoop(cs) }, cli.KeycodeCtrlD)
+		done := c.Loop(func() bool { return cs.CopyLoop() }, cli.KeycodeCtrlD)
 		wr.Close()
 		// report result
 		if !done {
 			c.User.Put("abort\n")
 			return
 		}
-		if cs.err != nil {
-			c.User.Put(fmt.Sprintf("error (%s)\n", cs.err))
+		err = cs.GetError()
+		if err != nil {
+			c.User.Put(fmt.Sprintf("error (%s)\n", err))
 			return
 		}
 	},
@@ -326,28 +283,23 @@ var cmdCheckSum = cli.Leaf{
 		region.Align32()
 
 		// read from memory, write to checksum
-		const readSize = 1024
 		const width = 32
 		rd := newMemReader(drv, region.Addr, region.Size, width)
 		wr := newMd5Writer(width)
-		cs := &copyState{
-			rd:       rd,
-			wr:       wr,
-			size:     readSize,
-			progress: util.NewProgress(c.User, rd.totalReads(readSize)),
-		}
+		cs := util.NewCopyState(rd, wr, 1024)
 		c.User.Put(fmt.Sprintf("reading memory (ctrl-d to abort): "))
-		cs.progress.Update(0)
-		done := c.Loop(func() bool { return copyLoop(cs) }, cli.KeycodeCtrlD)
-		cs.progress.Erase()
+		cs.Start(c.User)
+		done := c.Loop(func() bool { return cs.CopyLoop() }, cli.KeycodeCtrlD)
+		cs.Stop()
 
 		// report result
 		if !done {
 			c.User.Put("abort\n")
 			return
 		}
-		if cs.err != nil {
-			c.User.Put(fmt.Sprintf("error (%s)\n", cs.err))
+		err = cs.GetError()
+		if err != nil {
+			c.User.Put(fmt.Sprintf("error (%s)\n", err))
 			return
 		}
 		c.User.Put("done\n")

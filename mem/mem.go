@@ -64,10 +64,10 @@ func newMemReader(drv Driver, addr, n, width uint) *memReader {
 	}
 }
 
-// totalReads returns the total number of calls to Read() required.
-func (mr *memReader) totalReads(size uint) int {
-	bytesPerRead := size << mr.shift
-	return int((mr.n + bytesPerRead - 1) / bytesPerRead)
+// NumReads returns the total number of calls to Read() required.
+func (mr *memReader) NumReads(n int) int {
+	bytesPerRead := n << mr.shift
+	return (int(mr.n) + bytesPerRead - 1) / bytesPerRead
 }
 
 func (mr *memReader) Read(buf []uint) (int, error) {
