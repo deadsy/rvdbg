@@ -23,6 +23,7 @@ import (
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/mem"
 	"github.com/deadsy/rvdbg/soc"
+	"github.com/deadsy/rvdbg/swd"
 	"github.com/deadsy/rvdbg/target"
 )
 
@@ -31,7 +32,7 @@ import (
 // Info is target information.
 var Info = target.Info{
 	Name:     "pico",
-	Descr:    "RPi Pico Board (RP2040 Dual Core Cortex-M0+)",
+	Descr:    "RPi Pico Board (RP2040 Dual Core ARM 32-bit Cortex-M0+)",
 	DbgMode:  itf.ModeSwd,
 	DbgSpeed: 4000,
 	Volts:    3300,
@@ -47,7 +48,7 @@ var menuRoot = cli.Menu{
 	{"gpio", gpio.Menu, "gpio functions"},
 	{"help", target.CmdHelp},
 	{"history", target.CmdHistory, cli.HistoryHelp},
-	{"swd", swd.Menu, "jtag functions"},
+	{"swd", swd.Menu, "swd functions"},
 	{"map", soc.CmdMap},
 	{"mem", mem.Menu, "memory functions"},
 	{"regs", soc.CmdRegs, soc.RegsHelp},
@@ -123,6 +124,13 @@ func New(swdDriver swd.Driver) (target.Target, error) {
 		return nil, errors.New("target ~SRST line asserted, target is held in reset")
 	}
 
+	// make the swd device for the cpu core
+	swdDevice, err := swd.GetDevice(swdDriver)
+	if err != nil {
+		return nil, err
+	}
+
+	// create the CPU debug interface
 	cmDebug, err := cm.NewDebug(swdDevice)
 	if err != nil {
 		return nil, err
