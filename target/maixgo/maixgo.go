@@ -13,9 +13,8 @@ package maixgo
 import (
 	"os"
 
-	"kendryte/k210"
-
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/chip/kendryte/k210"
 	"github.com/deadsy/rvdbg/cpu/riscv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv11"

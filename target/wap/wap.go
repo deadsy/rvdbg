@@ -9,12 +9,12 @@ WAP is a development platform using a BCM47622
 package wap
 
 import (
-	"broadcom/bcm47622"
 	"errors"
 	"fmt"
 	"os"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/chip/broadcom/bcm47622"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/target"

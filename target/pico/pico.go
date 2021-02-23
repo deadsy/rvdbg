@@ -16,6 +16,7 @@ import (
 	"os"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/chip/rpi/rp20xx"
 	"github.com/deadsy/rvdbg/cpu/arm/cm"
 	"github.com/deadsy/rvdbg/flash"
 	"github.com/deadsy/rvdbg/gpio"
@@ -23,7 +24,6 @@ import (
 	"github.com/deadsy/rvdbg/mem"
 	"github.com/deadsy/rvdbg/soc"
 	"github.com/deadsy/rvdbg/target"
-	"github.com/deadsy/rvdbg/vendor/rpi/rp20xx"
 )
 
 //-----------------------------------------------------------------------------

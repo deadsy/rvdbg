@@ -14,9 +14,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sifive/fe310"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/chip/sifive/fe310"
 	"github.com/deadsy/rvdbg/cpu/riscv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv13"

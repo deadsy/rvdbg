@@ -9,12 +9,12 @@ APHX is a development platform using a BCM49408
 package aphx
 
 import (
-	"broadcom/bcm49408"
 	"errors"
 	"fmt"
 	"os"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/chip/broadcom/bcm49408"
 	"github.com/deadsy/rvdbg/itf"
 	"github.com/deadsy/rvdbg/jtag"
 	"github.com/deadsy/rvdbg/target"

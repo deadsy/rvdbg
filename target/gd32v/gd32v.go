@@ -13,10 +13,10 @@ package gd32v
 import (
 	"errors"
 	"fmt"
-	"gigadevice/gd32vf103"
 	"os"
 
 	cli "github.com/deadsy/go-cli"
+	"github.com/deadsy/rvdbg/chip/gigadevice/gd32vf103"
 	"github.com/deadsy/rvdbg/cpu/riscv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv"
 	"github.com/deadsy/rvdbg/cpu/riscv/rv13"
