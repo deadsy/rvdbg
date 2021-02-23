@@ -103,7 +103,7 @@ def attribute_string(s):
   if s is None:
     return "\"\""
   # escape any ' characters
-  s = s.replace("'", "\\'")
+  #s = s.replace("'", "\\'")
   return "\"%s\"" % s
 
 def attribute_hex32(x):
