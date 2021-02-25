@@ -26,6 +26,7 @@ type State struct {
 // Driver is the interface for an SWD driver.
 type Driver interface {
 	GetState() (*State, error)
+	Close() error
 }
 
 //-----------------------------------------------------------------------------

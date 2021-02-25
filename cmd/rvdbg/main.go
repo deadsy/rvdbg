@@ -15,10 +15,13 @@ import (
 
 	cli "github.com/deadsy/go-cli"
 	"github.com/deadsy/rvdbg/itf"
+	"github.com/deadsy/rvdbg/jtag"
+	"github.com/deadsy/rvdbg/swd"
 	"github.com/deadsy/rvdbg/target"
 	"github.com/deadsy/rvdbg/target/aphx"
 	"github.com/deadsy/rvdbg/target/gd32v"
 	"github.com/deadsy/rvdbg/target/maixgo"
+	"github.com/deadsy/rvdbg/target/pico"
 	"github.com/deadsy/rvdbg/target/redv"
 	"github.com/deadsy/rvdbg/target/wap"
 	"github.com/deadsy/rvdbg/util/log"
@@ -27,18 +30,29 @@ import (
 //-----------------------------------------------------------------------------
 
 const historyPath = ".rvdbg_history"
-const MHz = 1000
 
 //-----------------------------------------------------------------------------
 
 func run(info *target.Info) error {
 
 	// create the debug interface
-	jtagDriver, err := itf.NewJtagDriver(info.DbgType, info.DbgSpeed)
-	if err != nil {
-		return err
+	var jtagDriver jtag.Driver
+	var swdDriver swd.Driver
+	var err error
+	switch info.DbgMode {
+	case itf.ModeJtag:
+		jtagDriver, err = itf.NewJtagDriver(info.DbgType, info.DbgSpeed)
+		if err != nil {
+			return err
+		}
+		defer jtagDriver.Close()
+	case itf.ModeSwd:
+		swdDriver, err = itf.NewSwdDriver(info.DbgType, info.DbgSpeed)
+		if err != nil {
+			return err
+		}
+		defer swdDriver.Close()
 	}
-	defer jtagDriver.Close()
 
 	// create the target
 	var tgt target.Target
@@ -53,6 +67,8 @@ func run(info *target.Info) error {
 		tgt, err = gd32v.New(jtagDriver)
 	case "redv":
 		tgt, err = redv.New(jtagDriver)
+	case "pico":
+		tgt, err = pico.New(swdDriver)
 	}
 	if err != nil {
 		return err
@@ -85,6 +101,7 @@ func addTargets() {
 	target.Add(&maixgo.Info)
 	target.Add(&redv.Info)
 	target.Add(&wap.Info)
+	target.Add(&pico.Info)
 }
 
 //-----------------------------------------------------------------------------

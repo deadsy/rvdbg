@@ -17,6 +17,7 @@ import (
 	"github.com/deadsy/rvdbg/itf/daplink"
 	"github.com/deadsy/rvdbg/itf/jlink"
 	"github.com/deadsy/rvdbg/jtag"
+	"github.com/deadsy/rvdbg/swd"
 )
 
 //-----------------------------------------------------------------------------
@@ -157,6 +158,60 @@ func NewJtagDriver(typ Type, speed int) (jtag.Driver, error) {
 	}
 
 	return jtagDriver, nil
+}
+
+//-----------------------------------------------------------------------------
+
+func NewSwdDriver(typ Type, speed int) (swd.Driver, error) {
+
+	var swdDriver swd.Driver
+
+	switch typ {
+	case TypeJlink:
+		jlinkLibrary, err := jlink.Init()
+		if err != nil {
+			return nil, err
+		}
+		if jlinkLibrary.NumDevices() == 0 {
+			jlinkLibrary.Shutdown()
+			return nil, errors.New("no J-Link devices found")
+		}
+		dev, err := jlinkLibrary.DeviceByIndex(0)
+		if err != nil {
+			jlinkLibrary.Shutdown()
+			return nil, err
+		}
+		swdDriver, err = jlink.NewSwd(dev, speed)
+		if err != nil {
+			jlinkLibrary.Shutdown()
+			return nil, err
+		}
+
+	case TypeDapLink:
+		dapLibrary, err := daplink.Init()
+		if err != nil {
+			return nil, err
+		}
+		if dapLibrary.NumDevices() == 0 {
+			dapLibrary.Shutdown()
+			return nil, errors.New("no DAPLink devices found")
+		}
+		devInfo, err := dapLibrary.DeviceByIndex(0)
+		if err != nil {
+			dapLibrary.Shutdown()
+			return nil, err
+		}
+		swdDriver, err = daplink.NewSwd(devInfo, speed)
+		if err != nil {
+			dapLibrary.Shutdown()
+			return nil, err
+		}
+
+	default:
+		return nil, fmt.Errorf("%s does not support SWD operations", typ)
+	}
+
+	return swdDriver, nil
 }
 
 //-----------------------------------------------------------------------------

@@ -116,8 +116,8 @@ type Jtag struct {
 	dev *device
 }
 
-func (j *Jtag) String() string {
-	return j.dev.String()
+func (drv *Jtag) String() string {
+	return drv.dev.String()
 }
 
 // NewJtag returns a new CMSIS-DAP JTAG driver.
@@ -135,43 +135,43 @@ func NewJtag(devInfo *hidapi.DeviceInfo, speed int) (*Jtag, error) {
 		return nil, err
 	}
 
-	j := &Jtag{
+	drv := &Jtag{
 		dev: dev,
 	}
 
 	// make sure the CMSIS-DAP can do JTAG
-	if !j.dev.hasCap(capJtag) {
-		j.Close()
+	if !drv.dev.hasCap(capJtag) {
+		drv.Close()
 		return nil, errors.New("jtag not supported")
 	}
 
 	// connect in JTAG mode
-	err = j.dev.cmdConnect(modeJtag)
+	err = drv.dev.cmdConnect(modeJtag)
 	if err != nil {
-		j.Close()
+		drv.Close()
 		return nil, err
 	}
 
 	// set the clock speed
-	err = j.dev.cmdSwjClock(speed)
+	err = drv.dev.cmdSwjClock(speed)
 	if err != nil {
-		j.Close()
+		drv.Close()
 		return nil, err
 	}
 
-	return j, nil
+	return drv, nil
 }
 
 // Close closes a CMSIS-DAP JTAG driver.
-func (j *Jtag) Close() error {
-	j.dev.cmdDisconnect()
-	j.dev.close()
+func (drv *Jtag) Close() error {
+	drv.dev.cmdDisconnect()
+	drv.dev.close()
 	return nil
 }
 
 // GetState returns the JTAG hardware state.
-func (j *Jtag) GetState() (*jtag.State, error) {
-	pins, err := j.dev.getPins()
+func (drv *Jtag) GetState() (*jtag.State, error) {
+	pins, err := drv.dev.getPins()
 	if err != nil {
 		return nil, err
 	}
@@ -187,37 +187,37 @@ func (j *Jtag) GetState() (*jtag.State, error) {
 }
 
 // TestReset pulses the test reset line.
-func (j *Jtag) TestReset(delay time.Duration) error {
-	err := j.dev.setPins(pinTRST)
+func (drv *Jtag) TestReset(delay time.Duration) error {
+	err := drv.dev.setPins(pinTRST)
 	if err != nil {
 		return err
 	}
 	time.Sleep(delay)
-	return j.dev.clrPins(pinTRST)
+	return drv.dev.clrPins(pinTRST)
 }
 
 // SystemReset pulses the system reset line.
-func (j *Jtag) SystemReset(delay time.Duration) error {
-	err := j.dev.setPins(pinSRST)
+func (drv *Jtag) SystemReset(delay time.Duration) error {
+	err := drv.dev.setPins(pinSRST)
 	if err != nil {
 		return err
 	}
 	time.Sleep(delay)
-	return j.dev.clrPins(pinSRST)
+	return drv.dev.clrPins(pinSRST)
 }
 
 // TapReset resets the TAP state machine.
-func (j *Jtag) TapReset() error {
-	return j.dev.cmdSwjSequence(jtag.ToIdle)
+func (drv *Jtag) TapReset() error {
+	return drv.dev.cmdSwjSequence(jtag.ToIdle)
 }
 
 // scanXR handles the back half of an IR/DR scan ooperation
-func (j *Jtag) scanXR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
-	rx, err := j.dev.cmdJtagSequence(bitStringToJtagSeq(tdi, needTdo))
+func (drv *Jtag) scanXR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
+	rx, err := drv.dev.cmdJtagSequence(bitStringToJtagSeq(tdi, needTdo))
 	if err != nil {
 		return nil, err
 	}
-	err = j.dev.cmdSwjSequence(jtag.ExitToIdle[idle])
+	err = drv.dev.cmdSwjSequence(jtag.ExitToIdle[idle])
 	if err != nil {
 		return nil, err
 	}
@@ -228,21 +228,21 @@ func (j *Jtag) scanXR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.B
 }
 
 // ScanIR scans bits through the JTAG IR chain
-func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
-	err := j.dev.cmdSwjSequence(jtag.IdleToIRshift)
+func (drv *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
+	err := drv.dev.cmdSwjSequence(jtag.IdleToIRshift)
 	if err != nil {
 		return nil, err
 	}
-	return j.scanXR(tdi, 0, needTdo)
+	return drv.scanXR(tdi, 0, needTdo)
 }
 
 // ScanDR scans bits through the JTAG DR chain
-func (j *Jtag) ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
-	err := j.dev.cmdSwjSequence(jtag.IdleToDRshift)
+func (drv *Jtag) ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
+	err := drv.dev.cmdSwjSequence(jtag.IdleToDRshift)
 	if err != nil {
 		return nil, err
 	}
-	return j.scanXR(tdi, idle, needTdo)
+	return drv.scanXR(tdi, idle, needTdo)
 }
 
 //-----------------------------------------------------------------------------

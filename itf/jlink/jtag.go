@@ -30,31 +30,31 @@ type Jtag struct {
 	speed   int // current JTAG clock speed in kHz
 }
 
-func (j *Jtag) String() string {
+func (drv *Jtag) String() string {
 	s := []string{}
-	hw, err := j.hdl.GetHardwareVersion()
+	hw, err := drv.hdl.GetHardwareVersion()
 	if err == nil {
 		s = append(s, fmt.Sprintf("hardware %s", hw))
 	}
-	sn, err := j.dev.GetSerialNumber()
+	sn, err := drv.dev.GetSerialNumber()
 	if err == nil {
 		s = append(s, fmt.Sprintf("serial number %d", sn))
 	}
-	ver, err := j.hdl.GetFirmwareVersion()
+	ver, err := drv.hdl.GetFirmwareVersion()
 	if err == nil {
 		s = append(s, fmt.Sprintf("firmware %s", ver))
 	}
-	state, err := j.hdl.GetHardwareStatus()
+	state, err := drv.hdl.GetHardwareStatus()
 	if err == nil {
 		s = append(s, fmt.Sprintf("target voltage %dmV", state.TargetVoltage))
 	}
-	s = append(s, fmt.Sprintf("jtag speed %dkHz", j.speed))
+	s = append(s, fmt.Sprintf("jtag speed %dkHz", drv.speed))
 	return strings.Join(s, "\n")
 }
 
 // NewJtag returns a new J-Link JTAG driver.
 func NewJtag(dev *jaylink.Device, speed int) (*Jtag, error) {
-	j := &Jtag{
+	drv := &Jtag{
 		dev: dev,
 	}
 
@@ -63,7 +63,7 @@ func NewJtag(dev *jaylink.Device, speed int) (*Jtag, error) {
 	if err != nil {
 		return nil, err
 	}
-	j.hdl = hdl
+	drv.hdl = hdl
 
 	// get the device capabilities
 	caps, err := hdl.GetAllCaps()
@@ -78,7 +78,7 @@ func NewJtag(dev *jaylink.Device, speed int) (*Jtag, error) {
 		hdl.Close()
 		return nil, err
 	}
-	j.version = version
+	drv.version = version
 
 	// check and select the target interface
 	if caps.HasCap(jaylink.DEV_CAP_SELECT_TIF) {
@@ -120,19 +120,19 @@ func NewJtag(dev *jaylink.Device, speed int) (*Jtag, error) {
 		hdl.Close()
 		return nil, err
 	}
-	j.speed = speed
+	drv.speed = speed
 
-	return j, nil
+	return drv, nil
 }
 
 // Close closes a J-Link JTAG driver.
-func (j *Jtag) Close() error {
-	return j.hdl.Close()
+func (drv *Jtag) Close() error {
+	return drv.hdl.Close()
 }
 
 // GetState returns the JTAG hardware state.
-func (j *Jtag) GetState() (*jtag.State, error) {
-	status, err := j.hdl.GetHardwareStatus()
+func (drv *Jtag) GetState() (*jtag.State, error) {
+	status, err := drv.hdl.GetHardwareStatus()
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +148,8 @@ func (j *Jtag) GetState() (*jtag.State, error) {
 }
 
 // jtagIO performs jtag IO operations.
-func (j *Jtag) jtagIO(tms, tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
-	tdo, err := j.hdl.JtagIO(tms.GetBytes(), tdi.GetBytes(), uint16(tdi.Len()), j.version)
+func (drv *Jtag) jtagIO(tms, tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
+	tdo, err := drv.hdl.JtagIO(tms.GetBytes(), tdi.GetBytes(), uint16(tdi.Len()), drv.version)
 	if needTdo {
 		return bitstr.FromBytes(tdo, tdi.Len()), err
 	}
@@ -157,38 +157,38 @@ func (j *Jtag) jtagIO(tms, tdi *bitstr.BitString, needTdo bool) (*bitstr.BitStri
 }
 
 // TestReset pulses the test reset line.
-func (j *Jtag) TestReset(delay time.Duration) error {
-	err := j.hdl.JtagClearTrst()
+func (drv *Jtag) TestReset(delay time.Duration) error {
+	err := drv.hdl.JtagClearTrst()
 	if err != nil {
 		return err
 	}
 	time.Sleep(delay)
-	return j.hdl.JtagSetTrst()
+	return drv.hdl.JtagSetTrst()
 }
 
 // SystemReset pulses the system reset line.
-func (j *Jtag) SystemReset(delay time.Duration) error {
-	err := j.hdl.ClearReset()
+func (drv *Jtag) SystemReset(delay time.Duration) error {
+	err := drv.hdl.ClearReset()
 	if err != nil {
 		return err
 	}
 	time.Sleep(delay)
-	return j.hdl.SetReset()
+	return drv.hdl.SetReset()
 }
 
 // TapReset resets the TAP state machine.
-func (j *Jtag) TapReset() error {
+func (drv *Jtag) TapReset() error {
 	tdi := bitstr.Zeros(jtag.ToIdle.Len())
-	_, err := j.jtagIO(jtag.ToIdle, tdi, false)
+	_, err := drv.jtagIO(jtag.ToIdle, tdi, false)
 	return err
 }
 
 // ScanIR scans bits through the JTAG IR chain
-func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
+func (drv *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, error) {
 	shiftToIdle := jtag.ShiftToIdle[0]
 	tms := bitstr.Null().Tail(jtag.IdleToIRshift).Tail0(tdi.Len() - 1).Tail(shiftToIdle)
 	tdi = bitstr.Zeros(jtag.IdleToIRshift.Len()).Tail(tdi).Tail0(shiftToIdle.Len() - 1)
-	tdo, err := j.jtagIO(tms, tdi, needTdo)
+	tdo, err := drv.jtagIO(tms, tdi, needTdo)
 	if err != nil {
 		return nil, err
 	}
@@ -200,11 +200,11 @@ func (j *Jtag) ScanIR(tdi *bitstr.BitString, needTdo bool) (*bitstr.BitString, e
 }
 
 // ScanDR scans bits through the JTAG DR chain
-func (j *Jtag) ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
+func (drv *Jtag) ScanDR(tdi *bitstr.BitString, idle uint, needTdo bool) (*bitstr.BitString, error) {
 	shiftToIdle := jtag.ShiftToIdle[idle]
 	tms := bitstr.Null().Tail(jtag.IdleToDRshift).Tail0(tdi.Len() - 1).Tail(shiftToIdle)
 	tdi = bitstr.Zeros(jtag.IdleToDRshift.Len()).Tail(tdi).Tail0(shiftToIdle.Len() - 1)
-	tdo, err := j.jtagIO(tms, tdi, needTdo)
+	tdo, err := drv.jtagIO(tms, tdi, needTdo)
 	if err != nil {
 		return nil, err
 	}

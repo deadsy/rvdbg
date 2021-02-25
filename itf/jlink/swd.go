@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/deadsy/jaylink"
+	"github.com/deadsy/rvdbg/swd"
+	"github.com/deadsy/rvdbg/util/log"
 )
 
 //-----------------------------------------------------------------------------
@@ -25,8 +27,25 @@ type Swd struct {
 	hdl *jaylink.DeviceHandle
 }
 
+func (drv *Swd) String() string {
+	s := []string{}
+	hw, err := drv.hdl.GetHardwareVersion()
+	if err == nil {
+		s = append(s, fmt.Sprintf("hardware %s", hw))
+	}
+	ver, err := drv.hdl.GetFirmwareVersion()
+	if err == nil {
+		s = append(s, fmt.Sprintf("firmware %s", ver))
+	}
+	sn, err := drv.dev.GetSerialNumber()
+	if err == nil {
+		s = append(s, fmt.Sprintf("serial %d", sn))
+	}
+	return strings.Join(s, "\n")
+}
+
 // NewSwd returns a new J-Link SWD driver.
-func NewSwd(dev *jaylink.Device, speed uint16) (*Swd, error) {
+func NewSwd(dev *jaylink.Device, speed int) (*Swd, error) {
 	// get the device handle
 	hdl, err := dev.Open()
 	if err != nil {
@@ -77,13 +96,13 @@ func NewSwd(dev *jaylink.Device, speed uint16) (*Swd, error) {
 			hdl.Close()
 			return nil, err
 		}
-		if speed > maxSpeed {
-			hdl.Close()
-			return nil, fmt.Errorf("SWD speed is too high: %dkHz > %dkHz (max)", speed, maxSpeed)
+		if speed > int(maxSpeed) {
+			log.Info.Printf("SWD speed %dkHz is too high, limiting to %dkHz (max)", speed, maxSpeed)
+			speed = int(maxSpeed)
 		}
 	}
 	// set the interface speed
-	err = hdl.SetSpeed(speed)
+	err = hdl.SetSpeed(uint16(speed))
 	if err != nil {
 		hdl.Close()
 		return nil, err
@@ -96,35 +115,30 @@ func NewSwd(dev *jaylink.Device, speed uint16) (*Swd, error) {
 }
 
 // Close closes a J-Link SWD driver.
-func (swd *Swd) Close() error {
-	return swd.hdl.Close()
+func (drv *Swd) Close() error {
+	return drv.hdl.Close()
 }
 
-func (swd *Swd) String() string {
-	s := []string{}
-	hw, err := swd.hdl.GetHardwareVersion()
-	if err == nil {
-		s = append(s, fmt.Sprintf("hardware %s", hw))
+// GetState returns the SWD hardware state.
+func (drv *Swd) GetState() (*swd.State, error) {
+	status, err := drv.hdl.GetHardwareStatus()
+	if err != nil {
+		return nil, err
 	}
-	ver, err := swd.hdl.GetFirmwareVersion()
-	if err == nil {
-		s = append(s, fmt.Sprintf("firmware %s", ver))
-	}
-	sn, err := swd.dev.GetSerialNumber()
-	if err == nil {
-		s = append(s, fmt.Sprintf("serial %d", sn))
-	}
-	return strings.Join(s, "\n")
+	return &swd.State{
+		TargetVoltage: int(status.TargetVoltage),
+		Srst:          status.Tres,
+	}, nil
 }
 
 // SystemReset pulses the system reset line.
-func (swd *Swd) SystemReset(delay time.Duration) error {
-	err := swd.hdl.ClearReset()
+func (drv *Swd) SystemReset(delay time.Duration) error {
+	err := drv.hdl.ClearReset()
 	if err != nil {
 		return err
 	}
 	time.Sleep(delay)
-	return swd.hdl.SetReset()
+	return drv.hdl.SetReset()
 }
 
 //-----------------------------------------------------------------------------
