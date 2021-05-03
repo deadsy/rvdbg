@@ -11,8 +11,6 @@ See: https://www.raspberrypi.org/products/raspberry-pi-pico/
 package pico
 
 import (
-	"errors"
-	"fmt"
 	"os"
 
 	cli "github.com/deadsy/go-cli"
@@ -105,24 +103,6 @@ type Target struct {
 
 // New returns a new pico target.
 func New(swdDriver swd.Driver) (target.Target, error) {
-
-	// get the SWD state
-	state, err := swdDriver.GetState()
-	if err != nil {
-		return nil, err
-	}
-
-	// check the voltage
-	if state.TargetVoltage >= 0 {
-		if float32(state.TargetVoltage) < 0.9*float32(Info.Volts) {
-			return nil, fmt.Errorf("target voltage is too low (%dmV), is the target connected and powered?", state.TargetVoltage)
-		}
-	}
-
-	// check the ~SRST state
-	if !state.Srst {
-		return nil, errors.New("target ~SRST line asserted, target is held in reset")
-	}
 
 	// make the swd device for the cpu core
 	swdDevice, err := swd.GetDevice(swdDriver)

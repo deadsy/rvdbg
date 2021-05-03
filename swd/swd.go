@@ -9,8 +9,6 @@ SWD Device Functions
 package swd
 
 import (
-	"errors"
-
 	cli "github.com/deadsy/go-cli"
 )
 
@@ -33,11 +31,15 @@ type Driver interface {
 
 // Device stores the state for an SWD device.
 type Device struct {
+	drv Driver // swd driver
 }
 
 // GetDevice returns an SWD device.
 func GetDevice(drv Driver) (*Device, error) {
-	return nil, errors.New("TODO")
+	dev := &Device{
+		drv: drv,
+	}
+	return dev, nil
 }
 
 //-----------------------------------------------------------------------------

@@ -75,20 +75,6 @@ func NewSwd(dev *jaylink.Device, speed int) (*Swd, error) {
 		hdl.Close()
 		return nil, err
 	}
-	// check the hardware state
-	state, err := hdl.GetHardwareStatus()
-	if err != nil {
-		hdl.Close()
-		return nil, err
-	}
-	if state.TargetVoltage < 1500 {
-		hdl.Close()
-		return nil, fmt.Errorf("target voltage is too low (%dmV), is the target connected and powered?", state.TargetVoltage)
-	}
-	if state.Tres {
-		hdl.Close()
-		return nil, errors.New("target ~SRST line asserted, target is held in reset")
-	}
 	// check the desired interface speed
 	if caps.HasCap(jaylink.DEV_CAP_GET_SPEEDS) {
 		maxSpeed, err := hdl.GetMaxSpeed()
@@ -97,7 +83,7 @@ func NewSwd(dev *jaylink.Device, speed int) (*Swd, error) {
 			return nil, err
 		}
 		if speed > int(maxSpeed) {
-			log.Info.Printf("SWD speed %dkHz is too high, limiting to %dkHz (max)", speed, maxSpeed)
+			log.Info.Printf("swclk speed %dkHz is too high, limiting to %dkHz (max)", speed, maxSpeed)
 			speed = int(maxSpeed)
 		}
 	}
@@ -121,14 +107,7 @@ func (drv *Swd) Close() error {
 
 // GetState returns the SWD hardware state.
 func (drv *Swd) GetState() (*swd.State, error) {
-	status, err := drv.hdl.GetHardwareStatus()
-	if err != nil {
-		return nil, err
-	}
-	return &swd.State{
-		TargetVoltage: int(status.TargetVoltage),
-		Srst:          status.Tres,
-	}, nil
+	return nil, errors.New("not available for swd")
 }
 
 // SystemReset pulses the system reset line.
