@@ -24,7 +24,7 @@ const (
 	RP2040 Variant = iota
 )
 
-var flashSize = map[Variant]uint{
+var romSize = map[Variant]uint{
 	RP2040: 0 * util.KiB,
 }
 
@@ -37,10 +37,10 @@ func NewSoC(variant Variant) *soc.Device {
 	dev := baseSoC()
 	// setup the sram /flash
 	p := []soc.Peripheral{
-		{"sram", 0x20000000, sramSize[variant], "Static RAM", nil},
+		{"SRAM", 0x20000000, sramSize[variant], "Static RAM", nil},
 	}
-	if flashSize[variant] != 0 {
-		p = append(p, soc.Peripheral{"flash", 0x08000000, flashSize[variant], "Main Flash Block", nil})
+	if romSize[variant] != 0 {
+		p = append(p, soc.Peripheral{"ROM", 0x00000000, romSize[variant], "on-chip ROM", nil})
 	}
 	dev.AddPeripheral(p)
 	return dev

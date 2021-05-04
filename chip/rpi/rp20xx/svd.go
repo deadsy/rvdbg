@@ -40,11 +40,47 @@ func baseSoC() *soc.Device {
 			{Name: "RTC_IRQ", IRQ: 25},
 		},
 		Peripherals: []soc.Peripheral{
+
+			{
+				Name:  "XIP",
+				Addr:  0x10000000,
+				Size:  16 << 20,
+				Descr: "Flash execute-in-place region",
+			},
+
+			{
+				Name:  "XIP_NOALLOC",
+				Addr:  0x11000000,
+				Size:  16 << 20,
+				Descr: "Flash no-alloc execute-in-place region",
+			},
+
+			{
+				Name:  "XIP_NOCACHE",
+				Addr:  0x12000000,
+				Size:  16 << 20,
+				Descr: "Flash no-cache execute-in-place region",
+			},
+
+			{
+				Name:  "XIP_NOALLOC_NOCACHE",
+				Addr:  0x13000000,
+				Size:  16 << 20,
+				Descr: "Flash no-alloc/no-cache execute-in-place region",
+			},
+
+			{
+				Name:  "XIP_SRAM",
+				Addr:  0x15000000,
+				Size:  256 << 10,
+				Descr: "SRAM execute-in-place region",
+			},
+
 			{
 				Name:  "XIP_CTRL",
 				Addr:  0x14000000,
 				Size:  0x20,
-				Descr: "QSPI flash execute-in-place block",
+				Descr: "execute-in-place controller",
 				Registers: []soc.Register{
 					{
 						Name:   "CTRL",
@@ -119,7 +155,7 @@ func baseSoC() *soc.Device {
 				Name:  "XIP_SSI",
 				Addr:  0x18000000,
 				Size:  0x100,
-				Descr: "DW_apb_ssi has the following features:\n * APB interface – Allows for easy integration into a DesignWare Synthesizable Components for AMBA 2 implementation.\n * APB3 and APB4 protocol support.\n * Scalable APB data bus width – Supports APB data bus widths of 8, 16, and 32 bits.\n * Serial-master or serial-slave operation – Enables serial communication with serial-master or serial-slave peripheral devices.\n * Programmable Dual/Quad/Octal SPI support in Master Mode.\n * Dual Data Rate (DDR) and Read Data Strobe (RDS) Support - Enables the DW_apb_ssi master to perform operations with the device in DDR and RDS modes when working in Dual/Quad/Octal mode of operation.\n * Data Mask Support - Enables the DW_apb_ssi to selectively update the bytes in the device. This feature is applicable only in enhanced SPI modes.\n * eXecute-In-Place (XIP) support - Enables the DW_apb_ssi master to behave as a memory mapped I/O and fetches the data from the device based on the APB read request. This feature is applicable only in enhanced SPI modes.\n * DMA Controller Interface – Enables the DW_apb_ssi to interface to a DMA controller over the bus using a handshaking interface for transfer requests.\n * Independent masking of interrupts – Master collision, transmit FIFO overflow, transmit FIFO empty, receive FIFO full, receive FIFO underflow, and receive FIFO overflow interrupts can all be masked independently.\n * Multi-master contention detection – Informs the processor of multiple serial-master accesses on the serial bus.\n * Bypass of meta-stability flip-flops for synchronous clocks – When the APB clock (pclk) and the DW_apb_ssi serial clock (ssi_clk) are synchronous, meta-stable flip-flops are not used when transferring control signals across these clock domains.\n * Programmable delay on the sample time of the received serial data bit (rxd); enables programmable control of routing delays resulting in higher serial data-bit rates.\n * Programmable features:\n - Serial interface operation – Choice of Motorola SPI, Texas Instruments Synchronous Serial Protocol or National Semiconductor Microwire.\n - Clock bit-rate – Dynamic control of the serial bit rate of the data transfer; used in only serial-master mode of operation.\n - Data Item size (4 to 32 bits) – Item size of each data transfer under the control of the programmer.\n * Configured features:\n - FIFO depth – 16 words deep. The FIFO width is fixed at 32 bits.\n - 1 slave select output.\n - Hardware slave-select – Dedicated hardware slave-select line.\n - Combined interrupt line - one combined interrupt line from the DW_apb_ssi to the interrupt controller.\n - Interrupt polarity – active high interrupt lines.\n - Serial clock polarity – low serial-clock polarity directly after reset.\n - Serial clock phase – capture on first edge of serial-clock directly after reset",
+				Descr: "synchronous serial interface controller",
 				Registers: []soc.Register{
 					{
 						Name:   "CTRLR0",
@@ -420,7 +456,7 @@ func baseSoC() *soc.Device {
 				Name:  "SYSINFO",
 				Addr:  0x40000000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "system information",
 				Registers: []soc.Register{
 					{
 						Name:   "CHIP_ID",
@@ -455,7 +491,7 @@ func baseSoC() *soc.Device {
 				Name:  "SYSCFG",
 				Addr:  0x40004000,
 				Size:  0x1000,
-				Descr: "Register block for various chip control signals",
+				Descr: "system configuration",
 				Registers: []soc.Register{
 					{
 						Name:   "PROC0_NMI_MASK",
@@ -537,7 +573,7 @@ func baseSoC() *soc.Device {
 				Name:  "CLOCKS",
 				Addr:  0x40008000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "clock controller",
 				Registers: []soc.Register{
 					{
 						Name:   "CLK_GPOUT0_CTRL",
@@ -1144,7 +1180,7 @@ func baseSoC() *soc.Device {
 				Name:  "RESETS",
 				Addr:  0x4000c000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "reset controller",
 				Registers: []soc.Register{
 					{
 						Name:   "RESET",
@@ -1251,7 +1287,7 @@ func baseSoC() *soc.Device {
 				Name:  "PSM",
 				Addr:  0x40010000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "power-on state machine",
 				Registers: []soc.Register{
 					{
 						Name:   "FRCE_ON",
@@ -1359,7 +1395,7 @@ func baseSoC() *soc.Device {
 				Name:  "IO_BANK0",
 				Addr:  0x40014000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "GPIO IO control",
 				Registers: []soc.Register{
 					{
 						Name:   "GPIO0_STATUS",
@@ -3757,7 +3793,7 @@ func baseSoC() *soc.Device {
 				Name:  "IO_QSPI",
 				Addr:  0x40018000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "QSPI IO control",
 				Registers: []soc.Register{
 					{
 						Name:   "GPIO_QSPI_SCLK_STATUS",
@@ -4259,7 +4295,7 @@ func baseSoC() *soc.Device {
 				Name:  "PADS_BANK0",
 				Addr:  0x4001c000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "GPIO pad control",
 				Registers: []soc.Register{
 					{
 						Name:   "VOLTAGE_SELECT",
@@ -4756,7 +4792,7 @@ func baseSoC() *soc.Device {
 				Name:  "PADS_QSPI",
 				Addr:  0x40020000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "QSPI pad control",
 				Registers: []soc.Register{
 					{
 						Name:   "VOLTAGE_SELECT",
@@ -4863,7 +4899,7 @@ func baseSoC() *soc.Device {
 				Name:  "XOSC",
 				Addr:  0x40024000,
 				Size:  0x1000,
-				Descr: "Controls the crystal oscillator",
+				Descr: "crystal oscillator control",
 				Registers: []soc.Register{
 					{
 						Name:   "CTRL",
@@ -4918,7 +4954,7 @@ func baseSoC() *soc.Device {
 				Name:  "PLL_SYS",
 				Addr:  0x40028000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "PLL controller",
 				Registers: []soc.Register{
 					{
 						Name:   "CS",
@@ -4968,7 +5004,7 @@ func baseSoC() *soc.Device {
 				Name:  "PLL_USB",
 				Addr:  0x4002c000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "USB PLL control",
 				Registers: []soc.Register{
 					{
 						Name:   "CS",
@@ -5018,7 +5054,7 @@ func baseSoC() *soc.Device {
 				Name:  "BUSCTRL",
 				Addr:  0x40030000,
 				Size:  0x1000,
-				Descr: "Register block for busfabric control signals and performance counters",
+				Descr: "bus fabric control and performance counters",
 				Registers: []soc.Register{
 					{
 						Name:   "BUS_PRIORITY",
@@ -5119,7 +5155,7 @@ func baseSoC() *soc.Device {
 				Name:  "UART0",
 				Addr:  0x40034000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "UART 0",
 				Registers: []soc.Register{
 					{
 						Name:   "UARTDR",
@@ -5402,7 +5438,7 @@ func baseSoC() *soc.Device {
 				Name:  "UART1",
 				Addr:  0x40038000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "UART 1",
 				Registers: []soc.Register{
 					{
 						Name:   "UARTDR",
@@ -5685,7 +5721,7 @@ func baseSoC() *soc.Device {
 				Name:  "SPI0",
 				Addr:  0x4003c000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "SPI bus 0",
 				Registers: []soc.Register{
 					{
 						Name:   "SSPCR0",
@@ -5879,7 +5915,7 @@ func baseSoC() *soc.Device {
 				Name:  "SPI1",
 				Addr:  0x40040000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "SPI bus 1",
 				Registers: []soc.Register{
 					{
 						Name:   "SSPCR0",
@@ -6073,7 +6109,7 @@ func baseSoC() *soc.Device {
 				Name:  "I2C0",
 				Addr:  0x40044000,
 				Size:  0x100,
-				Descr: "DW_apb_i2c address block",
+				Descr: "I2C bus 0",
 				Registers: []soc.Register{
 					{
 						Name:   "IC_CON",
@@ -6549,7 +6585,7 @@ func baseSoC() *soc.Device {
 				Name:  "I2C1",
 				Addr:  0x40048000,
 				Size:  0x100,
-				Descr: "DW_apb_i2c address block",
+				Descr: "I2C bus 1",
 				Registers: []soc.Register{
 					{
 						Name:   "IC_CON",
@@ -7025,7 +7061,7 @@ func baseSoC() *soc.Device {
 				Name:  "ADC",
 				Addr:  0x4004c000,
 				Size:  0x1000,
-				Descr: "Control and data interface to SAR ADC",
+				Descr: "analog to digital converter",
 				Registers: []soc.Register{
 					{
 						Name:   "CS",
@@ -7133,7 +7169,7 @@ func baseSoC() *soc.Device {
 				Name:  "PWM",
 				Addr:  0x40050000,
 				Size:  0x1000,
-				Descr: "Simple PWM",
+				Descr: "pulse width modulator",
 				Registers: []soc.Register{
 					{
 						Name:   "CH0_CSR",
@@ -7645,7 +7681,7 @@ func baseSoC() *soc.Device {
 				Name:  "TIMER",
 				Addr:  0x40054000,
 				Size:  0x1000,
-				Descr: "Controls time and alarms\n time is a 64 bit value indicating the time in usec since power-on\n timeh is the top 32 bits of time & timel is the bottom 32 bits\n to change time write to timelw before timehw\n to read time read from timelr before timehr\n An alarm is set by setting alarm_enable and writing to the corresponding alarm register\n When an alarm is pending, the corresponding alarm_running signal will be high\n An alarm can be cancelled before it has finished by clearing the alarm_enable\n When an alarm fires, the corresponding alarm_irq is set and alarm_running is cleared\n To clear the interrupt write a 1 to the corresponding alarm_irq",
+				Descr: "64-bit timer",
 				Registers: []soc.Register{
 					{
 						Name:   "TIMEHW",
@@ -7789,7 +7825,7 @@ func baseSoC() *soc.Device {
 				Name:  "WATCHDOG",
 				Addr:  0x40058000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "watchdog controller",
 				Registers: []soc.Register{
 					{
 						Name:   "CTRL",
@@ -7890,7 +7926,7 @@ func baseSoC() *soc.Device {
 				Name:  "RTC",
 				Addr:  0x4005c000,
 				Size:  0x1000,
-				Descr: "Register block to control RTC",
+				Descr: "real time clock",
 				Registers: []soc.Register{
 					{
 						Name:   "CLKDIV_M1",
@@ -8033,7 +8069,7 @@ func baseSoC() *soc.Device {
 				Name:  "ROSC",
 				Addr:  0x40060000,
 				Size:  0x1000,
-				Descr: "",
+				Descr: "ring oscillator",
 				Registers: []soc.Register{
 					{
 						Name:   "CTRL",
@@ -8134,7 +8170,7 @@ func baseSoC() *soc.Device {
 				Name:  "VREG_AND_CHIP_RESET",
 				Addr:  0x40064000,
 				Size:  0x1000,
-				Descr: "control and status for on-chip voltage regulator and chip level reset subsystem",
+				Descr: "on-chip voltage regulator and chip level reset",
 				Registers: []soc.Register{
 					{
 						Name:   "VREG",
@@ -8176,7 +8212,7 @@ func baseSoC() *soc.Device {
 				Name:  "TBMAN",
 				Addr:  0x4006c000,
 				Size:  0x1000,
-				Descr: "Testbench manager. Allows the programmer to know what platform their software is running on",
+				Descr: "testbench manager",
 				Registers: []soc.Register{
 					{
 						Name:   "PLATFORM",
@@ -8194,7 +8230,7 @@ func baseSoC() *soc.Device {
 				Name:  "DMA",
 				Addr:  0x50000000,
 				Size:  0x1000,
-				Descr: "DMA with separate read and write masters",
+				Descr: "DMA controller",
 				Registers: []soc.Register{
 					{
 						Name:   "CH0_READ_ADDR",
@@ -9911,7 +9947,7 @@ func baseSoC() *soc.Device {
 				Name:  "USBCTRL_REGS",
 				Addr:  0x50110000,
 				Size:  0x1000,
-				Descr: "USB FS/LS controller device registers",
+				Descr: "USB FS/LS controller",
 				Registers: []soc.Register{
 					{
 						Name:   "ADDR_ENDP",
@@ -10624,7 +10660,7 @@ func baseSoC() *soc.Device {
 				Name:  "PIO0",
 				Addr:  0x50200000,
 				Size:  0x1000,
-				Descr: "Programmable IO block",
+				Descr: "programmable IO block 0",
 				Registers: []soc.Register{
 					{
 						Name:   "CTRL",
@@ -11518,7 +11554,7 @@ func baseSoC() *soc.Device {
 				Name:  "PIO1",
 				Addr:  0x50300000,
 				Size:  0x1000,
-				Descr: "Programmable IO block",
+				Descr: "programmable IO block 1",
 				Registers: []soc.Register{
 					{
 						Name:   "CTRL",
@@ -12412,7 +12448,7 @@ func baseSoC() *soc.Device {
 				Name:  "SIO",
 				Addr:  0xd0000000,
 				Size:  0x200,
-				Descr: "Single-cycle IO block\n Provides core-local and inter-core hardware for the two processors, with single-cycle access",
+				Descr: "single-cycle IO block",
 				Registers: []soc.Register{
 					{
 						Name:   "CPUID",
@@ -13108,7 +13144,7 @@ func baseSoC() *soc.Device {
 				Name:  "PPB",
 				Addr:  0xe0000000,
 				Size:  0x10000,
-				Descr: "",
+				Descr: "Cortex-M0+ internal periperals",
 				Registers: []soc.Register{
 					{
 						Name:   "SYST_CSR",
