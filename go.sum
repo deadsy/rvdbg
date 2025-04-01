@@ -8,6 +8,8 @@ github.com/deadsy/go-fdset v0.0.0-20191109013125-1377c8665b89 h1:uIQksL6B2rolyPX
 github.com/deadsy/go-fdset v0.0.0-20191109013125-1377c8665b89/go.mod h1:k4cs/s766EtemQo1eMCnPF18lSlNer6fJGTnsR7FG04=
 github.com/deadsy/hidapi v0.0.0-20201205163547-7cb4262cac1d h1:ZlpIZNF1ifHutw+6Zg2HbSN6tSoethI4M+GHz7QpY98=
 github.com/deadsy/hidapi v0.0.0-20201205163547-7cb4262cac1d/go.mod h1:w6v+i3VBKPBCj/N5pPcBtDztTaFV0ND5h19MjN5cxes=
+github.com/deadsy/hidapi v0.0.0-20250401173950-c4731c7bc2f6 h1:5tIgVrTdKKcugVaxgsp6MY0QPp/gAG3kjS1oPuqo5aU=
+github.com/deadsy/hidapi v0.0.0-20250401173950-c4731c7bc2f6/go.mod h1:Ptk07SMHk3WtLWq5d25beEyQSk+a1cu4bTSSOjWADZc=
 github.com/deadsy/jaylink v0.0.0-20201205163347-737357792d20 h1:vw4e0h38ouJ6+EqOUt/STFdG5pu7XqKRmQe9TOgKgd4=
 github.com/deadsy/jaylink v0.0.0-20201205163347-737357792d20/go.mod h1:iDHZIZ8TvJymEVWSP9JEU9KHA6W0kcCzWm9ZxHthLOU=
 github.com/deadsy/rvda v0.0.0-20230302170618-8cc97fa6dce8 h1:UYgW55suTQIbX4DkMLgkUs4cjNCOX4638SZlQnBi9R4=

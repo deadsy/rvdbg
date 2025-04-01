@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/deadsy/go-cli v0.0.0-20230301174137-5c174cc4ca7e
-	github.com/deadsy/hidapi v0.0.0-20201205163547-7cb4262cac1d
+	github.com/deadsy/hidapi v0.0.0-20250401173950-c4731c7bc2f6
 	github.com/deadsy/jaylink v0.0.0-20201205163347-737357792d20
 	github.com/deadsy/rvda v0.0.0-20230302170618-8cc97fa6dce8
 )
