@@ -19,7 +19,7 @@ import (
 
 //-----------------------------------------------------------------------------
 
-const maxDevices = 6
+const maxDevices = 10
 const flushSize = maxDevices * 32
 const idcodeLength = 32
 

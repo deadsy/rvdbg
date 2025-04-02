@@ -9,7 +9,6 @@ Geode is a development platform using a BCM47722
 package geode
 
 import (
-	//"errors"
 	"errors"
 	"fmt"
 	"os"
@@ -52,7 +51,7 @@ type Target struct {
 	jtagDevice *jtag.Device
 }
 
-// New returns a new wap target.
+// New returns a new target.
 func New(jtagDriver jtag.Driver) (target.Target, error) {
 
 	// get the JTAG state
